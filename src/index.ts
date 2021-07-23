@@ -1,11 +1,14 @@
-const { Telegraf, Markup } = require('telegraf')
+
+import { Context, Telegraf, Markup } from 'telegraf'
+
+interface PhiloContext extends Context {}
 
 const token = process.env.BOT_TOKEN
 if (token === undefined) {
-  throw new Error('BOT_TOKEN must be provided!')
+  throw new Error('BOT_TOKEN must be provided by ENV!')
 }
 
-const bot = new Telegraf(token)
+const bot = new Telegraf<PhiloContext>(token)
 
 bot.start((ctx) => {
   ctx.reply('Bot is ready!')
@@ -83,6 +86,10 @@ bot.command('random', (ctx) => {
   )
 })
 
+bot.action('Dr Pepper', (ctx, next) => {
+  return ctx.reply('👍').then(() => next())
+})
+
 bot.command('caption', (ctx) => {
   return ctx.replyWithPhoto({ url: 'https://picsum.photos/200/300/?random' },
     {
@@ -103,10 +110,6 @@ bot.hears(/\/wrap (\d+)/, (ctx) => {
       columns: parseInt(ctx.match[1])
     })
   )
-})
-
-bot.action('Dr Pepper', (ctx, next) => {
-  return ctx.reply('👍').then(() => next())
 })
 
 bot.action('plain', async (ctx) => {
