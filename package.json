@@ -1,0 +1,38 @@
+{
+  "name": "philo-philm",
+  "version": "1.0.0",
+  "description": "Photo & Timelapse Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node -r dotenv/config index.js",
+    "watch": "nodemon -r dotenv/config index.js",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Phoscur/philo.git"
+  },
+  "keywords": [
+    "photo",
+    "raspberry-pi",
+    "telegram",
+    "telegraf",
+    "bot",
+    "timelapse"
+  ],
+  "author": "Phoscur",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Phoscur/philo/issues"
+  },
+  "homepage": "https://github.com/Phoscur/philo#readme",
+  "dependencies": {
+    "telegraf": "^4.4.0"
+  },
+  "devDependencies": {
+    "dotenv": "^10.0.0",
+    "jest": "^27.0.6",
+    "nodemon": "^2.0.12",
+    "ts-node-dev": "^1.1.8"
+  }
+}
