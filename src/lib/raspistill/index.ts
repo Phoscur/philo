@@ -1,6 +1,8 @@
 // ## Adaption of the (MIT licensed) code from [pi-camera-connect](https://github.com/launchcodedev/pi-camera-connect/blob/master/src/lib/still-camera.ts)
 import { spawnPromise } from './spawn'
 
+const { DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_DELAY } = process.env
+
 export enum Rotation {
   Rotate0 = 0,
   Rotate90 = 90,
@@ -45,9 +47,12 @@ export enum AwbMode {
   GreyWorld = 'greyworld',
 }
 
+// TODO type Imxfx
+// export enum ImxFxMode {}
+
 export interface StillOptions {
-  width?: number
-  height?: number
+  width?: number|string
+  height?: number|string
   rotation?: Rotation
   flip?: Flip
   delay?: number
@@ -71,10 +76,15 @@ export default class StillCamera {
   static readonly jpegSignature = Buffer.from([0xff, 0xd8, 0xff, 0xe1])
 
   constructor(options: StillOptions = {}) {
+    const width = DEFAULT_WIDTH
+    const height = DEFAULT_HEIGHT
+    const delay = parseInt(DEFAULT_DELAY || "") || 500
     this.options = {
       rotation: Rotation.Rotate0,
       flip: Flip.None,
-      delay: 700,
+      delay,
+      width,
+      height,
       ...options,
     }
   }

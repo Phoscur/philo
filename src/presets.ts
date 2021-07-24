@@ -22,9 +22,17 @@ export function printPreset(p: Preset) {
   return `${roi}\n${widthAndHeight}\n${duration} ${minutely}\n${interval} ${count}`
 }
 
-const base = JSON.parse(process.env.DEFAULT_PRESET || '{}')
+const base: Preset = JSON.parse(process.env.DEFAULT_PRESET || '{}')
+const presets: Preset[] = JSON.parse(process.env.PRESETS || '{}')
 
 base.toString = printPreset.bind(null, base)
+for (const presetName in presets) {
+  const preset = presets[presetName]
+  console.log('Loading preset:', presetName, preset)
+  preset.toString = printPreset.bind(null, preset)
+}
+
 export default {
   base: base as Preset,
+  ...presets,
 }

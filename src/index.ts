@@ -19,6 +19,7 @@ bot.use(session({ // session is required for scenes: one session per chat (not u
 bot.use((ctx, next) => {
   ctx.presetName ??= 'base'
   ctx.preset = presets.base
+  ctx.presets = presets
   return next()
 })
 bot.use(sceneStage.middleware())
