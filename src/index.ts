@@ -1,20 +1,23 @@
+import { Context, Telegraf, Markup, session } from 'telegraf'
+import sceneStage from './scene'
+import type PhiloContext from './PhiloContext.interface'
 
-import { Context, Telegraf, Markup } from 'telegraf'
-
-interface PhiloContext extends Context {}
-
-const token = process.env.BOT_TOKEN
-if (token === undefined) {
+const { BOT_TOKEN } = process.env
+if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN must be provided by ENV!')
 }
 
-const bot = new Telegraf<PhiloContext>(token)
+const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
 
 bot.start((ctx) => {
   ctx.reply('Bot is ready!')
 })
 
 bot.use(Telegraf.log())
+bot.use(session({ // session is required for scenes
+  getSessionKey: async (ctx: Context) => ctx.chat && ctx.chat.id.toString(),
+}))
+bot.use(sceneStage.middleware())
 
 bot.command('onetime', (ctx) =>
   ctx.reply('One time keyboard', Markup
@@ -134,6 +137,11 @@ bot.action('italic', async (ctx) => {
 bot.action(/.+/, (ctx) => {
   return ctx.answerCbQuery(`Oh, ${ctx.match[0]}! Great choice`)
 })
+
+
+bot.command('greeter', (ctx) => ctx.scene.enter('photo'))
+bot.command('echo', (ctx) => ctx.scene.enter('timelapse'))
+bot.on('message', (ctx) => ctx.reply('Try /echo or /greeter'))
 
 bot.launch()
 console.log('Bot is running!')
