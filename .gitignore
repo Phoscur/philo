@@ -1,3 +1,7 @@
+# Image & configuration file storage
+storage
+
+### Github Node gitignore defaults
 # Logs
 logs
 *.log
