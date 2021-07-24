@@ -2,22 +2,30 @@ import { Context, Telegraf, Markup, session } from 'telegraf'
 import sceneStage from './scene'
 import type PhiloContext from './PhiloContext.interface'
 
-const { BOT_TOKEN } = process.env
+import presets from './presets' // TODO use storage
+
+const { BOT_TOKEN, GROUP_CHAT_ID } = process.env
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN must be provided by ENV!')
 }
 
 const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
 
+// bot.use(Telegraf.log())
+bot.use(session({ // session is required for scenes: one session per chat (not user bound)
+  //getSessionKey: (ctx: Context) => ctx.from && `${ctx.from.id}:${ctx.chat?.id || GROUP_CHAT_ID}`
+  getSessionKey: async (ctx: Context) => ctx.chat && ctx.chat.id.toString() || GROUP_CHAT_ID,
+}))
+bot.use((ctx, next) => {
+  ctx.presetName ??= 'base'
+  ctx.preset = presets.base
+  return next()
+})
+bot.use(sceneStage.middleware())
+
 bot.start((ctx) => {
   ctx.reply('Bot is ready!')
 })
-
-bot.use(Telegraf.log())
-bot.use(session({ // session is required for scenes
-  getSessionKey: async (ctx: Context) => ctx.chat && ctx.chat.id.toString(),
-}))
-bot.use(sceneStage.middleware())
 
 bot.command('onetime', (ctx) =>
   ctx.reply('One time keyboard', Markup
@@ -134,14 +142,11 @@ bot.action('italic', async (ctx) => {
   })
 })
 
-bot.action(/.+/, (ctx) => {
-  return ctx.answerCbQuery(`Oh, ${ctx.match[0]}! Great choice`)
-})
+bot.action(/.+/, (ctx) => ctx.answerCbQuery(`Oh, ${ctx.match[0]}! Great choice`))
 
-
-bot.command('greeter', (ctx) => ctx.scene.enter('photo'))
-bot.command('echo', (ctx) => ctx.scene.enter('timelapse'))
-bot.on('message', (ctx) => ctx.reply('Try /echo or /greeter'))
+bot.command('photo', (ctx) => ctx.scene.enter('photo'))
+bot.command('timelapse', (ctx) => ctx.scene.enter('timelapse'))
+bot.on('message', (ctx) => ctx.reply('Try /photo'))
 
 bot.launch()
 console.log('Bot is running!')
