@@ -7,6 +7,7 @@
     "start": "npm run build && node -r dotenv/config dist/index.js",
     "build": "tsc",
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
+    "dev-sundown": "ts-node-dev -r dotenv/config src/lib/sundown",
     "test": "jest"
   },
   "repository": {
@@ -28,6 +29,8 @@
   },
   "homepage": "https://github.com/Phoscur/philo#readme",
   "dependencies": {
+    "axios": "^0.21.1",
+    "dayjs": "^1.10.6",
     "telegraf": "^4.4.0"
   },
   "devDependencies": {
