@@ -23,7 +23,7 @@ export function printPreset(p: Preset) {
 }
 
 const base: Preset = JSON.parse(process.env.DEFAULT_PRESET || '{}')
-const presets: Preset[] = JSON.parse(process.env.PRESETS || '{}')
+const presets: { [name: string]: Preset } = JSON.parse(process.env.PRESETS || '{}')
 
 base.toString = printPreset.bind(null, base)
 for (const presetName in presets) {

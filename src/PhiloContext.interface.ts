@@ -1,11 +1,11 @@
 import type { Context, Scenes, Telegraf } from 'telegraf'
 import type { Preset } from './presets'
+export type { Preset } from './presets'
 
 export default interface PhiloContext extends Context {
+  presets: { [name: string]: Preset }
   presetName: string
   preset: Preset
-
-  presets: { [name: string]: Preset }
 
   // declare scene type
   scene: Scenes.SceneContextScene<PhiloContext>

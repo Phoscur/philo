@@ -1,5 +1,5 @@
 import { Context, Telegraf, Markup, session } from 'telegraf'
-import sceneStage from './scene'
+import sceneStage from './scenes'
 import type PhiloContext from './PhiloContext.interface'
 
 import presets from './presets' // TODO use storage
