@@ -1,25 +1,34 @@
 import { Scenes, Markup } from 'telegraf'
-import { InlineKeyboardMarkup, Message } from 'typegram'
+import type {
+  InputMediaAnimation,
+  InputMediaPhoto,
+  Message,
+  InlineKeyboardMarkup,
+} from 'telegraf/typings/core/types/typegram'
+
 import type PhiloContext from '../PhiloContext.interface'
 import type { Preset } from '../PhiloContext.interface'
 import type { Storage } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
 import { getNextSunset } from '../lib/sunset'
-import { InputMediaPhoto } from 'telegraf/typings/core/types/typegram'
 
 const { LOADING_SPINNER_URL, RANDOM_IMAGE_URL, DATE_FORMAT } = process.env
 const dateFormat = DATE_FORMAT || 'DD.MM.YYYY HH:MM'
 
-const spinnerGif = {
-  url:
-    LOADING_SPINNER_URL || 'https://loading.io/mod/spinner/spinner/sample.gif',
+const spinnerGif: InputMediaAnimation = {
+  media: {
+    url:
+      LOADING_SPINNER_URL ||
+      'https://loading.io/mod/spinner/spinner/sample.gif',
+  },
+  type: 'animation',
 }
 const randomImage: InputMediaPhoto = {
   media: {
     url: RANDOM_IMAGE_URL || 'https://picsum.photos/600/400/?random',
   },
-  type: 'photo'
+  type: 'photo',
 }
 const randomDelayMS = 500
 // Handler factories
@@ -70,19 +79,22 @@ async function takePhoto(preset: Preset): Promise<InputMediaPhoto> {
 
 async function prepareShot(
   ctx: PhiloContext,
-  meanwhile?: (m: Message.MediaMessage) => Promise<void>
+  preset: Preset,
+  meanwhile?: (m: Message.MediaMessage) => Promise<boolean>
 ) {
-  const message = await ctx.replyWithAnimation(spinnerGif, {
+  const message = await ctx.replyWithAnimation(spinnerGif.media, {
     caption: 'Taking a shot 🥃...',
   })
+  let aborted = false
   if (meanwhile) {
-    await meanwhile(message)
+    aborted = await meanwhile(message)
   }
+  if (aborted) return message
   await ctx.telegram.editMessageMedia(
     message.chat.id,
     message.message_id,
     undefined,
-    await takePhoto(ctx.preset),
+    await takePhoto(preset)
   )
   return message
 }
@@ -100,6 +112,7 @@ async function setCaption(
     text,
     markup
   )
+  return false
 }
 
 async function showSelectedOptions(ctx: PhiloContext) {
@@ -111,7 +124,13 @@ async function showSelectedOptions(ctx: PhiloContext) {
   await setCaption(ctx, text, markup, message)
 }
 
+interface Task {
+  message: Message.MediaMessage
+  abort(): Promise<void>
+}
+
 export default function createPhotoScene(storage: Storage) {
+  const running: { [id: string]: Task } = {}
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
@@ -125,7 +144,7 @@ export default function createPhotoScene(storage: Storage) {
   photoScene.action('shot', async (ctx) => {
     await ctx.answerCbQuery('Taking image now...')
     // const message =
-    await prepareShot(ctx)
+    await prepareShot(ctx, ctx.preset)
     // TODO add share button (repost in CHANNEL_CHAT_ID with different caption)
     /* ctx.telegram.editMessageCaption(
       message.chat.id,
@@ -142,17 +161,43 @@ export default function createPhotoScene(storage: Storage) {
     await ctx.answerCbQuery(
       `Taking image in ${sunset.humanizedDiff}... (${diff}ms)`
     )
-    // TODO use media group for all sunsetTimings
+    // break off execution flow (to answer other commands while waiting)
     setImmediate(async () => {
-      const message = await prepareShot(ctx, async (message) => {
+      const markup = Markup.inlineKeyboard([
+        Markup.button.callback('Cancel', 'cancelRunning'),
+      ])
+      let aborted = false
+      const message = await prepareShot(ctx, ctx.preset, async (message) => {
         await ctx.telegram.editMessageCaption(
           message.chat.id,
           message.message_id,
           undefined,
-          `${sunset.date.format(dateFormat)} (waiting ${diff}ms)`
+          `${sunset.date.format(dateFormat)} (waiting ${diff}ms)`,
+          markup
         )
-        await new Promise((resolve) => setTimeout(resolve, diff))
+        const taskId = `${message.chat.id}:${message.message_id}`
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(resolve, diff)
+            running[taskId] = {
+              message,
+              abort: async () => {
+                clearTimeout(timeout)
+                delete running[taskId]
+                reject('Aborted: ' + taskId)
+              },
+            }
+          })
+        } catch (error) {
+          console.error(error)
+          aborted = true
+        } finally {
+          delete running[taskId]
+        }
+        return aborted
       })
+      if (aborted) return
+
       await ctx.telegram.editMessageCaption(
         message.chat.id,
         message.message_id,
@@ -161,40 +206,15 @@ export default function createPhotoScene(storage: Storage) {
       )
     })
   })
-
-  photoScene.command('album', async (ctx) => {
-    const telegramMediaGroupLimit = 10
-    const images = Array(telegramMediaGroupLimit).fill(randomImage)
-    const group = await ctx.replyWithMediaGroup(images)/*[
-      {
-        media: { url: 'https://picsum.photos/200/300/?random' },
-        caption: 'Piped from URL', // If you'll specify captions for more than one element telegram will show them only when you click on photo preview for each photo separately. - https://stackoverflow.com/questions/58893142/how-to-send-telegram-mediagroup-with-caption-text
-        type: 'photo',
-      },
-      {
-        media: { url: 'https://picsum.photos/200/300/?random' },
-        type: 'photo',
-      },
-      {
-        media: { url: 'https://picsum.photos/200/300/?random' },
-        type: 'photo',
-      },
-    ])
-    /*for (const message of group) {
-      // await new Promise((res) => setTimeout(res, randomDelayMS))
-      // we can shrink albums but as the media group is just an array, I could not find out how to grow it
-      // await ctx.telegram.deleteMessage(message.chat.id, message.message_id)
-      await ctx.telegram.editMessageMedia(
-        message.chat.id,
-        message.message_id,
-        undefined,
-        {
-          media: { url: 'https://picsum.photos/200/300/?random' },
-          caption: 'Piped from URL',
-          type: 'photo',
-        }
-      )
-    }*/
+  photoScene.action('cancelRunning', async (ctx) => {
+    const { message } = ctx.callbackQuery
+    const id = `${message?.chat.id}:${message?.message_id}`
+    if (!running[id]) {
+      return ctx.answerCbQuery(`Error Message ID[${id}] not found!`)
+    }
+    await ctx.answerCbQuery(`Cancelled!`)
+    await running[id].abort()
+    await ctx.deleteMessage()
   })
 
   photoScene.action('timelapse', async (ctx) => {
@@ -233,8 +253,48 @@ export default function createPhotoScene(storage: Storage) {
     await ctx.editMessageMedia(await takePhoto(ctx.preset))
     await ctx.editMessageCaption(text, markup)
   })
+
+  photoScene.hears(/\/random ?(\d+)?/, async (ctx) => {
+    const telegramMediaGroupLimit = 10
+    const images: InputMediaPhoto[] = Array(
+      parseInt(ctx.match[1]) || telegramMediaGroupLimit
+    ).fill(randomImage)
+    // const group =
+    await ctx.replyWithMediaGroup(images) /*[
+      {
+        media: { url: 'https://picsum.photos/200/300/?random' },
+        caption: 'Piped from URL', // If you'll specify captions for more than one element telegram will show them only when you click on photo preview for each photo separately. - https://stackoverflow.com/questions/58893142/how-to-send-telegram-mediagroup-with-caption-text
+        type: 'photo',
+      },
+      {
+        media: { url: 'https://picsum.photos/200/300/?random' },
+        type: 'photo',
+      },
+      {
+        media: { url: 'https://picsum.photos/200/300/?random' },
+        type: 'photo',
+      },
+    ])
+    /*for (const message of group) {
+      // await new Promise((res) => setTimeout(res, randomDelayMS))
+      // we can shrink albums but as the media group is just an array, I could not find out how to grow it
+      // await ctx.telegram.deleteMessage(message.chat.id, message.message_id)
+      await ctx.telegram.editMessageMedia(
+        message.chat.id,
+        message.message_id,
+        undefined,
+        {
+          media: { url: 'https://picsum.photos/200/300/?random' },
+          caption: 'Piped from URL',
+          type: 'photo',
+        }
+      )
+    }*/
+  })
+
   photoScene.on('message', (ctx) =>
     ctx.replyWithMarkdown('📷 Command not recognised - try /options')
   )
+
   return photoScene
 }

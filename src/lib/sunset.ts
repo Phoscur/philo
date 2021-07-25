@@ -11,11 +11,14 @@ export async function getNextSunset(tomorrow = false) {
   const { data } = await axios.get(apiUrl)
   const sunset = data.results.sunset
   const localSunset = changeTimezoneToLocal(sunset)
-  const diff = localSunset.diff(Date.now())
   return {
-    diff,
     date: localSunset,
-    humanizedDiff: humanizeDuration(diff),
+    get diff() {
+      return localSunset.diff(Date.now())
+    },
+    get humanizedDiff() {
+      return humanizeDuration(this.diff)
+    },
   } 
 }
 
