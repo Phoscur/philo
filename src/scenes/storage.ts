@@ -1,13 +1,13 @@
-import FileStorage from '../lib/storage'
-import type { PhiloBot } from '../PhiloContext.interface'
+import type FileStorage from '../lib/storage'
+import type { PhiloBot, PhiloScene } from '../PhiloContext.interface'
 
 export default function setupStorageCommands(
-  bot: PhiloBot,
+  bot: PhiloBot | PhiloScene,
   storage: FileStorage
 ) {
   async function filterStorage(filter: string) {
     const files = await storage.list()
-    return files.filter((name) => name.includes(filter))
+    return files.filter((name: string) => name.includes(filter))
   }
 
   bot.command(['list', 'l'], (ctx) => {
@@ -15,7 +15,7 @@ export default function setupStorageCommands(
       const [_, filter] = ctx.message.text.split(' ')
       const files = await filterStorage(filter)
       // TODO cut or split into multiple messages if the list is too long
-      ctx.reply(files.join(' '))
+      ctx.reply(files.join(' ') || 'Storage is empty')
     })
   })
 
@@ -29,7 +29,7 @@ export default function setupStorageCommands(
         fileName.endsWith('.gif') || fileName.endsWith('.mp4')
           ? ctx.replyWithAnimation.bind(ctx)
           : ctx.replyWithPhoto.bind(ctx)
-      source.on('error', (err) => {
+      source.on('error', (err: Error) => {
         ctx.reply(`Error: ${fileName} - ${err}`)
       })
       replyWithFile({

@@ -12,3 +12,4 @@ export default interface PhiloContext extends Context {
 }
 
 export interface PhiloBot extends Telegraf<PhiloContext> {}
+export interface PhiloScene extends Scenes.BaseScene<PhiloContext> {}

@@ -1,14 +1,15 @@
 import { Context, Telegraf, Markup, session } from 'telegraf'
-import sceneStage from './scenes'
+import buildStage from './scenes'
+import FileStorage from './lib/storage'
 import type PhiloContext from './PhiloContext.interface'
 
 import presets from './presets' // TODO use storage
 
-const { BOT_TOKEN, GROUP_CHAT_ID } = process.env
+const { BOT_TOKEN, GROUP_CHAT_ID, STORAGE_DIRECTORY } = process.env
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN must be provided by ENV!')
 }
-
+const storage = new FileStorage()
 const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
 
 // bot.use(Telegraf.log())
@@ -22,7 +23,7 @@ bot.use((ctx, next) => {
   ctx.presets = presets
   return next()
 })
-bot.use(sceneStage.middleware())
+bot.use(buildStage(storage).middleware())
 
 bot.start((ctx) => {
   ctx.reply('Bot is ready!')
