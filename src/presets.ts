@@ -6,6 +6,7 @@ export interface PhiloOptions {
   minutely?: number
   interval?: number
   count?: number
+  random?: boolean
 }
 
 export type Preset = PhiloOptions & StillOptions & StitchOptions & {

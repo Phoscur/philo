@@ -41,6 +41,9 @@ function renderPresetSelect(ctx: PhiloContext) {
 }
 
 async function takePhoto(preset: Preset) {
+  if (preset.random) {
+    return randomImage
+  }
   // TODO use source instead of random url
   await new Promise((res) => setTimeout(res, randomDelayMS))
   return randomImage
@@ -111,6 +114,39 @@ photoScene.action('shot', async (ctx) => {
   ) // TODO add share button (repost in CHANNEL_CHAT_ID with different caption)
 })
 
+photoScene.command('album', async (ctx) => {
+  const group = await ctx.replyWithMediaGroup([
+    {
+      media: { url: 'https://picsum.photos/200/300/?random' },
+      caption: 'Piped from URL', // If you'll specify captions for more than one element telegram will show them only when you click on photo preview for each photo separately. - https://stackoverflow.com/questions/58893142/how-to-send-telegram-mediagroup-with-caption-text
+      type: 'photo',
+    },
+    {
+      media: { url: 'https://picsum.photos/200/300/?random' },
+      type: 'photo',
+    },
+    {
+      media: { url: 'https://picsum.photos/200/300/?random' },
+      type: 'photo',
+    },
+  ])
+  for (const message of group) {
+    // await new Promise((res) => setTimeout(res, randomDelayMS))
+    // we can shrink albums but as the media group is just an array, I could not find out how to grow it
+    // await ctx.telegram.deleteMessage(message.chat.id, message.message_id)
+    /*await ctx.telegram.editMessageMedia(
+      message.chat.id,
+      message.message_id,
+      undefined,
+      {
+        media: { url: 'https://picsum.photos/200/300/?random' },
+        caption: 'Piped from URL',
+        type: 'photo',
+      }
+    )*/
+  }
+})
+
 photoScene.action('timelapse', async (ctx) => {
   await ctx.answerCbQuery('Please check the interval options!')
   await ctx.deleteMessage()
@@ -123,12 +159,14 @@ photoScene.action('preset', async (ctx) => {
   const { text, markup } = renderPresetSelect(ctx)
 
   await ctx.editMessageCaption(text, markup)
+  /* update preview image, flickers in random mode
   await ctx.editMessageMedia({
     type: 'photo',
     media: await takePhoto(ctx.preset),
   })
   // again because changing the media replaces the whole message
   await ctx.editMessageCaption(text, markup)
+  */
 })
 // handle all presets
 photoScene.action(/.+/, async (ctx) => {
