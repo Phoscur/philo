@@ -3,6 +3,7 @@ import type { Preset } from './presets'
 export type { Preset } from './presets'
 
 export default interface PhiloContext extends Context {
+  sunsetTimings: number[]
   presets: { [name: string]: Preset }
   presetName: string
   preset: Preset

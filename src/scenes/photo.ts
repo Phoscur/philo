@@ -5,11 +5,22 @@ import type { Preset } from '../PhiloContext.interface'
 import type { Storage } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
+import { getNextSunset } from '../lib/sunset'
+import { InputMediaPhoto } from 'telegraf/typings/core/types/typegram'
 
-const { LOADING_SPINNER_URL, RANDOM_IMAGE_URL } = process.env
+const { LOADING_SPINNER_URL, RANDOM_IMAGE_URL, DATE_FORMAT } = process.env
+const dateFormat = DATE_FORMAT || 'DD.MM.YYYY HH:MM'
 
-const spinnerGif = { url: LOADING_SPINNER_URL || 'https://loading.io/mod/spinner/spinner/sample.gif' }
-const randomImage = { url: RANDOM_IMAGE_URL || 'https://picsum.photos/600/400/?random' }
+const spinnerGif = {
+  url:
+    LOADING_SPINNER_URL || 'https://loading.io/mod/spinner/spinner/sample.gif',
+}
+const randomImage: InputMediaPhoto = {
+  media: {
+    url: RANDOM_IMAGE_URL || 'https://picsum.photos/600/400/?random',
+  },
+  type: 'photo'
+}
 const randomDelayMS = 500
 // Handler factories
 const { enter, leave } = Scenes.Stage
@@ -17,9 +28,12 @@ const { enter, leave } = Scenes.Stage
 function renderPhotoMessage(ctx: PhiloContext) {
   const text = `Selected options: ${ctx.presetName} 📷\n${ctx.preset}`
   const markup = Markup.inlineKeyboard([
-    Markup.button.callback('Switch Preset 📷', 'preset'),
-    Markup.button.callback('Single Shot 🥃', 'shot'),
-    Markup.button.callback('Timelapse 🎥', 'timelapse'),
+    [Markup.button.callback('Switch Preset 📷', 'preset')],
+    [
+      Markup.button.callback('Single Shot 🥃', 'shot'),
+      Markup.button.callback('Sunset 🥃', 'sunsetShot'),
+    ],
+    [Markup.button.callback('Timelapse 🎥', 'timelapse')],
     // Markup.button.callback('Done', 'done'), TODO? delete preview message?
   ])
   return {
@@ -45,7 +59,7 @@ function renderPresetSelect(ctx: PhiloContext) {
   }
 }
 
-async function takePhoto(preset: Preset) {
+async function takePhoto(preset: Preset): Promise<InputMediaPhoto> {
   if (preset.random) {
     return randomImage
   }
@@ -68,10 +82,7 @@ async function prepareShot(
     message.chat.id,
     message.message_id,
     undefined,
-    {
-      type: 'photo',
-      media: await takePhoto(ctx.preset),
-    }
+    await takePhoto(ctx.preset),
   )
   return message
 }
@@ -104,16 +115,16 @@ export default function createPhotoScene(storage: Storage) {
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
-  
+
   photoScene.enter(showSelectedOptions)
   photoScene.leave((ctx) => ctx.reply('Bye'))
   photoScene.command(['done', 'exit'], leave<PhiloContext>())
   photoScene.action(['done', 'exit'], leave<PhiloContext>())
-  
+
   photoScene.command(['photo', 'options'], showSelectedOptions)
   photoScene.action('shot', async (ctx) => {
     await ctx.answerCbQuery('Taking image now...')
-    // const message = 
+    // const message =
     await prepareShot(ctx)
     // TODO add share button (repost in CHANNEL_CHAT_ID with different caption)
     /* ctx.telegram.editMessageCaption(
@@ -123,9 +134,38 @@ export default function createPhotoScene(storage: Storage) {
       'filename/date todo'
     )*/
   })
-  
+  photoScene.action('sunsetShot', async (ctx) => {
+    const sunset = await getNextSunset()
+    const diff = sunset.diff > 0 ? sunset.diff : -1 // TODO take image the next day instead?
+    if (diff < 0)
+      return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
+    await ctx.answerCbQuery(
+      `Taking image in ${sunset.humanizedDiff}... (${diff}ms)`
+    )
+    // TODO use media group for all sunsetTimings
+    setImmediate(async () => {
+      const message = await prepareShot(ctx, async (message) => {
+        await ctx.telegram.editMessageCaption(
+          message.chat.id,
+          message.message_id,
+          undefined,
+          `${sunset.date.format(dateFormat)} (waiting ${diff}ms)`
+        )
+        await new Promise((resolve) => setTimeout(resolve, diff))
+      })
+      await ctx.telegram.editMessageCaption(
+        message.chat.id,
+        message.message_id,
+        undefined,
+        sunset.date.format(dateFormat)
+      )
+    })
+  })
+
   photoScene.command('album', async (ctx) => {
-    const group = await ctx.replyWithMediaGroup([
+    const telegramMediaGroupLimit = 10
+    const images = Array(telegramMediaGroupLimit).fill(randomImage)
+    const group = await ctx.replyWithMediaGroup(images)/*[
       {
         media: { url: 'https://picsum.photos/200/300/?random' },
         caption: 'Piped from URL', // If you'll specify captions for more than one element telegram will show them only when you click on photo preview for each photo separately. - https://stackoverflow.com/questions/58893142/how-to-send-telegram-mediagroup-with-caption-text
@@ -140,11 +180,11 @@ export default function createPhotoScene(storage: Storage) {
         type: 'photo',
       },
     ])
-    for (const message of group) {
+    /*for (const message of group) {
       // await new Promise((res) => setTimeout(res, randomDelayMS))
       // we can shrink albums but as the media group is just an array, I could not find out how to grow it
       // await ctx.telegram.deleteMessage(message.chat.id, message.message_id)
-      /*await ctx.telegram.editMessageMedia(
+      await ctx.telegram.editMessageMedia(
         message.chat.id,
         message.message_id,
         undefined,
@@ -153,21 +193,22 @@ export default function createPhotoScene(storage: Storage) {
           caption: 'Piped from URL',
           type: 'photo',
         }
-      )*/
-    }
+      )
+    }*/
   })
-  
+
   photoScene.action('timelapse', async (ctx) => {
     await ctx.answerCbQuery('Please check the interval options!')
-    await ctx.deleteMessage()
-    enter<PhiloContext>('timelapse')(ctx)
+    // TODO extract to time
+    // await ctx.deleteMessage()
+    // enter<PhiloContext>('timelapse')(ctx)
   })
-  
+
   // TODO? should image presets have their own scene (because of the all presets handler)?
   photoScene.action('preset', async (ctx) => {
     await ctx.answerCbQuery()
     const { text, markup } = renderPresetSelect(ctx)
-  
+
     await ctx.editMessageCaption(text, markup)
     /* update preview image, flickers in random mode
     await ctx.editMessageMedia({
@@ -189,15 +230,11 @@ export default function createPhotoScene(storage: Storage) {
     ctx.presetName = name
     ctx.preset = preset
     const { text, markup } = renderPresetSelect(ctx)
-    await ctx.editMessageMedia({
-      type: 'photo',
-      media: await takePhoto(ctx.preset),
-    })
+    await ctx.editMessageMedia(await takePhoto(ctx.preset))
     await ctx.editMessageCaption(text, markup)
   })
   photoScene.on('message', (ctx) =>
     ctx.replyWithMarkdown('📷 Command not recognised - try /options')
   )
-  return photoScene;
+  return photoScene
 }
-

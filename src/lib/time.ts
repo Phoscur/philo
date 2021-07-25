@@ -11,8 +11,8 @@ dayjs.extend(relativeTime)
 
 const { LOCATION_TIMEZONE } = process.env
 
-export function changeTimezoneLondonToLocal(time: Date|number) {
-  return dayjs.tz(time, "Europe/London").tz(LOCATION_TIMEZONE)
+export function changeTimezoneToLocal(time: Date|number) {
+  return dayjs(time).tz(LOCATION_TIMEZONE || 'Europe/Berlin')
 }
 
 export function humanizeDuration(diff: number) {

@@ -3,7 +3,7 @@ import buildStage from './scenes'
 import FileStorage from './lib/storage'
 import type PhiloContext from './PhiloContext.interface'
 
-import presets from './presets' // TODO use storage
+import presets, { sunsetTimings } from './presets' // TODO use storage
 
 const { BOT_TOKEN, GROUP_CHAT_ID, STORAGE_DIRECTORY } = process.env
 if (!BOT_TOKEN) {
@@ -19,8 +19,9 @@ bot.use(session({ // session is required for scenes: one session per chat (not u
 }))
 bot.use((ctx, next) => {
   ctx.presetName ??= 'base'
-  ctx.preset = presets.base
-  ctx.presets = presets
+  ctx.preset ??= presets.base
+  ctx.presets ??= presets
+  ctx.sunsetTimings ??= sunsetTimings
   return next()
 })
 bot.use(buildStage(storage).middleware())

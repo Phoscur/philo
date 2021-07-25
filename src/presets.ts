@@ -1,5 +1,5 @@
-import type { StitchOptions } from "./lib/ffmpeg"
 import type { StillOptions } from "./lib/raspistill"
+import type { StitchOptions } from "./lib/ffmpeg"
 
 export interface PhiloOptions {
   duration?: number
@@ -25,6 +25,7 @@ export function printPreset(p: Preset) {
 
 const base: Preset = JSON.parse(process.env.DEFAULT_PRESET || '{}')
 const presets: { [name: string]: Preset } = JSON.parse(process.env.PRESETS || '{}')
+export const sunsetTimings: number[] = JSON.parse(process.env.SUNSET_TIMINGS || '[0]')
 
 base.toString = printPreset.bind(null, base)
 for (const presetName in presets) {
