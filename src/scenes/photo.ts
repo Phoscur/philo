@@ -6,8 +6,10 @@ import type { Storage } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
 
-const spinnerGif = { url: 'https://loading.io/mod/spinner/spinner/sample.gif' }
-const randomImage = { url: 'https://picsum.photos/600/400/?random' }
+const { LOADING_SPINNER_URL, RANDOM_IMAGE_URL } = process.env
+
+const spinnerGif = { url: LOADING_SPINNER_URL || 'https://loading.io/mod/spinner/spinner/sample.gif' }
+const randomImage = { url: RANDOM_IMAGE_URL || 'https://picsum.photos/600/400/?random' }
 const randomDelayMS = 500
 // Handler factories
 const { enter, leave } = Scenes.Stage
