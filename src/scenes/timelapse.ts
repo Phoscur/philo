@@ -9,7 +9,7 @@ const timelapseScene = new Scenes.BaseScene<PhiloContext>('timelapse')
 // TODO stop interval or queue timelapse rendering
 timelapseScene.enter((ctx) => ctx.reply('TODO timelapse - echo scene'))
 timelapseScene.leave((ctx) => ctx.reply('exiting echo scene'))
-timelapseScene.command('done', leave<PhiloContext>())
+timelapseScene.command(['done', 'exit'], leave<PhiloContext>())
 timelapseScene.on('text', (ctx) => ctx.reply(ctx.message.text))
 timelapseScene.on('message', (ctx) => ctx.reply('Only text messages please'))
 
