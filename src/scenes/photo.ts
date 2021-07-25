@@ -98,6 +98,7 @@ photoScene.enter(showSelectedOptions)
 photoScene.leave((ctx) => ctx.reply('Bye'))
 photoScene.command(['done', 'exit'], leave<PhiloContext>())
 photoScene.action(['done', 'exit'], leave<PhiloContext>())
+
 photoScene.command(['photo', 'options'], showSelectedOptions)
 photoScene.action('shot', async (ctx) => {
   await ctx.answerCbQuery('Taking image now...')
@@ -107,8 +108,15 @@ photoScene.action('shot', async (ctx) => {
     message.message_id,
     undefined,
     'filename/date todo'
-  )
+  ) // TODO add share button (repost in CHANNEL_CHAT_ID with different caption)
 })
+
+photoScene.action('timelapse', async (ctx) => {
+  await ctx.answerCbQuery('Please check the interval options!')
+  await ctx.deleteMessage()
+  enter<PhiloContext>('timelapse')(ctx)
+})
+
 // TODO? should image presets have their own scene (because of the all presets handler)?
 photoScene.action('preset', async (ctx) => {
   await ctx.answerCbQuery()
@@ -121,11 +129,6 @@ photoScene.action('preset', async (ctx) => {
   })
   // again because changing the media replaces the whole message
   await ctx.editMessageCaption(text, markup)
-})
-photoScene.action('timelapse', async (ctx) => {
-  await ctx.answerCbQuery('Please check the interval options!')
-  await ctx.deleteMessage()
-  enter<PhiloContext>('timelapse')(ctx)
 })
 // handle all presets
 photoScene.action(/.+/, async (ctx) => {
