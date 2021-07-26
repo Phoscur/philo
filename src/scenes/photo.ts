@@ -37,10 +37,11 @@ const { enter, leave } = Scenes.Stage
 function renderPhotoMessage(ctx: PhiloContext) {
   const text = `Selected options: ${ctx.presetName} 📷\n${ctx.preset}`
   const markup = Markup.inlineKeyboard([
+    [Markup.button.callback('Single Shot 🥃', 'shot')],
     [Markup.button.callback('Switch Preset 📷', 'preset')],
     [
-      Markup.button.callback('Single Shot 🥃', 'shot'),
       Markup.button.callback('Sunset 🥃', 'sunsetShot'),
+      Markup.button.callback('🥃🥃🥃🥃', 'sunsetShots'),
     ],
     [Markup.button.callback('Timelapse 🎥', 'timelapse')],
     // Markup.button.callback('Done', 'done'), TODO? delete preview message?
@@ -99,6 +100,32 @@ async function prepareShot(
   return message
 }
 
+async function prepareGroupShots(
+  ctx: PhiloContext,
+  preset: Preset,
+  size = 10,
+  meanwhile?: (m: Message.MediaMessage, index: number) => Promise<boolean>
+) {
+  const images = Array(size).fill(randomImage)
+  const messages = await ctx.replyWithMediaGroup(images)
+  if (meanwhile) {
+    let aborted = false
+    for (const [index, message] of messages.entries()) {
+      aborted = await meanwhile(message, index)
+
+      if (aborted) return messages
+
+      await ctx.telegram.editMessageMedia(
+        message.chat.id,
+        message.message_id,
+        undefined,
+        await takePhoto(preset)
+      )
+    }
+  }
+  return messages
+}
+
 async function setCaption(
   ctx: PhiloContext,
   text: string,
@@ -153,6 +180,67 @@ export default function createPhotoScene(storage: Storage) {
       'filename/date todo'
     )*/
   })
+  photoScene.action('sunsetShots', async (ctx) => {
+    const timings = ctx.sunsetTimings
+    const sunset = await getNextSunset()
+    const diff = sunset.diff > 0 ? sunset.diff : -1 // TODO take image the next day instead?
+    if (diff < 0)
+      return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
+    await ctx.answerCbQuery(
+      `Taking image in ${sunset.humanizedDiff}... (${diff}ms)`
+    )
+    // break off execution flow (to answer other commands while waiting)
+    setImmediate(async () => {
+      /* TODO abort current task
+      const markup = Markup.inlineKeyboard([
+        Markup.button.callback('Cancel', 'cancelRunning'),
+      ])*/
+      let aborted = false
+      let firstMessage // the first images gets the album caption
+      const messages = await prepareGroupShots(ctx, ctx.preset, timings.length, async (message: Message.MediaMessage, index: number) => {
+        const wait = diff + timings[index] * 1000
+        if (index === 0) {
+          firstMessage = message
+        }
+        await ctx.telegram.editMessageCaption(
+          message.chat.id,
+          message.message_id,
+          undefined,
+          `${sunset.date.format(dateFormat)} (waiting ${Math.round(wait/1000)}s)`
+        )
+        const taskId = `${message.chat.id}:${message.message_id}`
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(resolve, diff)
+            running[taskId] = {
+              message,
+              abort: async () => {
+                clearTimeout(timeout)
+                delete running[taskId]
+                reject('Aborted: ' + taskId)
+              },
+            }
+          })
+        } catch (error) {
+          console.error(error)
+          aborted = true
+        } finally {
+          delete running[taskId]
+        }
+        return aborted
+      })
+      if (aborted) return aborted
+
+      await ctx.telegram.editMessageCaption(
+        messages[0].chat.id,
+        messages[0].message_id,
+        undefined,
+        sunset.date.format(dateFormat)
+      )
+      return false
+    })
+  })
+  
   photoScene.action('sunsetShot', async (ctx) => {
     const sunset = await getNextSunset()
     const diff = sunset.diff > 0 ? sunset.diff : -1 // TODO take image the next day instead?
@@ -196,7 +284,7 @@ export default function createPhotoScene(storage: Storage) {
         }
         return aborted
       })
-      if (aborted) return
+      if (aborted) return aborted
 
       await ctx.telegram.editMessageCaption(
         message.chat.id,
@@ -204,6 +292,7 @@ export default function createPhotoScene(storage: Storage) {
         undefined,
         sunset.date.format(dateFormat)
       )
+      return false
     })
   })
   photoScene.action('cancelRunning', async (ctx) => {
