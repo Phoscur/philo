@@ -7,11 +7,11 @@ import type {
 } from 'telegraf/typings/core/types/typegram'
 
 import type PhiloContext from '../PhiloContext.interface'
-import type { Preset } from '../PhiloContext.interface'
+import type { Preset, Task } from '../PhiloContext.interface'
 import type { Storage } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
-import { getNextSunset } from '../lib/sunset'
+import { getNextSunset, Sunset } from '../lib/sunset'
 
 const { LOADING_SPINNER_URL, RANDOM_IMAGE_URL, DATE_FORMAT } = process.env
 const dateFormat = DATE_FORMAT || 'DD.MM.YYYY HH:MM'
@@ -38,11 +38,11 @@ function renderPhotoMessage(ctx: PhiloContext) {
   const text = `Selected options: ${ctx.presetName} 📷\n${ctx.preset}`
   const markup = Markup.inlineKeyboard([
     [Markup.button.callback('Single Shot 🥃', 'shot')],
-    [Markup.button.callback('Switch Preset 📷', 'preset')],
     [
-      Markup.button.callback('Sunset 🥃', 'sunsetShot'),
-      Markup.button.callback('🥃🥃🥃🥃', 'sunsetShots'),
+      Markup.button.callback('🌇🥃', 'sunsetShot'),
+      Markup.button.callback('🌇🥃🥃🥃🥃', 'sunsetShots'),
     ],
+    [Markup.button.callback('Switch Preset 📷', 'preset')],
     [Markup.button.callback('Timelapse 🎥', 'timelapse')],
     // Markup.button.callback('Done', 'done'), TODO? delete preview message?
   ])
@@ -104,17 +104,42 @@ async function prepareGroupShots(
   ctx: PhiloContext,
   preset: Preset,
   size = 10,
-  meanwhile?: (m: Message.MediaMessage, index: number) => Promise<boolean>
+  meanwhile?: (
+    m: Message.MediaMessage,
+    index: number,
+    status: Message.MediaMessage
+  ) => Promise<boolean>
 ) {
+  const markup = Markup.inlineKeyboard([
+    Markup.button.callback('Cancel', 'cancelRunning'),
+  ])
   const images = Array(size).fill(randomImage)
   const messages = await ctx.replyWithMediaGroup(images)
+  const status = await ctx.replyWithAnimation(spinnerGif.media, {
+    caption: 'Taking shots ... ',
+    ...markup,
+  })
   if (meanwhile) {
+    let caption = status.caption
     let aborted = false
     for (const [index, message] of messages.entries()) {
-      aborted = await meanwhile(message, index)
+      caption += '🥃'
+      aborted = await meanwhile(message, index, status)
 
-      if (aborted) return messages
-
+      if (aborted) {
+        for (const m of messages) {
+          await ctx.telegram.deleteMessage(m.chat.id, m.message_id)
+        }
+        return []
+      }
+      console.log(caption)
+      await ctx.telegram.editMessageCaption(
+        status.chat.id,
+        status.message_id,
+        undefined,
+        caption,
+        markup
+      )
       await ctx.telegram.editMessageMedia(
         message.chat.id,
         message.message_id,
@@ -123,7 +148,46 @@ async function prepareGroupShots(
       )
     }
   }
+  await ctx.telegram.deleteMessage(status.chat.id, status.message_id)
   return messages
+}
+
+function sunsetTaskHandler(ctx: PhiloContext, running: { [id: string]: Task }, sunset: Sunset) {
+  let aborted = false
+  return async (
+    message: Message.MediaMessage,
+    index: number,
+    status: Message.MediaMessage
+  ) => {
+    const wait = sunset.diff + ctx.sunsetTimings[index] * 1000
+    await ctx.telegram.editMessageCaption(
+      message.chat.id,
+      message.message_id,
+      undefined,
+      `${sunset.date.format(dateFormat)} (waiting ${Math.round(wait / 1000)}s)`
+    )
+    const taskId = `${status.chat.id}:${status.message_id}`
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(resolve, wait)
+        running[taskId] = {
+          message,
+          abort: async () => {
+            clearTimeout(timeout)
+            reject('Aborted: ' + taskId)
+          },
+        }
+        console.log(`Sunset Task ${taskId} running`)
+      })
+    } catch (error) {
+      console.error(error)
+      aborted = true
+    } finally {
+      delete running[taskId]
+      console.log(`Task ${taskId} is finished`, aborted ? '(was aborted)' : '')
+    }
+    return aborted
+  }
 }
 
 async function setCaption(
@@ -151,13 +215,8 @@ async function showSelectedOptions(ctx: PhiloContext) {
   await setCaption(ctx, text, markup, message)
 }
 
-interface Task {
-  message: Message.MediaMessage
-  abort(): Promise<void>
-}
-
 export default function createPhotoScene(storage: Storage) {
-  const running: { [id: string]: Task } = {}
+  const running: { [id: string]: Task } = {} // (needs sharing beyond the context lifetime of setImmediate)
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
@@ -183,7 +242,7 @@ export default function createPhotoScene(storage: Storage) {
   photoScene.action('sunsetShots', async (ctx) => {
     const timings = ctx.sunsetTimings
     const sunset = await getNextSunset()
-    const diff = sunset.diff > 0 ? sunset.diff : -1 // TODO take image the next day instead?
+    const diff = sunset.diff + timings[0] > 0 ? sunset.diff : -1 // TODO take image the next day instead?
     if (diff < 0)
       return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
     await ctx.answerCbQuery(
@@ -191,56 +250,23 @@ export default function createPhotoScene(storage: Storage) {
     )
     // break off execution flow (to answer other commands while waiting)
     setImmediate(async () => {
-      /* TODO abort current task
-      const markup = Markup.inlineKeyboard([
-        Markup.button.callback('Cancel', 'cancelRunning'),
-      ])*/
-      let aborted = false
-      let firstMessage // the first images gets the album caption
-      const messages = await prepareGroupShots(ctx, ctx.preset, timings.length, async (message: Message.MediaMessage, index: number) => {
-        const wait = diff + timings[index] * 1000
-        if (index === 0) {
-          firstMessage = message
-        }
-        await ctx.telegram.editMessageCaption(
-          message.chat.id,
-          message.message_id,
-          undefined,
-          `${sunset.date.format(dateFormat)} (waiting ${Math.round(wait/1000)}s)`
-        )
-        const taskId = `${message.chat.id}:${message.message_id}`
-        try {
-          await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(resolve, diff)
-            running[taskId] = {
-              message,
-              abort: async () => {
-                clearTimeout(timeout)
-                delete running[taskId]
-                reject('Aborted: ' + taskId)
-              },
-            }
-          })
-        } catch (error) {
-          console.error(error)
-          aborted = true
-        } finally {
-          delete running[taskId]
-        }
-        return aborted
-      })
-      if (aborted) return aborted
-
+      const [message] = await prepareGroupShots(
+        ctx,
+        ctx.preset,
+        timings.length,
+        sunsetTaskHandler(ctx, running, sunset)
+      )
+      if (!message) return
+      // the first images gets the album caption
       await ctx.telegram.editMessageCaption(
-        messages[0].chat.id,
-        messages[0].message_id,
+        message.chat.id,
+        message.message_id,
         undefined,
         sunset.date.format(dateFormat)
       )
-      return false
     })
   })
-  
+
   photoScene.action('sunsetShot', async (ctx) => {
     const sunset = await getNextSunset()
     const diff = sunset.diff > 0 ? sunset.diff : -1 // TODO take image the next day instead?
@@ -271,7 +297,6 @@ export default function createPhotoScene(storage: Storage) {
               message,
               abort: async () => {
                 clearTimeout(timeout)
-                delete running[taskId]
                 reject('Aborted: ' + taskId)
               },
             }
@@ -286,23 +311,24 @@ export default function createPhotoScene(storage: Storage) {
       })
       if (aborted) return aborted
 
-      await ctx.telegram.editMessageCaption(
+      /*await ctx.telegram.editMessageCaption(
         message.chat.id,
         message.message_id,
         undefined,
         sunset.date.format(dateFormat)
-      )
+      )*/
       return false
     })
   })
   photoScene.action('cancelRunning', async (ctx) => {
     const { message } = ctx.callbackQuery
     const id = `${message?.chat.id}:${message?.message_id}`
-    if (!running[id]) {
+    const task: Task = running[id]
+    if (!task) {
       return ctx.answerCbQuery(`Error Message ID[${id}] not found!`)
     }
     await ctx.answerCbQuery(`Cancelled!`)
-    await running[id].abort()
+    await task.abort()
     await ctx.deleteMessage()
   })
 

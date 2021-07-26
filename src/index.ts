@@ -3,13 +3,13 @@ import buildStage from './scenes'
 import FileStorage from './lib/storage'
 import type PhiloContext from './PhiloContext.interface'
 
-import presets, { sunsetTimings } from './presets' // TODO use storage
+import presets, { sunsetTimings } from './presets' // TODO? use storage instead?
 
 const { BOT_TOKEN, GROUP_CHAT_ID, STORAGE_DIRECTORY } = process.env
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN must be provided by ENV!')
 }
-const storage = new FileStorage()
+const storage = new FileStorage(STORAGE_DIRECTORY)
 const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
 
 // bot.use(Telegraf.log())

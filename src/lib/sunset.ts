@@ -1,7 +1,14 @@
 import axios from 'axios'
+import { Dayjs } from 'dayjs'
 import { changeTimezoneToLocal, humanizeDuration } from './time'
 
 const { LOCATION_LATITUDE, LOCATION_LONGITUDE } = process.env
+
+export interface Sunset {
+  date: Dayjs
+  readonly diff: number
+  readonly humanizedDiff: string
+}
 
 export async function getNextSunset(tomorrow = false) {
   const apiUrl = `https://api.sunrise-sunset.org/json?lat=${LOCATION_LATITUDE}&lng=${LOCATION_LONGITUDE}&formatted=0&${
@@ -19,7 +26,7 @@ export async function getNextSunset(tomorrow = false) {
     get humanizedDiff() {
       return humanizeDuration(this.diff)
     },
-  } 
+  } as Sunset
 }
 
 if (require.main === module) {
