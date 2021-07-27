@@ -29,7 +29,7 @@ export default function enhancePhotoScene(
     const images = Array(size).fill(ctx.storage.random)
     const messages = await ctx.replyWithMediaGroup(images)
     const status = await ctx.replyWithAnimation(ctx.storage.spinner.media, {
-      caption: `Taking shots at ${sunset.hoursFormatted} ...`,
+      caption: `Taking shots at ${sunset.dayFormatted} ...`,
       ...markup,
     })
     const taskId = `${status.chat.id}:${status.message_id}`
@@ -37,7 +37,9 @@ export default function enhancePhotoScene(
     let wait = diff
     // break off execution flow (to answer other commands while waiting)
     setImmediate(async () => {
-      await running.createWaitTask(taskId, diff)
+      while (wait > 0) {
+        await running.createWaitTask(taskId, wait)
+      }
 
 
       const [message] = messages

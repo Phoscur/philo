@@ -2,13 +2,15 @@ import axios from 'axios'
 import { Dayjs } from 'dayjs'
 import { changeTimezoneToLocal, humanizeDuration } from './time'
 
-const { LOCATION_LATITUDE, LOCATION_LONGITUDE, DATE_FORMAT, HOURS_FORMAT } = process.env
-const dateFormat = DATE_FORMAT || 'DD.MM.YYYY HH:MM'
-const hoursFormat = HOURS_FORMAT || 'HH:MM:SS'
+const { LOCATION_LATITUDE, LOCATION_LONGITUDE, DATE_FORMAT, DAY_FORMAT, HOURS_FORMAT } = process.env
+const dateFormat = DATE_FORMAT || 'DD.MM.YYYY HH:mm'
+const dayFormat = DAY_FORMAT || 'DD. MMMM YYYY'
+const hoursFormat = HOURS_FORMAT || 'HH:mm:ss'
 
 export interface Sunset {
   date: Dayjs
   readonly fullFormatted: string
+  readonly dayFormatted: string
   readonly hoursFormatted: string
   readonly diff: number
   readonly humanizedDiff: string
@@ -32,6 +34,9 @@ export async function getNextSunset(tomorrow = false) {
     },
     get fullFormatted() {
       return localSunset.format(dateFormat)
+    },
+    get dayFormatted() {
+      return localSunset.format(dayFormat)
     },
     get hoursFormatted() {
       return localSunset.format(hoursFormat)
