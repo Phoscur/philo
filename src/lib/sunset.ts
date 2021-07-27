@@ -2,10 +2,14 @@ import axios from 'axios'
 import { Dayjs } from 'dayjs'
 import { changeTimezoneToLocal, humanizeDuration } from './time'
 
-const { LOCATION_LATITUDE, LOCATION_LONGITUDE } = process.env
+const { LOCATION_LATITUDE, LOCATION_LONGITUDE, DATE_FORMAT, HOURS_FORMAT } = process.env
+const dateFormat = DATE_FORMAT || 'DD.MM.YYYY HH:MM'
+const hoursFormat = HOURS_FORMAT || 'HH:MM:SS'
 
 export interface Sunset {
   date: Dayjs
+  readonly fullFormatted: string
+  readonly hoursFormatted: string
   readonly diff: number
   readonly humanizedDiff: string
 }
@@ -25,6 +29,12 @@ export async function getNextSunset(tomorrow = false) {
     },
     get humanizedDiff() {
       return humanizeDuration(this.diff)
+    },
+    get fullFormatted() {
+      return localSunset.format(dateFormat)
+    },
+    get hoursFormatted() {
+      return localSunset.format(hoursFormat)
     },
   } as Sunset
 }

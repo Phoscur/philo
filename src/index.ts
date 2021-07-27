@@ -22,6 +22,7 @@ bot.use((ctx, next) => {
   ctx.preset ??= presets.base
   ctx.presets ??= presets
   ctx.sunsetTimings ??= sunsetTimings
+  ctx.storage ??= storage
   return next()
 })
 bot.use(buildStage(storage).middleware())
