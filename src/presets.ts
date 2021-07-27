@@ -31,34 +31,40 @@ export function printPreset(p: Preset) {
   return `${roi}\n${widthAndHeight}\n${duration} ${minutely}\n${interval} ${count}`
 }
 
-const base: Preset = JSON.parse(process.env.DEFAULT_PRESET || '{}')
 const presets: { [name: string]: Preset } = JSON.parse(
   process.env.PRESETS || '{}'
 )
+const base: Preset = JSON.parse(process.env.DEFAULT_PRESET || '{}')
 export const sunsetTimings: number[] = JSON.parse(
   process.env.SUNSET_TIMINGS || '[0]'
 )
 
 function enhancePreset(preset: Preset) {
-  preset.toString = printPreset.bind(null, preset)
-  Object.defineProperty(preset, 'interval', {
-    get() {
-      return Math.floor(60000 / this.minutely) || undefined
+  Object.defineProperties(preset, {
+    toString: {
+      get(): () => string {
+        return printPreset.bind(null, preset)
+      }
     },
-  })
-  Object.defineProperty(preset, 'count', {
-    get() {
-      return Math.round(this.minutely * this.duration) || undefined
+    interval: {
+      get() {
+        return Math.floor(60000 / this.minutely) || undefined
+      },
+    },
+    count: {
+      get() {
+        return Math.round(this.minutely * this.duration) || undefined
+      },
     },
   })
 }
 
-enhancePreset(base)
 for (const presetName in presets) {
   const preset = presets[presetName]
   console.log('Loading preset:', presetName, preset)
   enhancePreset(preset)
 }
+enhancePreset(base)
 
 export default {
   base: base as Preset,

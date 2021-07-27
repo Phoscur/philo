@@ -1,5 +1,4 @@
 import type { Context, Scenes, Telegraf } from 'telegraf'
-import type { Message } from 'telegraf/typings/core/types/typegram'
 import type { Storage } from './lib/storage'
 import type { Preset } from './presets'
 
