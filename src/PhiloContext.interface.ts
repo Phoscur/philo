@@ -1,4 +1,8 @@
 import type { Context, Scenes, Telegraf } from 'telegraf'
+import type {
+  InputMediaAnimation,
+  InputMediaPhoto,
+} from 'telegraf/typings/core/types/typegram'
 import type { Storage } from './lib/storage'
 import type { Preset } from './presets'
 
@@ -11,6 +15,8 @@ export default interface PhiloContext extends Context {
   presetName: string
   preset: Preset
   storage: Storage
+  randomImage: InputMediaPhoto
+  spinnerAnimation: InputMediaAnimation
 
   // declare scene type
   scene: Scenes.SceneContextScene<PhiloContext>

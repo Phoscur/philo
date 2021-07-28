@@ -1,5 +1,6 @@
 {
   "indent_size": 2,
   "indent_char": " ",
-  "space_in_paren": false
+  "space_in_paren": false,
+  "wrap_line_length": 120
 }
