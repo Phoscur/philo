@@ -1,16 +1,28 @@
-import { Context, Telegraf, Markup, session } from 'telegraf'
+import { Context, Telegraf, session } from 'telegraf'
 import buildStage from './scenes'
+import StillCamera from './lib/raspistill'
 import FileStorage from './lib/storage'
 import type PhiloContext from './PhiloContext.interface'
+import type { Preset, InputMediaCameraPhoto } from './PhiloContext.interface'
 
 import presets, { sunsetTimings } from './presets' // TODO? use storage instead?
 
+const randomEmulation = 300
 const { BOT_TOKEN, GROUP_CHAT_ID, STORAGE_DIRECTORY, RANDOM_IMAGE_URL } = process.env
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN must be provided by ENV!')
 }
 const storage = new FileStorage(STORAGE_DIRECTORY)
 const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
+
+async function takePhoto(preset: Preset): Promise<InputMediaCameraPhoto> {
+  const source = await new StillCamera(preset).takeImage()
+  const media = { source }
+  return {
+    type: 'photo',
+    media,
+  }
+}
 
 // bot.use(Telegraf.log())
 bot.use(
@@ -21,11 +33,23 @@ bot.use(
   })
 )
 bot.use((ctx, next) => {
+  ctx.randomEmulation = randomEmulation
   ctx.presetName ??= 'base'
   ctx.preset ??= presets.base
   ctx.presets ??= presets
   ctx.sunsetTimings ??= sunsetTimings
   ctx.storage ??= storage
+  ctx.takePhoto = (preset: Preset) => {
+    if (ctx.randomEmulation) {
+      return new Promise((resolve) =>
+        setTimeout(
+          resolve.bind(null, ctx.randomImage as InputMediaCameraPhoto),
+          ctx.randomEmulation
+        )
+      )
+    }
+    return takePhoto(preset)
+  }
   Object.defineProperties(ctx, {
     spinnerAnimation: {
       get() {

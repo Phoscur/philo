@@ -1,6 +1,9 @@
 # Image & configuration file storage
 storage
 
+# VSCode SFTP
+.vscode/sftp.json
+
 ### Github Node gitignore defaults
 # Logs
 logs

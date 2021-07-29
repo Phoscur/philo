@@ -1,31 +1,19 @@
 import { Markup } from 'telegraf'
-import type { InputMediaPhoto, InputFile } from 'telegraf/typings/core/types/typegram'
 import { getNextSunset, Sunset } from '../lib/sunset'
-import StillCamera from '../lib/raspistill'
+import stitchImages from '../lib/ffmpeg'
 import type TasksContainer from '../lib/tasks'
 import type PhiloContext from '../PhiloContext.interface'
 import type { PhiloScene, Preset } from '../PhiloContext.interface'
 
-/**
- * InputFile(ByBuffer) as declared by Typegram
- */
-interface InputFileByBuffer {
-  source: Buffer
-}
-
 export default function enhancePhotoScene(photoScene: PhiloScene, running: TasksContainer) {
-  async function takePhoto(preset: Preset) /*: Promise<InputMediaPhoto>*/ {
-    const source = await new StillCamera(preset).takeImage()
-    const media: InputFile & InputFileByBuffer = { source }
-    return {
-      type: 'photo',
-      media,
-    }
-  }
-
   photoScene.action('sunsetTimelapse', async (ctx: PhiloContext) => {
-    const size = 10
-    const timing = -60000 * 10 // 10min before
+    // TODO const size = 10 max group size
+    if (ctx.randomEmulation) {
+      return ctx.answerCbQuery(
+        `Sorry! Random Emulation Mode is enabled [${ctx.randomEmulation}ms] - no timelapses`
+      )
+    }
+    const timing = -60000 * 60 * 2 // 2h before
     const preset: Preset = Object.create(ctx.preset) // clone preset
     preset.duration = 60 * 3 // 3h
     preset.minutely = 3
@@ -57,7 +45,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
       caption: `${preset}\nTaking shots ${sunset.dayFormatted} ...`,
       ...markup,
     })
-    const taskId = `${status.chat.id}-${status.message_id}`
+    const taskId = `${status.chat.id}-${status.message_id}` // common format with cancelRunning action
     const count = preset.count || 10 // should always have a count (with duration&minutely set), ten is also the max count of images in an album
     let counter = 0
     let wait = diff
@@ -68,20 +56,14 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
           await running.createWaitTask(taskId, wait)
           const name = `${taskId}-${counter}`
           wait = preset.interval || 333
-          const image = await takePhoto(preset)
+          const image = await ctx.takePhoto(preset)
           await ctx.storage.save(name, image.media.source)
-          await ctx.telegram.editMessageMedia(
-            status.chat.id,
-            status.message_id,
-            undefined,
-            // image.media: InputFile|string? that leads to a typing error if not casted manually
-            image as InputMediaPhoto // Buffer from StillCamera
-          )
+          await ctx.telegram.editMessageMedia(status.chat.id, status.message_id, undefined, image)
           await ctx.telegram.editMessageCaption(
             status.chat.id,
             status.message_id,
             undefined,
-            `${preset}\nTaking more shots (${counter}) ...`,
+            `${preset}\nTaking more shots (${count - counter}) ...`,
             markup
           )
         }
@@ -95,6 +77,35 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
             sunset.fullFormatted
           )
         }*/
+
+        await ctx.telegram.editMessageCaption(
+          status.chat.id,
+          status.message_id,
+          undefined,
+          `Rendering timelapse consisting ${count} images ...`,
+          markup
+        )
+        const outFile = `${sunset.dayFormatted} (${taskId}).mp4`
+        await stitchImages(taskId, { outFile })
+        await ctx.telegram.editMessageMedia(
+          status.chat.id,
+          status.message_id,
+          undefined,
+          // image.media: InputFile|string? that leads to a typing error if not casted manually
+          {
+            type: 'animation',
+            media: {
+              source: ctx.storage.readStream(outFile),
+            },
+          }
+        )
+        await ctx.telegram.editMessageCaption(
+          status.chat.id,
+          status.message_id,
+          undefined,
+          `${sunset.dayFormatted}`
+          // removed markup
+        )
       } catch (error) {
         console.error(error)
         /* delete album preview when cancelled

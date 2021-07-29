@@ -4,7 +4,8 @@
   "description": "Photo & Timelapse Bot",
   "main": "dist/index.js",
   "scripts": {
-    "start": "npm run build && node -r dotenv/config dist/index.js",
+    "start": "npm run build && npm run run-build",
+    "run-build": "node -r dotenv/config dist/index.js",
     "build": "tsc",
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
     "dev-sundown": "ts-node-dev -r dotenv/config src/lib/sundown",

@@ -1,5 +1,9 @@
 import { Scenes, Markup } from 'telegraf'
-import type { InputMediaPhoto, Message, InlineKeyboardMarkup } from 'telegraf/typings/core/types/typegram'
+import type {
+  InputMediaPhoto,
+  Message,
+  InlineKeyboardMarkup,
+} from 'telegraf/typings/core/types/typegram'
 
 import type PhiloContext from '../PhiloContext.interface'
 import type { Preset } from '../PhiloContext.interface'
@@ -10,7 +14,6 @@ import setupSunsetTimelapse from './sunset'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import TasksContainer from '../lib/tasks'
 
-const randomDelayMS = 500
 // Handler factories
 const { enter, leave } = Scenes.Stage
 
@@ -18,7 +21,10 @@ function renderPhotoMessage(ctx: PhiloContext) {
   const text = `Selected options: ${ctx.presetName} 📷\n${ctx.preset}`
   const markup = Markup.inlineKeyboard([
     [Markup.button.callback('Single Shot 🥃', 'shot')],
-    [Markup.button.callback('Sunset Shot 🌇🥃', 'sunsetShot'), Markup.button.callback('🌇🥃🥃🥃🥃', 'sunsetShots')],
+    [
+      Markup.button.callback('Sunset Shot 🌇🥃', 'sunsetShot'),
+      Markup.button.callback('🌇🥃🥃🥃🥃', 'sunsetShots'),
+    ],
     [Markup.button.callback('Timelapse 🎥🌇', 'sunsetTimelapse')],
     [Markup.button.callback('Switch Preset 📷', 'preset')],
     // Markup.button.callback('Done', 'done'), TODO? delete preview message?
@@ -31,7 +37,9 @@ function renderPhotoMessage(ctx: PhiloContext) {
 
 function renderPresetSelect(ctx: PhiloContext) {
   const presetNames = Object.keys(ctx.presets).filter((name) => name !== ctx.presetName)
-  const buttons = presetNames.map((presetName) => Markup.button.callback(`${presetName} 📷`, presetName))
+  const buttons = presetNames.map((presetName) =>
+    Markup.button.callback(`${presetName} 📷`, presetName)
+  )
   return {
     text: `Current: ${ctx.presetName} 📷\n${ctx.preset}`,
     markup: Markup.inlineKeyboard([
@@ -48,7 +56,13 @@ async function setCaption(
   markup: Markup.Markup<InlineKeyboardMarkup>,
   message: Message.MediaMessage
 ) {
-  await ctx.telegram.editMessageCaption(message.chat.id, message.message_id, undefined, text, markup)
+  await ctx.telegram.editMessageCaption(
+    message.chat.id,
+    message.message_id,
+    undefined,
+    text,
+    markup
+  )
   return false
 }
 export default function createPhotoScene(storage: Storage) {
@@ -72,8 +86,7 @@ export default function createPhotoScene(storage: Storage) {
     }
     if (aborted) return message
 
-    const image = preset.random ? ctx.randomImage : ctx.randomImage // TODO use source instead of random url
-    await new Promise((res) => setTimeout(res, randomDelayMS))
+    const image = await ctx.takePhoto(preset)
     await ctx.telegram.editMessageMedia(message.chat.id, message.message_id, undefined, image)
     return message
   }
@@ -82,7 +95,11 @@ export default function createPhotoScene(storage: Storage) {
     ctx: PhiloContext,
     preset: Preset,
     size = 10,
-    meanwhile?: (m: Message.MediaMessage, index: number, status: Message.MediaMessage) => Promise<boolean>
+    meanwhile?: (
+      m: Message.MediaMessage,
+      index: number,
+      status: Message.MediaMessage
+    ) => Promise<boolean>
   ) {
     const markup = Markup.inlineKeyboard([Markup.button.callback('Cancel', 'cancelRunning')])
     const images = Array(size).fill(ctx.randomImage)
@@ -105,9 +122,14 @@ export default function createPhotoScene(storage: Storage) {
           return []
         }
         console.log(caption)
-        await ctx.telegram.editMessageCaption(status.chat.id, status.message_id, undefined, caption, markup)
-        const image = preset.random ? ctx.randomImage : ctx.randomImage // TODO use source instead of random url
-        await new Promise((res) => setTimeout(res, randomDelayMS))
+        await ctx.telegram.editMessageCaption(
+          status.chat.id,
+          status.message_id,
+          undefined,
+          caption,
+          markup
+        )
+        const image = await ctx.takePhoto(preset)
         await ctx.telegram.editMessageMedia(message.chat.id, message.message_id, undefined, image)
       }
     }
@@ -182,7 +204,12 @@ export default function createPhotoScene(storage: Storage) {
       )
       if (!message) return
       // the first images gets the album caption
-      await ctx.telegram.editMessageCaption(message.chat.id, message.message_id, undefined, sunset.fullFormatted)
+      await ctx.telegram.editMessageCaption(
+        message.chat.id,
+        message.message_id,
+        undefined,
+        sunset.fullFormatted
+      )
     })
   })
 
@@ -273,15 +300,28 @@ export default function createPhotoScene(storage: Storage) {
     ctx.presetName = name
     ctx.preset = preset
     const { text, markup } = renderPresetSelect(ctx)
-    const image = preset.random ? ctx.randomImage : ctx.randomImage // TODO use source instead of random url
-    await new Promise((res) => setTimeout(res, randomDelayMS))
+    const image = preset.random ? ctx.randomImage : await ctx.takePhoto(preset)
     await ctx.editMessageMedia(image)
     await ctx.editMessageCaption(text, markup)
+  })
+  photoScene.hears(/\/randomEmulation ?(\d+)?/, async (ctx) => {
+    const arg = parseInt(ctx.match[1])
+    const delay = arg === 0 ? 0 : arg || 300
+    const message =
+      ctx.randomEmulation !== delay
+        ? `${ctx.randomEmulation} -> ${delay}ms delay`
+        : `${delay}ms delay`
+    ctx.reply(
+      !delay ? `Random Emulation Mode disabled` : `Random Emulation Mode enabled (${message})`
+    )
+    ctx.randomEmulation = delay
   })
 
   photoScene.hears(/\/random ?(\d+)?/, async (ctx) => {
     const telegramMediaGroupLimit = 10
-    const images: InputMediaPhoto[] = Array(parseInt(ctx.match[1]) || telegramMediaGroupLimit).fill(ctx.randomImage)
+    const images: InputMediaPhoto[] = Array(parseInt(ctx.match[1]) || telegramMediaGroupLimit).fill(
+      ctx.randomImage
+    )
     // const group =
     await ctx.replyWithMediaGroup(images) /*[
       {
@@ -315,7 +355,9 @@ export default function createPhotoScene(storage: Storage) {
     }*/
   })
 
-  photoScene.on('message', (ctx) => ctx.replyWithMarkdown('📷 Command not recognised - try /options'))
+  photoScene.on('message', (ctx) =>
+    ctx.replyWithMarkdown('📷 Command not recognised - try /options')
+  )
 
   return photoScene
 }
