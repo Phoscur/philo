@@ -51,8 +51,8 @@ export enum AwbMode {
 // export enum ImxFxMode {}
 
 export interface StillOptions {
-  width?: number|string
-  height?: number|string
+  width?: number | string
+  height?: number | string
   rotation?: Rotation
   flip?: Flip
   delay?: number
@@ -78,7 +78,7 @@ export default class StillCamera {
   constructor(options: StillOptions = {}) {
     const width = DEFAULT_WIDTH
     const height = DEFAULT_HEIGHT
-    const delay = parseInt(DEFAULT_DELAY || "") || 500
+    const delay = parseInt(DEFAULT_DELAY || '') || 500
     this.options = {
       rotation: Rotation.Rotate0,
       flip: Flip.None,
@@ -88,37 +88,29 @@ export default class StillCamera {
       ...options,
     }
   }
-
   async takeImage() {
     try {
       return await spawnPromise('raspistill', [
         /**
          * Width
          */
-        ...(this.options.width
-          ? ['--width', this.options.width.toString()]
-          : []),
+        ...(this.options.width ? ['--width', this.options.width.toString()] : []),
 
         /**
          * Height
          */
-        ...(this.options.height
-          ? ['--height', this.options.height.toString()]
-          : []),
+        ...(this.options.height ? ['--height', this.options.height.toString()] : []),
 
         /**
          * Rotation
          */
-        ...(this.options.rotation
-          ? ['--rotation', this.options.rotation.toString()]
-          : []),
+        ...(this.options.rotation ? ['--rotation', this.options.rotation.toString()] : []),
 
         /**
          * Horizontal flip
          */
         ...(this.options.flip &&
-        (this.options.flip === Flip.Horizontal ||
-          this.options.flip === Flip.Both)
+        (this.options.flip === Flip.Horizontal || this.options.flip === Flip.Both)
           ? ['--hflip']
           : []),
 
@@ -133,23 +125,17 @@ export default class StillCamera {
         /**
          * Shutter Speed
          */
-        ...(this.options.shutter
-          ? ['--shutter', this.options.shutter.toString()]
-          : []),
+        ...(this.options.shutter ? ['--shutter', this.options.shutter.toString()] : []),
 
         /**
          * Sharpness (-100 to 100; default 0)
          */
-        ...(this.options.sharpness
-          ? ['--sharpness', this.options.sharpness.toString()]
-          : []),
+        ...(this.options.sharpness ? ['--sharpness', this.options.sharpness.toString()] : []),
 
         /**
          * Contrast (-100 to 100; default 0)
          */
-        ...(this.options.contrast
-          ? ['--contrast', this.options.contrast.toString()]
-          : []),
+        ...(this.options.contrast ? ['--contrast', this.options.contrast.toString()] : []),
 
         /**
          * Brightness (0 to 100; default 50)
@@ -161,9 +147,7 @@ export default class StillCamera {
         /**
          * Saturation (-100 to 100; default 0)
          */
-        ...(this.options.saturation
-          ? ['--saturation', this.options.saturation.toString()]
-          : []),
+        ...(this.options.saturation ? ['--saturation', this.options.saturation.toString()] : []),
 
         /**
          * ISO
@@ -180,30 +164,22 @@ export default class StillCamera {
         /**
          * Exposure Mode
          */
-        ...(this.options.exposureMode
-          ? ['--exposure', this.options.exposureMode.toString()]
-          : []),
+        ...(this.options.exposureMode ? ['--exposure', this.options.exposureMode.toString()] : []),
 
         /**
          * Auto White Balance Mode
          */
-        ...(this.options.awbMode
-          ? ['--awb', this.options.awbMode.toString()]
-          : []),
+        ...(this.options.awbMode ? ['--awb', this.options.awbMode.toString()] : []),
 
         /**
          * Analog Gain
          */
-        ...(this.options.analogGain
-          ? ['--analoggain', this.options.analogGain.toString()]
-          : []),
+        ...(this.options.analogGain ? ['--analoggain', this.options.analogGain.toString()] : []),
 
         /**
          * Digital Gain
          */
-        ...(this.options.digitalGain
-          ? ['--digitalgain', this.options.digitalGain.toString()]
-          : []),
+        ...(this.options.digitalGain ? ['--digitalgain', this.options.digitalGain.toString()] : []),
 
         /**
          * Capture delay (ms)

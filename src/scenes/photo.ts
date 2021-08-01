@@ -160,7 +160,7 @@ export default function createPhotoScene(storage: Storage) {
 
   async function showSelectedOptions(ctx: PhiloContext) {
     const { text, markup } = renderPhotoMessage(ctx)
-    const message = await prepareShot(ctx, setCaption.bind(null, ctx, text, markup))
+    const message = await prepareShot(ctx, ctx.preset, setCaption.bind(null, ctx, text, markup))
     await setCaption(ctx, text, markup, message)
   }
 
@@ -258,7 +258,7 @@ export default function createPhotoScene(storage: Storage) {
     const { message } = ctx.callbackQuery
     const id = `${message?.chat.id}-${message?.message_id}`
     if (!running.ongoing(id)) {
-      await ctx.answerCbQuery(`Error Task ID[${id}] not found!`)
+      await ctx.answerCbQuery(`Warning - Task ID[${id}] not found! Nothing to cancel.`)
       await ctx.deleteMessage()
       return
     }
@@ -299,7 +299,7 @@ export default function createPhotoScene(storage: Storage) {
     }
     ctx.presetName = name
     ctx.preset = preset
-    const { text, markup } = renderPresetSelect(ctx)
+    const { text, markup } = renderPhotoMessage(ctx)
     const image = preset.random ? ctx.randomImage : await ctx.takePhoto(preset)
     await ctx.editMessageMedia(image)
     await ctx.editMessageCaption(text, markup)

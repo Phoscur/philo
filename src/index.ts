@@ -7,7 +7,7 @@ import type { Preset, InputMediaCameraPhoto } from './PhiloContext.interface'
 
 import presets, { sunsetTimings } from './presets' // TODO? use storage instead?
 
-const randomEmulation = 300
+const randomEmulation = 0
 const { BOT_TOKEN, GROUP_CHAT_ID, STORAGE_DIRECTORY, RANDOM_IMAGE_URL } = process.env
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN must be provided by ENV!')
@@ -33,21 +33,22 @@ bot.use(
   })
 )
 bot.use((ctx, next) => {
-  ctx.randomEmulation = randomEmulation
+  ctx.randomEmulation ??= randomEmulation
   ctx.presetName ??= 'base'
   ctx.preset ??= presets.base
   ctx.presets ??= presets
   ctx.sunsetTimings ??= sunsetTimings
   ctx.storage ??= storage
-  ctx.takePhoto = (preset: Preset) => {
-    if (ctx.randomEmulation) {
+  ctx.takePhoto = function (preset: Preset) {
+    if (this.randomEmulation) {
       return new Promise((resolve) =>
         setTimeout(
-          resolve.bind(null, ctx.randomImage as InputMediaCameraPhoto),
-          ctx.randomEmulation
+          resolve.bind(null, this.randomImage as InputMediaCameraPhoto),
+          this.randomEmulation
         )
       )
     }
+    console.log('Taking photo with preset: ' + ctx.preset)
     return takePhoto(preset)
   }
   Object.defineProperties(ctx, {

@@ -16,12 +16,15 @@ import { join } from 'path'
  * TODO rather use fs/promises
  */
 export default class FileStorage {
-
   constructor(public readonly path: string = 'storage') {
     if (!existsSync(path)) {
       mkdirSync(path)
       console.log('Created storage folder:', path)
     }
+  }
+
+  get cwd() {
+    return join(process.cwd(), this.path)
   }
 
   exists(name: string) {
