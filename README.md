@@ -1,7 +1,15 @@
 # Philo Philm, Raspberry Pi telegraphing Timelapse Photographer
+
 Photo &amp; Timelapse Telegram Bot
 
+### MAJOR TODOS
+
+- create PhotoStream, reusable multitarget, queueing
+- more timelapse settings
+- clean storage - upload via git
+
 ## Dependencies
+
 Install nodejs, raspistill and ffmpeg
 
 ```sh

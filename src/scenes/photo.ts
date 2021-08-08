@@ -12,8 +12,8 @@ import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
 import setupSunsetTimelapse from './sunset'
 import { getNextSunset, Sunset } from '../lib/sunset'
+import fancyCount from '../lib/fancyCount'
 import TasksContainer from '../lib/tasks'
-import { MessageChannel } from 'worker_threads'
 
 // Handler factories
 const { enter, leave } = Scenes.Stage
@@ -191,6 +191,9 @@ export default function createPhotoScene(storage: Storage) {
     Markup.button.callback('💚', 'like-💚'),
     Markup.button.callback('💜', 'like-💜'),
     Markup.button.callback('💖', 'like-💖'),
+    Markup.button.callback('💗', 'like-💗'),
+    Markup.button.callback('🤍', 'like-🤍'),
+    Markup.button.callback('🖤', 'like-🖤'), // 8 is max
   ]
 
   photoScene.action('share', async (ctx, next) => {
@@ -219,10 +222,12 @@ export default function createPhotoScene(storage: Storage) {
     const { message } = ctx.callbackQuery
     if (!message) return next()
     if ('text' in message) return next()
-    if (!('photo' in message || 'animation' in message)) return next()
+    if (!('photo' in message || 'animation' in message || 'video' in message)) return next()
     await ctx.answerCbQuery('💖')
     const markup = Markup.inlineKeyboard([emojiButtons])
-    await ctx.editMessageCaption(message.caption + emoji, markup) // TODO use  '❤️‍🔥' :)
+    const caption = message.caption + emoji
+    const emojis = fancyCount(caption)
+    await ctx.editMessageCaption(emojis.count < 13 ? caption : emojis.unfancy + ' ❤️‍🔥', markup)
     // removes discussion await ctx.editMessageCaption ReplyMarkup({      inline_keyboard: [emojiButtons],    })
   })
 
