@@ -3,8 +3,12 @@ import type {
   InputFile,
   InputMediaAnimation,
   InputMediaPhoto,
+  Message,
+  MessageId,
 } from 'telegraf/typings/core/types/typegram'
+import { ExtraCopyMessage, ExtraReplyMessage } from 'telegraf/typings/telegram-types'
 import type { Storage } from './lib/storage'
+import type { FormattedDate } from './lib/time'
 import type { Preset } from './presets'
 
 export type { Storage } from './lib/storage'
@@ -33,9 +37,19 @@ export default interface PhiloContext extends Context {
   preset: Preset
   storage: Storage
   takePhoto: (preset: Preset) => Promise<InputMediaCameraPhoto>
+  sendChannelMessage: (message: string, extra?: ExtraReplyMessage) => Promise<Message.TextMessage>
+  sendChannelPhoto: (
+    photo: string | InputFile,
+    extra?: ExtraReplyMessage
+  ) => Promise<Message.PhotoMessage>
+  sendChannelAnimation: (
+    animation: string | InputFile,
+    extra?: ExtraReplyMessage
+  ) => Promise<Message.AnimationMessage>
+  sendChannelMessageCopy: (extra?: ExtraCopyMessage) => Promise<MessageId>
   randomImage: InputMediaPhoto
   spinnerAnimation: InputMediaAnimation
-
+  now: FormattedDate
   // declare scene type
   scene: Scenes.SceneContextScene<PhiloContext>
 }

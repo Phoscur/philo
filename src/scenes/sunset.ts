@@ -92,12 +92,14 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
         const outFile = `${sunset.dayFormatted} (${taskId}).mp4`
         console.log('Stitching:', ctx.storage.cwd, outFile)
         await stitchImages(taskId, ctx.storage.cwd, { outFile })
+
         await ctx.replyWithAnimation(
           {
             source: ctx.storage.readStream(outFile),
           },
           {
             caption: `${sunset.dayFormatted}`,
+            ...Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]),
           }
         )
         await ctx.telegram.deleteMessage(status.chat.id, status.message_id)

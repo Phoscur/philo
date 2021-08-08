@@ -13,6 +13,7 @@ import setupTemperatureCommands from './temperature'
 import setupSunsetTimelapse from './sunset'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import TasksContainer from '../lib/tasks'
+import { MessageChannel } from 'worker_threads'
 
 // Handler factories
 const { enter, leave } = Scenes.Stage
@@ -172,15 +173,57 @@ export default function createPhotoScene(storage: Storage) {
   photoScene.command(['photo', 'options'], showSelectedOptions)
   photoScene.action('shot', async (ctx) => {
     await ctx.answerCbQuery('Taking image now...')
-    // const message =
-    await prepareShot(ctx, ctx.preset)
-    // TODO add share button (repost in CHANNEL_CHAT_ID with different caption)
-    /* ctx.telegram.editMessageCaption(
+    const message = await prepareShot(ctx, ctx.preset)
+    // add share button (repost in CHANNEL_CHAT_ID with different caption)
+    const markup = Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]])
+    ctx.telegram.editMessageCaption(
       message.chat.id,
       message.message_id,
       undefined,
-      'filename/date todo'
-    )*/
+      ctx.now.fullFormatted,
+      markup
+    )
+  })
+
+  const emojiButtons = [
+    Markup.button.callback('❤️', 'like-❤️'),
+    Markup.button.callback('💙', 'like-💙'),
+    Markup.button.callback('💚', 'like-💚'),
+    Markup.button.callback('💜', 'like-💜'),
+    Markup.button.callback('💖', 'like-💖'),
+  ]
+
+  photoScene.action('share', async (ctx, next) => {
+    const { message } = ctx.callbackQuery
+    await ctx.answerCbQuery('Sharing to channel!')
+    console.log('Message', ctx.callbackQuery)
+    if (!message) return next()
+    if ('text' in message) return next()
+    //if (!('photo' in message)) return next()
+    //if ('video' in message) return next()
+    console.log(
+      'Message Photo',
+      (message as Message.PhotoMessage).photo,
+      (message as Message.AnimationMessage).animation
+    )
+    const markup = Markup.inlineKeyboard([emojiButtons])
+    ctx.sendChannelMessageCopy(markup)
+    ctx.deleteMessage()
+    //if (!('video' in ctx.message)) return next()
+    //if (ctx.message.video) {}
+  })
+  photoScene.action(/like-.+/, async (ctx, next) => {
+    const match = ctx.match[0]?.split('-')
+    const emoji = match[1] || '💖'
+    console.log('Match', ctx.match, match)
+    const { message } = ctx.callbackQuery
+    if (!message) return next()
+    if ('text' in message) return next()
+    if (!('photo' in message || 'animation' in message)) return next()
+    await ctx.answerCbQuery('💖')
+    const markup = Markup.inlineKeyboard([emojiButtons])
+    await ctx.editMessageCaption(message.caption + emoji, markup) // TODO use  '❤️‍🔥' :)
+    // removes discussion await ctx.editMessageCaption ReplyMarkup({      inline_keyboard: [emojiButtons],    })
   })
 
   photoScene.action('sunsetShots', async (ctx) => {
@@ -245,12 +288,12 @@ export default function createPhotoScene(storage: Storage) {
       })
       if (aborted) return aborted
 
-      /*await ctx.telegram.editMessageCaption(
+      await ctx.telegram.editMessageCaption(
         message.chat.id,
         message.message_id,
         undefined,
-        sunset.date.format(dateFormat)
-      )*/
+        sunset.fullFormatted
+      )
       return false
     })
   })
@@ -290,12 +333,12 @@ export default function createPhotoScene(storage: Storage) {
     */
   })
   // handle all presets
-  photoScene.action(/.+/, async (ctx) => {
+  photoScene.action(/.+/, async (ctx, next) => {
     const name = ctx.match[0]
     await ctx.answerCbQuery(`Selected ${name} 📷, updating...`)
     const preset = ctx.presets[name]
     if (!preset) {
-      return
+      return next()
     }
     ctx.presetName = name
     ctx.preset = preset
