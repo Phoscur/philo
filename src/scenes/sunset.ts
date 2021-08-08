@@ -12,20 +12,20 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
         `Sorry! Random Emulation Mode is enabled [${ctx.randomEmulation}ms] - no timelapses`
       )
     }
-    const timing = -60000 * 60 * 2 // 2h before
+    const timing = -60000 * 60 * 1.25 // 1.2h before
     const preset: Preset = ctx.preset.lapse({
-      duration: 60 * 3, // 3h
+      duration: 60 * 1.75, // 1.75h total
       minutely: 3,
     })
     let sunset: Sunset = await getNextSunset()
-    let diff = sunset.diff + timing > 0 ? sunset.diff : -1
-    if (diff < 0) {
+    let diff = sunset.diff + timing
+    if (!diff || diff < 0) {
       //return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
       sunset = await getNextSunset(true)
       diff = sunset.diff + timing
     }
     await ctx.answerCbQuery(
-      `Taking images in ${sunset.humanizedDiff}... (wait ${Math.round(diff / 1000)}s)`
+      `Sunset is in ${sunset.humanizedDiff}... (wait ${Math.round(diff / 1000)}s)`
     )
     // remove the message because there is an ongoing task TODO should edit markup instead to because parallel timelapses are not supported
     await ctx.deleteMessage()
@@ -46,7 +46,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
     const count = preset.count || 10 // should always have a count (with duration&minutely set), ten is also the max count of images in an album
     const markup = Markup.inlineKeyboard([Markup.button.callback('Cancel', 'cancelRunning')])
     const status = await ctx.replyWithAnimation(ctx.spinnerAnimation.media, {
-      caption: `${preset}\nTaking ${count} shots on ${sunset.dayFormatted} ...`,
+      caption: `${preset}\nTaking ${count} shots around ${sunset.fullFormatted} ...`,
       ...markup,
     })
     const taskId = `${status.chat.id}-${status.message_id}` // common format with cancelRunning action

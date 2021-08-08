@@ -8,7 +8,7 @@
     "run-build": "node -r dotenv/config dist/index.js",
     "build": "tsc",
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
-    "dev-sundown": "ts-node-dev -r dotenv/config src/lib/sundown",
+    "dev-sunset": "ts-node-dev -r dotenv/config src/lib/sunset",
     "test": "jest"
   },
   "repository": {

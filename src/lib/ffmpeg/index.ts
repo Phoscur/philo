@@ -12,7 +12,7 @@ export default async function stitchImages(name: string, storagePath: string, op
   const optionsWithDefaults = {
     framerate: 10,
     crf: 28,
-    inFiles: `${name}*.jpg`,
+    inFiles: `${name}-%d.jpg`,
     outFile: `${name}.mp4`,
     //outFile: name+".mp4",
     ...options,
@@ -25,8 +25,8 @@ export default async function stitchImages(name: string, storagePath: string, op
     // delay between frames
     '-framerate',
     optionsWithDefaults.framerate.toString(),
-    '-pattern_type',
-    'glob',
+    // '-pattern_type', // use * instead of %d
+    // 'glob',
     '-i',
     optionsWithDefaults.inFiles.toString(),
     ...(gif
