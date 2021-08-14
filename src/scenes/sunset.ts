@@ -12,9 +12,9 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Tasks
         `Sorry! Random Emulation Mode is enabled [${ctx.randomEmulation}ms] - no timelapses`
       )
     }
-    const timing = -60000 * 60 * 1.25 // 1.2h before
+    const timing = -60000 * 60 * 0.45 // hours before
     const preset: Preset = ctx.preset.lapse({
-      duration: 60 * 1.75, // 1.75h total
+      duration: 60 * 1.2, // hours total
       minutely: 3,
     })
     let sunset: Sunset = await getNextSunset()

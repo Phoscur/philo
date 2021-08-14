@@ -15,7 +15,7 @@ const dateFormat = DATE_FORMAT || 'D.M.YYYY H:mm'
 const dayFormat = DAY_FORMAT || 'D. MMMM YYYY'
 const hoursFormat = HOURS_FORMAT || 'HH:mm:ss'
 
-export function changeTimezoneToLocal(time: Date | number) {
+export function changeTimezoneToLocal(time: Date | number | Dayjs) {
   return dayjs(time).tz(LOCATION_TIMEZONE || 'Europe/Berlin')
 }
 
@@ -30,7 +30,7 @@ export interface FormattedDate {
 }
 
 export function getFormattedDate(now: Dayjs | number = Date.now()): FormattedDate {
-  const date = dayjs(now)
+  const date = dayjs(changeTimezoneToLocal(now))
   return {
     date,
     get fullFormatted() {

@@ -193,7 +193,7 @@ export default function createPhotoScene(storage: Storage) {
     Markup.button.callback('💖', 'like-💖'),
     Markup.button.callback('💗', 'like-💗'),
     Markup.button.callback('🤍', 'like-🤍'),
-    Markup.button.callback('🖤', 'like-🖤'), // 8 is max
+    Markup.button.callback('🖤', 'like-🖤'), // 8 is max in a row
   ]
 
   photoScene.action('share', async (ctx, next) => {
@@ -210,8 +210,8 @@ export default function createPhotoScene(storage: Storage) {
       (message as Message.AnimationMessage).animation
     )
     const markup = Markup.inlineKeyboard([emojiButtons])
-    ctx.sendChannelMessageCopy(markup)
-    ctx.deleteMessage()
+    await ctx.sendChannelMessageCopy(markup)
+    await ctx.deleteMessage()
     //if (!('video' in ctx.message)) return next()
     //if (ctx.message.video) {}
   })
