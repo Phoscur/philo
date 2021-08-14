@@ -4,6 +4,8 @@ export interface Task {
 }
 
 export default class TasksContainer {
+  static setTimeout = setTimeout
+  static clearTimeout = clearTimeout
   running: { [id: string]: Task }
 
   constructor() {
@@ -19,7 +21,7 @@ export default class TasksContainer {
       throw new Error(`An ongoing Task [${id}] already exists!`)
     }
     return new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(resolve, wait)
+      const timeout = TasksContainer.setTimeout(resolve, wait)
       this.running[id] = {
         id,
         abort: async () => {
