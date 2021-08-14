@@ -16,7 +16,7 @@ export default class TasksContainer {
 
   createWaitTask(id: string, wait: number): Promise<void> {
     if (this.ongoing(id)) {
-      throw new Error(`An ongoing Task with ID[${id}] already exists!`)
+      throw new Error(`An ongoing Task [${id}] already exists!`)
     }
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(resolve, wait)
@@ -24,10 +24,11 @@ export default class TasksContainer {
         id,
         abort: async () => {
           clearTimeout(timeout)
+          console.log(`Task [${id}] aborted, its wait time was ${wait}ms`)
           reject('Aborted: ' + id)
         },
       }
-      console.log(`Task ${id} running for ${wait}ms`)
+      console.log(`Task [${id}] running for ${wait}ms`)
     }).finally(() => {
       delete this.running[id]
     })
