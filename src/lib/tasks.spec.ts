@@ -2,7 +2,8 @@ import TasksContainer from './tasks'
 
 describe('Tasks', () => {
   it('can be canceled', () => {
-    const tasks = new TasksContainer()
+    new TasksContainer() // a task container with console.log default logger
+    const tasks = new TasksContainer(() => {})
     const id = 'id'
     const wait = 1000
     const tp = tasks.createWaitTask(id, wait)
@@ -12,7 +13,7 @@ describe('Tasks', () => {
   })
 
   it('resolves', () => {
-    const tasks = new TasksContainer()
+    const tasks = new TasksContainer(() => {})
     const id = 'id'
     const wait = 10
     const tp = tasks.createWaitTask(id, wait)
@@ -21,7 +22,7 @@ describe('Tasks', () => {
   })
 
   it('fails', () => {
-    const tasks = new TasksContainer()
+    const tasks = new TasksContainer(() => {})
     const id = 'id'
     const wait = 10
     tasks.cancel(id) // cancelling anything inexistent is ignored

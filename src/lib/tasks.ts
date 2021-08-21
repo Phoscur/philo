@@ -8,7 +8,7 @@ export default class TasksContainer {
   static clearTimeout = clearTimeout
   running: { [id: string]: Task }
 
-  constructor() {
+  constructor(protected logger = console.log) {
     this.running = {}
   }
 
@@ -26,11 +26,11 @@ export default class TasksContainer {
         id,
         abort: async () => {
           clearTimeout(timeout)
-          console.log(`Task [${id}] aborted, its wait time was ${wait}ms`)
+          this.logger(`Task [${id}] aborted, its wait time was ${wait}ms`)
           reject('Aborted: ' + id)
         },
       }
-      console.log(`Task [${id}] running for ${wait}ms`)
+      this.logger(`Task [${id}] running for ${wait}ms`)
     }).finally(() => {
       delete this.running[id]
     })

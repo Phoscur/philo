@@ -1,10 +1,11 @@
 import TasksContainer from './tasks'
-export interface PhotoFileStream {
+export interface TaskStream {
   id: string
+  due: number
   interval: number
   parts: number
   remaining: number
-  handler: (this: PhotoFileStream, lastWait: number) => Promise<void>
+  handler: (this: TaskStream, lastWait: number) => Promise<void>
 }
 export default class StreamContainer {
   /**
@@ -13,9 +14,12 @@ export default class StreamContainer {
   static MINIMUM_INTERVAL_SPACING = 1000
 
   running?: Promise<void>
-  runningMS: number = 0
 
-  constructor(public tasks: TasksContainer, public streams: PhotoFileStream[] = []) {}
+  constructor(
+    public tasks: TasksContainer,
+    public streams: TaskStream[] = [],
+    public now: number = Date.now()
+  ) {}
 
   get spacing(): number {
     return this.streams.length * StreamContainer.MINIMUM_INTERVAL_SPACING
@@ -23,8 +27,25 @@ export default class StreamContainer {
   get requiredSpacing(): number {
     return (1 + this.streams.length) * StreamContainer.MINIMUM_INTERVAL_SPACING
   }
+  get smallestInterval(): number {
+    return this.streams.reduce(
+      (smallest, { interval }) => (smallest <= interval ? smallest : interval),
+      Number.POSITIVE_INFINITY
+    )
+  }
 
-  get busyWith(): PhotoFileStream[] {
+  nextSpace(dueMS: number): number {
+    let space = 0
+    if (!this.streams.length) return 0
+    let conflicts
+    do {
+      conflicts = this.streams.filter((s) => dueMS + space <= s.due)
+      if (conflicts.length) space += StreamContainer.MINIMUM_INTERVAL_SPACING
+    } while (conflicts.length)
+    return space
+  }
+
+  get busyWith(): TaskStream[] {
     return this.streams.filter((s) => {
       return s.interval <= this.spacing
     })
@@ -35,56 +56,75 @@ export default class StreamContainer {
   }
 
   async run() {
-    const sorted = this.streams.sort((a, b) => a.interval - b.interval).slice()
-    let s: PhotoFileStream | undefined
-    let lastWait = 0
-    this.runningMS = 0
-    while ((s = sorted.shift())) {
-      this.runningMS = s.interval - lastWait
-      if (this.runningMS < StreamContainer.MINIMUM_INTERVAL_SPACING) {
-        this.runningMS = StreamContainer.MINIMUM_INTERVAL_SPACING
-      }
-      lastWait = s.interval
-      try {
-        this.running = this.tasks.createWaitTask(s.id, this.runningMS)
-        await this.running
-        await s.handler(this.runningMS)
-      } catch (error) {
-        // mark for deletion
-        s.remaining = 1
-      }
-    }
-    this.streams = this.streams.filter((stream) => {
-      return --stream.remaining
-    })
-    if (this.streams.length) {
-      // recurse
-      await this.run()
-    }
+    this.now = Date.now()
+    // TODO wait for running tasks to finish here? - should call this method "drain" then
+    this.streams = this.streams.filter((s) => s.remaining)
   }
 
-  protected add(stream: PhotoFileStream) {
+  protected handleTask(stream: TaskStream, wait: number) {
+    const handler: () => Promise<void> = async () => {
+      await stream.handler(wait)
+      if (!stream.interval || !--stream.remaining) return
+      wait = stream.interval
+      return this.tasks.createWaitTask(stream.id, wait).then(handler)
+    }
+    return handler
+  }
+
+  async add(stream: TaskStream) {
+    this.streams = this.streams.filter((s) => s.remaining)
+    const spacing = this.nextSpace(stream.due)
+    stream.due += spacing
     this.streams.push(stream)
-    // TODO adapt this.run()
+    const wait = stream.due - this.now
+    const initialWait = wait < 0 ? 0 : wait
+    return this.tasks
+      .createWaitTask(stream.id, initialWait)
+      .then(this.handleTask(stream, initialWait))
+      .catch(() => {
+        // mark for deletion
+        stream.remaining = 0
+      })
   }
 
-  create(id: string, interval: number, parts: number = 1, handler = async () => {}) {
+  create(
+    id: string,
+    due = Date.now(),
+    parts: number = 1,
+    interval: number = 0,
+    handler = async () => {}
+  ) {
     if (this.streams.find((s) => s.id === id)) {
       throw new Error(`Stream [${id}] is already running, did you mean to cancel first?`)
     }
-    if (interval <= this.spacing) {
+    if (interval && interval <= this.spacing) {
       throw new Error(
         `Stream collision [${id}, ${interval}ms], spacing ${this.requiredSpacing}/${this.spacing}`
       )
     }
-    const stream: PhotoFileStream = {
+    const smallestInterval = this.smallestInterval
+    if (
+      // a short or multiple intervals might not allow more than the same
+      smallestInterval < this.spacing ||
+      (smallestInterval <= this.requiredSpacing && smallestInterval !== interval)
+    ) {
+      throw new Error(
+        `Stream collision [${id}, ${interval}ms], spacing is ${StreamContainer.MINIMUM_INTERVAL_SPACING} for ${this.streams.length}x${smallestInterval}`
+      )
+    }
+    const stream: TaskStream = {
       id,
+      due,
       interval,
       parts,
       remaining: parts,
       handler,
     }
-    this.add(stream)
     return stream
+  }
+
+  cancel(id: string) {
+    this.tasks.cancel(id)
+    this.streams = this.streams.filter((s) => s.id !== id)
   }
 }
