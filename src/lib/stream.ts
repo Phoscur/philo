@@ -1,11 +1,13 @@
 import TasksContainer from './tasks'
+import TaskEmitter from './TaskEmitter'
+
 export interface TaskStream {
   id: string
   due: number
   interval: number
   parts: number
   remaining: number
-  handler: (this: TaskStream, lastWait: number) => Promise<void>
+  handler: (this: TaskStream, lastWait: number, part: number) => Promise<void>
 }
 export default class StreamContainer {
   /**
@@ -63,8 +65,8 @@ export default class StreamContainer {
 
   protected handleTask(stream: TaskStream, wait: number) {
     const handler: () => Promise<void> = async () => {
-      await stream.handler(wait)
-      if (!stream.interval || !--stream.remaining) return
+      await stream.handler(wait, stream.parts + 1 - stream.remaining)
+      if (!--stream.remaining) return
       wait = stream.interval
       return this.tasks.createWaitTask(stream.id, wait).then(handler)
     }
@@ -85,6 +87,15 @@ export default class StreamContainer {
         // mark for deletion
         stream.remaining = 0
       })
+  }
+
+  addStream(stream: TaskStream): TaskEmitter {
+    const handler = stream.handler.bind(stream)
+    const done = this.add(stream)
+    const emitter = new TaskEmitter(handler, done, stream.parts)
+    // overwrite with wrapped handler
+    stream.handler = emitter.handler
+    return emitter
   }
 
   create(
@@ -110,6 +121,11 @@ export default class StreamContainer {
     ) {
       throw new Error(
         `Stream collision [${id}, ${interval}ms], spacing is ${StreamContainer.MINIMUM_INTERVAL_SPACING} for ${this.streams.length}x${smallestInterval}`
+      )
+    }
+    if (smallestInterval < Number.POSITIVE_INFINITY && smallestInterval % interval !== 0) {
+      throw new Error(
+        `Stream collision [${id}, ${interval}ms], interval is locked to modulo ${smallestInterval}`
       )
     }
     const stream: TaskStream = {
