@@ -223,11 +223,16 @@ export default function createPhotoScene(storage: Storage) {
     if (!message) return next()
     if ('text' in message) return next()
     if (!('photo' in message || 'animation' in message || 'video' in message)) return next()
-    await ctx.answerCbQuery('💖')
-    const markup = Markup.inlineKeyboard([emojiButtons])
-    const caption = message.caption + emoji
-    const emojis = fancyCount(caption)
-    await ctx.editMessageCaption(emojis.count < 13 ? caption : emojis.unfancy + ' ❤️‍🔥', markup)
+    try {
+      const markup = Markup.inlineKeyboard([emojiButtons])
+      const caption = message.caption + emoji
+      const emojis = fancyCount(caption)
+      await ctx.editMessageCaption(emojis.count < 13 ? caption : emojis.unfancy + ' ❤️‍🔥', markup)
+      await ctx.answerCbQuery('💖')
+    } catch (error) {
+      console.error(error)
+      await ctx.answerCbQuery('Failed :(')
+    }
     // removes discussion await ctx.editMessageCaption ReplyMarkup({      inline_keyboard: [emojiButtons],    })
   })
 
