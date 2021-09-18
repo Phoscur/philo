@@ -11,6 +11,7 @@ import type { Storage } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
 import setupSunsetTimelapse from './sunset'
+import setupTimelapse from './timelapse'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import fancyCount from '../lib/fancyCount'
 import TasksContainer from '../lib/tasks'
@@ -26,7 +27,10 @@ function renderPhotoMessage(ctx: PhiloContext) {
       Markup.button.callback('Sunset Shot 🌇🥃', 'sunsetShot'),
       Markup.button.callback('🌇🥃🥃🥃🥃', 'sunsetShots'),
     ],
-    [Markup.button.callback('Timelapse 🎥🌇', 'sunsetTimelapse')],
+    [
+      Markup.button.callback('Timelapse 🎥🌇', 'sunsetTimelapse'),
+      Markup.button.callback('🎥 now', 'timelapse'),
+    ],
     [Markup.button.callback('Switch Preset 📷', 'preset')],
     // Markup.button.callback('Done', 'done'), TODO? delete preview message?
   ])
@@ -72,6 +76,7 @@ export default function createPhotoScene(storage: Storage) {
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
   setupSunsetTimelapse(photoScene, running)
+  setupTimelapse(photoScene, running)
 
   async function prepareShot(
     ctx: PhiloContext,
