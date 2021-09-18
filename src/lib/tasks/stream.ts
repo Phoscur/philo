@@ -37,8 +37,8 @@ export default class StreamContainer {
   }
 
   nextSpace(dueMS: number): number {
-    let space = 0
     if (!this.streams.length) return 0
+    let space = 0
     let conflicts
     do {
       conflicts = this.streams.filter((s) => dueMS + space <= s.due)

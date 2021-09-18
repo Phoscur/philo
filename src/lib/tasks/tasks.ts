@@ -25,7 +25,7 @@ export default class TasksContainer {
       this.running[id] = {
         id,
         abort: async () => {
-          clearTimeout(timeout)
+          TasksContainer.clearTimeout(timeout)
           this.logger(`Task [${id}] aborted, its wait time was ${wait}ms`)
           reject('Aborted: ' + id)
         },
