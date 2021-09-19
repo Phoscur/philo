@@ -16,6 +16,8 @@ import { getNextSunset, Sunset } from '../lib/sunset'
 import fancyCount from '../lib/fancyCount'
 import { TasksContainer, StreamContainer } from '../lib/tasks'
 
+const ADMINS = ['Phoscur']
+
 // Handler factories
 const { enter, leave } = Scenes.Stage
 
@@ -330,6 +332,12 @@ export default function createPhotoScene(storage: Storage) {
         await ctx.answerCbQuery(`Warning - Task ID[${id}] not found! Nothing to cancel.`)
         await ctx.deleteMessage()
         return
+      }
+      const user = ctx.from?.username || ''
+      // TODO use list from channel, doesn't work in private channel though! await ctx.getChatAdministrators(),
+      console.log('Admin Check', ADMINS, ctx.from)
+      if (!~ADMINS.indexOf(user)) {
+        return ctx.answerCbQuery(`Only Admins can cancel`)
       }
       await ctx.answerCbQuery(`Cancelled!`)
       await running.cancel(id)

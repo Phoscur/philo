@@ -15,8 +15,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, running: Strea
       )
     }
     const preset: Preset = ctx.preset.lapse({
-      //duration: 60 * 1, // 1 hour total
-      duration: 10, // 1 hour total
+      duration: 60 * 1, // 1 hour total
       minutely: 3,
     })
     const nowFormatted = ctx.now.fullFormatted
