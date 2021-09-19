@@ -76,7 +76,7 @@ export class StreamContainer {
   createPartEmitter(
     id: string,
     partHandler: (part: number) => Promise<void>,
-    finishHandler: (parts: number) => Promise<void>,
+    finishHandler: (parts: number) => Promise<void> = async () => {},
     parts: number = 1,
     interval: number = 0,
     due = Date.now()

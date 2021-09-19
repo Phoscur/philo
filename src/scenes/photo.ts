@@ -92,9 +92,15 @@ export default function createPhotoScene(storage: Storage) {
       aborted = await meanwhile(message)
     }
     if (aborted) return message
-
-    const image = await ctx.takePhoto(preset)
-    await ctx.telegram.editMessageMedia(message.chat.id, message.message_id, undefined, image)
+    const taskId = `${message.message_id}`
+    await streams.run()
+    await new Promise<void>((resolve) => {
+      streams.createPartEmitter(taskId, async () => {
+        const image = await ctx.takePhoto(preset)
+        await ctx.telegram.editMessageMedia(message.chat.id, message.message_id, undefined, image)
+        resolve()
+      })
+    })
     return message
   }
 
@@ -171,6 +177,9 @@ export default function createPhotoScene(storage: Storage) {
     await setCaption(ctx, text, markup, message)
   }
 
+  // ---------------------------------------------------------------------------------------------------
+  // entering with /photo
+  // ---------------------------------------------------------------------------------------------------
   photoScene.enter(showSelectedOptions)
   photoScene.leave((ctx) => ctx.reply('Bye'))
   photoScene.command(['done', 'exit'], leave<PhiloContext>())
