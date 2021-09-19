@@ -1,4 +1,3 @@
-import TasksContainer from './tasks'
-
 export * from './tasks'
-export default TasksContainer
+export * from './stream'
+export * from './TaskEmitter'

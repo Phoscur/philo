@@ -3,7 +3,7 @@ export interface Task {
   abort(): Promise<void>
 }
 
-export default class TasksContainer {
+export class TasksContainer {
   static setTimeout = setTimeout
   static clearTimeout = clearTimeout
   running: { [id: string]: Task }

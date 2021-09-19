@@ -1,5 +1,5 @@
-import TasksContainer from './tasks'
-import TaskEmitter from './TaskEmitter'
+import { TasksContainer } from './tasks'
+import { TaskEmitter } from './TaskEmitter'
 
 export interface TaskStream {
   id: string
@@ -9,7 +9,7 @@ export interface TaskStream {
   remaining: number
   handler: (this: TaskStream, lastWait: number, part: number) => Promise<void>
 }
-export default class StreamContainer {
+export class StreamContainer {
   /**
    * Minimum time gap between handler timings
    */
@@ -73,6 +73,21 @@ export default class StreamContainer {
     return handler
   }
 
+  createPartEmitter(
+    id: string,
+    partHandler: (part: number) => Promise<void>,
+    finishHandler: (parts: number) => Promise<void>,
+    parts: number = 1,
+    interval: number = 0,
+    due = Date.now()
+  ): TaskEmitter {
+    const stream = this.create(id, due, parts, interval)
+    const emitter = this.addStream(stream)
+    emitter.onPart((_, part) => partHandler(part))
+    emitter.onFinish(finishHandler)
+    return emitter
+  }
+
   async add(stream: TaskStream) {
     this.streams = this.streams.filter((s) => s.remaining)
     const spacing = this.nextSpace(stream.due)
@@ -80,6 +95,9 @@ export default class StreamContainer {
     this.streams.push(stream)
     const wait = stream.due - this.now
     const initialWait = wait < 0 ? 0 : wait
+    if (initialWait !== 0) {
+      console.log(`Adding Stream with initial wait ${initialWait}ms`)
+    }
     return this.tasks
       .createWaitTask(stream.id, initialWait)
       .then(this.handleTask(stream, initialWait))
@@ -93,7 +111,7 @@ export default class StreamContainer {
     const handler = stream.handler.bind(stream)
     const done = this.add(stream)
     const emitter = new TaskEmitter(handler, done, stream.parts)
-    // overwrite with wrapped handler
+    // overwrite with emitter-wrapped handler
     stream.handler = emitter.handler
     return emitter
   }

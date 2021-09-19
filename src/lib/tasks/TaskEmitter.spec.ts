@@ -1,6 +1,4 @@
-import StreamContainer from './stream'
-import TaskEmitter from './TaskEmitter'
-import TasksContainer from './tasks'
+import { StreamContainer, TaskEmitter, TasksContainer } from './index'
 
 describe('TaskEmitter', () => {
   it('is an EventEmitter', async () => {
@@ -34,5 +32,20 @@ describe('TaskEmitter', () => {
     expect(handler).toHaveBeenCalledWith(1000, 2)
     expect(followHandler).toHaveBeenCalledWith(0, 1)
     expect(followHandler).toHaveBeenCalledWith(1000, 2)
+  })
+
+  it('can be used as part emitter', async () => {
+    const tasks = new TasksContainer(() => {})
+    const streams = new StreamContainer(tasks)
+    const partHandler = jest.fn(async () => {})
+    const finishHandler = jest.fn(async () => {})
+
+    const emitter = streams.createPartEmitter('id', partHandler, finishHandler, 2, 1000, Date.now())
+    await new Promise((resolve) => {
+      emitter.onFinish(resolve)
+    })
+    expect(partHandler).toHaveBeenCalledWith(1)
+    expect(partHandler).toHaveBeenCalledWith(2)
+    expect(finishHandler).toHaveBeenCalledWith(2)
   })
 })

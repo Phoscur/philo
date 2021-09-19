@@ -1,6 +1,6 @@
 {
   "name": "philo-philm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Photo & Timelapse Bot",
   "main": "dist/index.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "build": "tsc",
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
     "dev-sunset": "ts-node-dev -r dotenv/config src/lib/sunset",
-    "test": "jest"
+    "test": "jest",
+    "test-watch": "jest --watch"
   },
   "repository": {
     "type": "git",

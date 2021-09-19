@@ -14,7 +14,7 @@ import setupSunsetTimelapse from './sunset'
 import setupTimelapse from './timelapse'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import fancyCount from '../lib/fancyCount'
-import TasksContainer from '../lib/tasks'
+import { TasksContainer, StreamContainer } from '../lib/tasks'
 
 // Handler factories
 const { enter, leave } = Scenes.Stage
@@ -75,8 +75,9 @@ export default function createPhotoScene(storage: Storage) {
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
-  setupSunsetTimelapse(photoScene, running)
-  setupTimelapse(photoScene, running)
+  const streams: StreamContainer = new StreamContainer(running)
+  setupSunsetTimelapse(photoScene, running) // TODO use streams
+  setupTimelapse(photoScene, streams)
 
   async function prepareShot(
     ctx: PhiloContext,
@@ -313,16 +314,20 @@ export default function createPhotoScene(storage: Storage) {
     })
   })
   photoScene.action('cancelRunning', async (ctx) => {
-    const { message } = ctx.callbackQuery
-    const id = `${message?.chat.id}-${message?.message_id}`
-    if (!running.ongoing(id)) {
-      await ctx.answerCbQuery(`Warning - Task ID[${id}] not found! Nothing to cancel.`)
+    try {
+      const { message } = ctx.callbackQuery
+      const id = `${message?.chat.id}-${message?.message_id}`
+      if (!running.ongoing(id)) {
+        await ctx.answerCbQuery(`Warning - Task ID[${id}] not found! Nothing to cancel.`)
+        await ctx.deleteMessage()
+        return
+      }
+      await ctx.answerCbQuery(`Cancelled!`)
+      await running.cancel(id)
       await ctx.deleteMessage()
-      return
+    } catch (error) {
+      console.error('Failed to cancel', error)
     }
-    await ctx.answerCbQuery(`Cancelled!`)
-    await running.cancel(id)
-    await ctx.deleteMessage()
   })
 
   photoScene.action('timelapse', async (ctx) => {

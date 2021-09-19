@@ -1,7 +1,7 @@
 import { Markup } from 'telegraf'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import stitchImages from '../lib/ffmpeg'
-import type TasksContainer from '../lib/tasks'
+import type { TasksContainer } from '../lib/tasks'
 import type { PhiloScene, Preset } from '../PhiloContext.interface'
 
 export default function enhancePhotoScene(photoScene: PhiloScene, running: TasksContainer) {

@@ -1,4 +1,4 @@
-import TasksContainer from './tasks'
+import { TasksContainer } from './tasks'
 
 describe('Tasks', () => {
   it('can be canceled', () => {

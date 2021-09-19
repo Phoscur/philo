@@ -1,16 +1,16 @@
 import { EventEmitter } from 'stream'
 
-interface TaskEvents {
+export interface TaskEvents {
   part: (lastWait: number, part: number) => void
   finish: (parts: number) => void
 }
 
-declare interface TaskEmitter {
+export declare interface TaskEmitter {
   on<U extends keyof TaskEvents>(event: U, listener: TaskEvents[U]): this
   emit<U extends keyof TaskEvents>(event: U, ...args: Parameters<TaskEvents[U]>): boolean
 }
 
-class TaskEmitter extends EventEmitter {
+export class TaskEmitter extends EventEmitter {
   public handler: (part: number, parts: number) => Promise<void>
   constructor(
     handler: (part: number, parts: number) => Promise<void>,
@@ -35,5 +35,3 @@ class TaskEmitter extends EventEmitter {
     this.on('finish', action)
   }
 }
-
-export default TaskEmitter

@@ -1,5 +1,5 @@
-import TasksContainer from './tasks'
-import StreamContainer, { TaskStream } from './stream'
+import { TasksContainer } from './tasks'
+import { StreamContainer, TaskStream } from './stream'
 
 describe('Task Stream Container', () => {
   beforeAll(() => {
