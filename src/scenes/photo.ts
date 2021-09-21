@@ -10,7 +10,6 @@ import type { Preset } from '../PhiloContext.interface'
 import type { Storage } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
-import setupSunsetTimelapse from './sunset'
 import setupTimelapse from './timelapse'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import fancyCount from '../lib/fancyCount'
@@ -78,7 +77,6 @@ export default function createPhotoScene(storage: Storage) {
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
   const streams: StreamContainer = new StreamContainer(running)
-  setupSunsetTimelapse(photoScene, running) // TODO use streams
   setupTimelapse(photoScene, streams)
 
   async function prepareShot(
