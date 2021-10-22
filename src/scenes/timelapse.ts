@@ -7,6 +7,10 @@ import type { PhiloScene, Preset } from '../PhiloContext.interface'
 
 const MINIMUM_TIMELAPSE_PARTS = 10
 
+function padZero(s: string, length: number): string {
+  return s.length >= length ? s : padZero('0' + s, length)
+}
+
 async function timelapse(
   ctx: PhiloContext,
   streams: StreamContainer,
@@ -53,7 +57,8 @@ async function timelapse(
   let photosTaken = 0,
     photoErrors = 0
   async function handlePart(part: number) {
-    const name = `${taskId}-${part}.jpg`
+    const partPaddedWithZeros = padZero(part.toString(), count.toString().length)
+    const name = `${taskId}-${partPaddedWithZeros}.jpg`
     try {
       const image = await ctx.takePhoto(preset)
       console.log('Saving image:', name)
