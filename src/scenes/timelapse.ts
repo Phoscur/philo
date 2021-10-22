@@ -19,7 +19,7 @@ async function timelapse(
       `Sorry! Random Emulation Mode is enabled [${ctx.randomEmulation}ms] - no timelapses`
     )
   }
-  const nowFormatted = ctx.now.fullFormatted
+  const { fileNameFormatted, fullFormatted } = ctx.now
 
   // remove the message because there is an ongoing task TODO should edit markup instead to because parallel timelapses are not supported
   // await ctx.deleteMessage() - parallel timelapses should be supported now!
@@ -98,7 +98,7 @@ async function timelapse(
         `Rendering timelapse consisting ${parts} images ...`,
         markup
       )
-      const outFile = `${nowFormatted} (${taskId}).mp4`
+      const outFile = `${fileNameFormatted} (${taskId}).mp4`
       console.log('Stitching:', ctx.storage.cwd, outFile)
       await stitchImages(taskId, ctx.storage.cwd, { outFile })
 
@@ -107,7 +107,7 @@ async function timelapse(
           source: ctx.storage.readStream(outFile),
         },
         {
-          caption: `${nowFormatted}`,
+          caption: `${fullFormatted}`,
           ...Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]),
         }
       )

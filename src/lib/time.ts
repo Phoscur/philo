@@ -24,6 +24,7 @@ export function humanizeDuration(diff: number) {
 }
 export interface FormattedDate {
   date: Dayjs
+  readonly fileNameFormatted: string
   readonly fullFormatted: string
   readonly dayFormatted: string
   readonly hoursFormatted: string
@@ -33,6 +34,9 @@ export function getFormattedDate(now: Dayjs | number = Date.now()): FormattedDat
   const date = dayjs(changeTimezoneToLocal(now))
   return {
     date,
+    get fileNameFormatted() {
+      return date.format('YYYY-MM-DD--HH-mm')
+    },
     get fullFormatted() {
       return date.format(dateFormat)
     },
