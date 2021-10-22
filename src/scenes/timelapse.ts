@@ -132,8 +132,8 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
   photoScene.action('timelapse', async (ctx) => {
     try {
       const preset: Preset = ctx.preset.lapse({
-        duration: 60 * 1, // 1 hour total
-        minutely: 3,
+        duration: 60 * 1.4, // 1.4 hours total
+        minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Timelapse now!`)
       await timelapse(ctx, streams, preset)
@@ -144,10 +144,10 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
 
   photoScene.action('sunsetTimelapse', async (ctx) => {
     try {
-      const timing = -60000 * 60 * 0.45 // hours before
+      const timing = -60000 * 60 * 0.75 // hours before
       const preset: Preset = ctx.preset.lapse({
-        duration: 60 * 1, // 1 hour total
-        minutely: 3,
+        duration: 60 * 1.4, // 1.4 hours total
+        minutely: 5,
       })
       let sunset: Sunset = await getNextSunset()
       let diff = sunset.diff + timing

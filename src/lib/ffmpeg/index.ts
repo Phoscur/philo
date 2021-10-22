@@ -10,7 +10,7 @@ export interface StitchOptions {
 
 export default async function stitchImages(name: string, storagePath: string, options = {}) {
   const optionsWithDefaults = {
-    framerate: 10,
+    framerate: 18,
     crf: 28,
     inFiles: `${name}-%d.jpg`,
     outFile: `${name}.mp4`,
