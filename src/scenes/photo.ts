@@ -30,7 +30,12 @@ function renderPhotoMessage(ctx: PhiloContext) {
     ],
     [
       Markup.button.callback('Timelapse 🎥🌇', 'sunsetTimelapse'),
-      Markup.button.callback('🎥 now', 'timelapse'),
+      Markup.button.callback('Timelapse now 🎥', 'timelapse'),
+    ],
+    [
+      Markup.button.callback('Short 🎥', 'short-timelapse'),
+      Markup.button.callback('Super Short 🎥', 'super-short-timelapse'),
+      Markup.button.callback('Short delay 🎥', 'short-delayed-timelapse'),
     ],
     [Markup.button.callback('Switch Preset 📷', 'preset')],
     // Markup.button.callback('Done', 'done'), TODO? delete preview message?

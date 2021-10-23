@@ -84,14 +84,17 @@ async function timelapse(
       photoErrors++
     }
   }
+
   async function handleFinish(parts: number) {
     try {
       if (photosTaken < MINIMUM_TIMELAPSE_PARTS) {
+        const message = `Not rendering timelapse only has ${photosTaken}/${MINIMUM_TIMELAPSE_PARTS} parts. Errors: ${photoErrors}`
+        console.log(message)
         await ctx.telegram.editMessageCaption(
           status.chat.id,
           status.message_id,
           undefined,
-          `Not rendering timelapse only ${photosTaken}/${MINIMUM_TIMELAPSE_PARTS} parts. Errors: ${photoErrors}`,
+          message,
           markup
         )
         return
@@ -103,9 +106,9 @@ async function timelapse(
         `Rendering timelapse consisting ${parts} images ...`,
         markup
       )
-      const outFile = `${fileNameFormatted} (${taskId}).mp4`
+      const outFile = `${fileNameFormatted}.${taskId}.mp4`
       console.log('Stitching:', ctx.storage.cwd, outFile)
-      await stitchImages(taskId, ctx.storage.cwd, { outFile })
+      await stitchImages(taskId, ctx.storage.cwd, { outFile, parts })
 
       await ctx.replyWithAnimation(
         {
@@ -142,6 +145,45 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
       })
       await ctx.answerCbQuery(`Starting Timelapse now!`)
       await timelapse(ctx, streams, preset)
+    } catch (error) {
+      await ctx.answerCbQuery(`Failed timelapse: ${error}`)
+    }
+  })
+
+  photoScene.action('short-timelapse', async (ctx) => {
+    try {
+      const preset: Preset = ctx.preset.lapse({
+        duration: 5, // 5 mins
+        minutely: 5,
+      })
+      await ctx.answerCbQuery(`Starting Short Timelapse now!`)
+      await timelapse(ctx, streams, preset)
+    } catch (error) {
+      await ctx.answerCbQuery(`Failed timelapse: ${error}`)
+    }
+  })
+  photoScene.action('super-short-timelapse', async (ctx) => {
+    try {
+      const preset: Preset = ctx.preset.lapse({
+        duration: 2, // 2 mins
+        minutely: 5,
+      })
+      await ctx.answerCbQuery(`Starting Super Short Timelapse now!`)
+      await timelapse(ctx, streams, preset)
+    } catch (error) {
+      await ctx.answerCbQuery(`Failed timelapse: ${error}`)
+    }
+  })
+
+  photoScene.action('short-delayed-timelapse', async (ctx) => {
+    const delay = 3 * 60 * 1000 // 3 mins
+    try {
+      const preset: Preset = ctx.preset.lapse({
+        duration: 5, // 5 mins
+        minutely: 5,
+      })
+      await ctx.answerCbQuery(`Starting Short Timelapse soon!`)
+      await timelapse(ctx, streams, preset, delay)
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }

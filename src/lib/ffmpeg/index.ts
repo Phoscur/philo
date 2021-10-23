@@ -1,4 +1,3 @@
-import { join } from 'path'
 import { spawnPromisePrependStdErr } from './spawn'
 
 export interface StitchOptions {
@@ -6,13 +5,20 @@ export interface StitchOptions {
   crf?: number
   inFiles?: string
   outFile?: string
+  parts?: number
 }
 
-export default async function stitchImages(name: string, storagePath: string, options = {}) {
+export default async function stitchImages(
+  name: string,
+  storagePath: string,
+  options: StitchOptions = {}
+) {
+  const parts = options.parts || 10
+  const num = '%0' + parts.toString().length + 'd' // e.g. %04d - without zero padding use %d instead
   const optionsWithDefaults = {
     framerate: 18,
     crf: 28,
-    inFiles: `${name}-%d.jpg`,
+    inFiles: `${name}-${num}.jpg`,
     outFile: `${name}.mp4`,
     //outFile: name+".mp4",
     ...options,
@@ -46,8 +52,8 @@ export default async function stitchImages(name: string, storagePath: string, op
   try {
     // for some reason ffmpeg needs to spit errors even if it produces a good result
     return await spawnPromisePrependStdErr('ffmpeg', args, { cwd: storagePath })
-  } catch (err) {
-    if (err.code === 'ENOENT') {
+  } catch (err: any) {
+    if (err && err.code === 'ENOENT') {
       throw new Error(`Could not stitch images [${name}*.jpg] with ffmpeg, is it installed?`)
     }
     throw err

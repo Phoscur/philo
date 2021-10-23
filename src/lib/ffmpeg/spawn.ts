@@ -34,6 +34,17 @@ export const spawnPromisePrependStdErr = (
     childProcess.stderr.once('error', (err: Error) => reject(err))
 
     childProcess.stdout.on('close', () => {
+      console.log(
+        'Command successful',
+        command,
+        args,
+        'Error:',
+        stderrData.length,
+        'Output:',
+        stdoutData.length,
+        'Warnings:',
+        stderrData.toString()
+      )
       if (stderrData.length > 0) {
         return resolve(Buffer.concat([stderrData, stdoutData]))
       }
