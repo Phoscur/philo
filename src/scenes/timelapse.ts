@@ -165,8 +165,8 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
   photoScene.action('super-short-timelapse', async (ctx) => {
     try {
       const preset: Preset = ctx.preset.lapse({
-        duration: 2, // 2 mins
-        minutely: 5,
+        duration: 0.5,
+        minutely: 30,
       })
       await ctx.answerCbQuery(`Starting Super Short Timelapse now!`)
       await timelapse(ctx, streams, preset)

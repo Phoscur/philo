@@ -13,7 +13,7 @@ export class StreamContainer {
   /**
    * Minimum time gap between handler timings
    */
-  static MINIMUM_INTERVAL_SPACING = 1000
+  static MINIMUM_INTERVAL_SPACING = 2000
 
   running?: Promise<void>
 
@@ -64,11 +64,14 @@ export class StreamContainer {
   }
 
   protected handleTask(stream: TaskStream, wait: number) {
+    // execute all the stream handlers
     const handler: () => Promise<void> = async () => {
       await stream.handler(wait, stream.parts + 1 - stream.remaining)
+      // console.log('Stream Countdown:', stream.remaining)
       if (!--stream.remaining) return
       wait = stream.interval
-      return this.tasks.createWaitTask(stream.id, wait).then(handler)
+      await this.tasks.createWaitTask(stream.id, wait)
+      await handler()
     }
     return handler
   }
@@ -81,9 +84,9 @@ export class StreamContainer {
     interval: number = 0,
     due = Date.now()
   ): TaskEmitter {
-    const stream = this.create(id, due, parts, interval)
+    const stream = this.create(id, due, parts, interval, (_, part) => partHandler(part))
     const emitter = this.addStream(stream)
-    emitter.onPart((_, part) => partHandler(part))
+    //emitter.onPart((_, part) => partHandler(part))
     emitter.onFinish(finishHandler)
     return emitter
   }
@@ -121,7 +124,7 @@ export class StreamContainer {
     due = Date.now(),
     parts: number = 1,
     interval: number = 0,
-    handler = async () => {}
+    handler: (this: TaskStream, lastWait: number, part: number) => Promise<void> = async () => {}
   ) {
     if (this.streams.find((s) => s.id === id)) {
       throw new Error(`Stream [${id}] is already running, did you mean to cancel first?`)

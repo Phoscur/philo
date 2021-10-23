@@ -13,12 +13,10 @@ export default async function stitchImages(
   storagePath: string,
   options: StitchOptions = {}
 ) {
-  const parts = options.parts || 10
-  const num = '%0' + parts.toString().length + 'd' // e.g. %04d - without zero padding use %d instead
   const optionsWithDefaults = {
     framerate: 18,
     crf: 28,
-    inFiles: `${name}-${num}.jpg`,
+    inFiles: `${name}-${!options.parts ? '%d' : '%0' + options.parts.toString().length + 'd'}.jpg`, // e.g. %04d - without zero padding use %d instead
     outFile: `${name}.mp4`,
     //outFile: name+".mp4",
     ...options,

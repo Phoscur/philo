@@ -3,8 +3,31 @@ import { StreamContainer, TaskStream } from './stream'
 
 describe('Task Stream Container', () => {
   beforeAll(() => {
+    StreamContainer.MINIMUM_INTERVAL_SPACING = 1000
     TasksContainer.setTimeout = ((resolve: () => void) =>
       setTimeout(resolve, 0)) as typeof setTimeout // shortcut wait
+  })
+
+  it('should emit done after the last part', async () => {
+    expect.assertions(3)
+    const tasks = new TasksContainer(() => {})
+    const streams = new StreamContainer(tasks)
+    const spy = jest.fn(async () => {
+      return new Promise<void>((resolve) =>
+        setTimeout(() => {
+          resolve()
+        }, 0)
+      )
+    })
+    const s: TaskStream = streams.create('id', Date.now() - 1000, 5, 33, spy)
+    const emitter = streams.addStream(s)
+    expect(spy).toHaveBeenCalledTimes(0)
+    await emitter.done.then(() => {
+      expect(spy).toHaveBeenCalledTimes(5)
+    })
+    // TODO? only start & recalc with:
+    await streams.run()
+    expect(spy).toHaveBeenCalledTimes(5)
   })
 
   it('should be busy when using very low intervals', async () => {
