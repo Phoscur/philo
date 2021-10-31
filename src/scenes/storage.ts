@@ -1,10 +1,7 @@
 import type FileStorage from '../lib/storage'
 import type { PhiloBot, PhiloScene } from '../PhiloContext.interface'
 
-export default function setupStorageCommands(
-  bot: PhiloBot | PhiloScene,
-  storage: FileStorage
-) {
+export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage: FileStorage) {
   async function filterStorage(filter: string) {
     const files = await storage.list()
     return files.filter((name: string) => name.includes(filter))
@@ -16,6 +13,13 @@ export default function setupStorageCommands(
       const files = await filterStorage(filter)
       // TODO cut or split into multiple messages if the list is too long
       ctx.reply(files.join(' ') || 'Storage is empty')
+    })
+  })
+
+  bot.command(['status', 'storage', 's'], (ctx) => {
+    setImmediate(async () => {
+      const status = await ctx.storage.status()
+      ctx.reply(`Storage space: ${status}`)
     })
   })
 

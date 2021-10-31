@@ -1,5 +1,5 @@
 // ## Adaption of the (MIT licensed) code from [pi-camera-connect](https://github.com/launchcodedev/pi-camera-connect/blob/master/src/lib/still-camera.ts)
-import { spawnPromise } from './spawn'
+import { spawnPromise } from '../spawn'
 
 const { DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_DELAY } = process.env
 

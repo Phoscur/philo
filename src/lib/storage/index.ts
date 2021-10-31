@@ -10,6 +10,7 @@ import {
   mkdirSync,
 } from 'fs'
 import { join } from 'path'
+import getStorageStatus from './df'
 
 /**
  * Filesystem access to cache photos for timelapses
@@ -25,6 +26,11 @@ export default class FileStorage {
 
   get cwd() {
     return join(process.cwd(), this.path)
+  }
+
+  async status() {
+    const i = await getStorageStatus(this.cwd)
+    return `${i.folder}/${i.available} (${i.percent}: ${i.used}/${i.size}) [${this.path}]`
   }
 
   exists(name: string) {

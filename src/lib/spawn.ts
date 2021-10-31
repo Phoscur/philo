@@ -1,10 +1,6 @@
 import { spawn, SpawnOptions } from 'child_process'
 
-export const spawnPromise = (
-  command: string,
-  args?: Array<string>,
-  options?: SpawnOptions
-) =>
+export const spawnPromise = (command: string, args?: Array<string>, options?: SpawnOptions) =>
   new Promise<Buffer>((resolve, reject) => {
     const childProcess = spawn(command, args ?? [], options ?? {})
 

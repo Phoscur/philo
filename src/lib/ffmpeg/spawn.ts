@@ -31,11 +31,9 @@ export const spawnPromisePrependStdErr = (
       'data',
       (data: Buffer) => (stderrData = Buffer.concat([stderrData, data]))
     )
-    childProcess.stderr.once('error', (err: Error) => reject(err))
-
-    childProcess.stdout.on('close', () => {
+    childProcess.stderr.once('error', (err: Error) => {
       console.log(
-        'Command successful',
+        'Command unsuccessful',
         command,
         args,
         'Error:',
@@ -45,6 +43,10 @@ export const spawnPromisePrependStdErr = (
         'Warnings:',
         stderrData.toString()
       )
+      reject(err)
+    })
+
+    childProcess.stdout.on('close', () => {
       if (stderrData.length > 0) {
         return resolve(Buffer.concat([stderrData, stdoutData]))
       }

@@ -54,6 +54,7 @@ async function timelapse(
     ...markup,
   })
   const taskId = `${status.chat.id}-${status.message_id}` // common format with cancelRunning action
+  console.log('Starting timelapse', taskId, count, interval)
   let photosTaken = 0,
     photoErrors = 0
   async function handlePart(part: number) {
