@@ -210,8 +210,8 @@ export default class StillCamera {
         '--output',
         '-',
       ])
-    } catch (err) {
-      if (err.code === 'ENOENT') {
+    } catch (err: any) {
+      if (err && err.code === 'ENOENT') {
         throw new Error(
           "Could not take image with StillCamera. Are you running on a Raspberry Pi with 'raspistill' installed?"
         )

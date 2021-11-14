@@ -196,7 +196,7 @@ export default function createPhotoScene(storage: Storage) {
     const message = await prepareShot(ctx, ctx.preset)
     // add share button (repost in CHANNEL_CHAT_ID with different caption)
     const markup = Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]])
-    ctx.telegram.editMessageCaption(
+    await ctx.telegram.editMessageCaption(
       message.chat.id,
       message.message_id,
       undefined,

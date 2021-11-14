@@ -48,7 +48,10 @@ async function timelapse(
 
   const count = preset.count || 10 // should always have a count (with duration&minutely set), ten is also the max count of images in an album
   const interval = preset.interval || 333
-  const markup = Markup.inlineKeyboard([Markup.button.callback('Cancel', 'cancelRunning')])
+  const markup = Markup.inlineKeyboard([
+    // TODO finish early Markup.button.callback('Finish', 'finishRunning'),
+    Markup.button.callback('Cancel', 'cancelRunning'),
+  ])
   const status = await ctx.replyWithAnimation(ctx.spinnerAnimation.media, {
     caption: `${preset}\nTaking ${count} shots ...`,
     ...markup,
@@ -132,9 +135,21 @@ async function timelapse(
       )
     }
   }
-  await streams.run()
-  /* TODO reuse emitter: const emitter = */
-  streams.createPartEmitter(taskId, handlePart, handleFinish, count, interval, due)
+  try {
+    await streams.run()
+    /* TODO reuse emitter: const emitter = */
+    streams.createPartEmitter(taskId, handlePart, handleFinish, count, interval, due)
+  } catch (error) {
+    console.log('Failed to start timelapse', taskId, error)
+    const message = error ? error + '' : 'An error occured'
+    await ctx.telegram.editMessageCaption(
+      status.chat.id,
+      status.message_id,
+      undefined,
+      message,
+      markup
+    )
+  }
 }
 
 export default function enhancePhotoScene(photoScene: PhiloScene, streams: StreamContainer) {
