@@ -4,12 +4,14 @@ Photo &amp; Timelapse Telegram Bot
 
 ### MAJOR TODOS
 
-- create PhotoStream, reusable multitarget, queueing [fix queueing]
+- create PhotoStream, reusable multitarget, queueing [fix queueing!]
 - more timelapse settings
 
+- save to folders shots & vids (with data.json & readme.md)
 - upload via git
-- df & du commands
 - clean storage
+
+- !! automatically take a timelapse every day !!
 
 ## Dependencies
 
