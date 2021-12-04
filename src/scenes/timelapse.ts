@@ -153,10 +153,37 @@ async function timelapse(
 }
 
 export default function enhancePhotoScene(photoScene: PhiloScene, streams: StreamContainer) {
+  const timelapseDuration = 60 * 1.4 // 1.4 hours total
   photoScene.action('timelapse', async (ctx) => {
     try {
       const preset: Preset = ctx.preset.lapse({
-        duration: 60 * 1.4, // 1.4 hours total
+        duration: timelapseDuration,
+        minutely: 5,
+      })
+      await ctx.answerCbQuery(`Starting Timelapse now!`)
+      await timelapse(ctx, streams, preset)
+    } catch (error) {
+      await ctx.answerCbQuery(`Failed timelapse: ${error}`)
+    }
+  })
+
+  photoScene.action('half-timelapse', async (ctx) => {
+    try {
+      const preset: Preset = ctx.preset.lapse({
+        duration: timelapseDuration / 2,
+        minutely: 5,
+      })
+      await ctx.answerCbQuery(`Starting Timelapse now!`)
+      await timelapse(ctx, streams, preset)
+    } catch (error) {
+      await ctx.answerCbQuery(`Failed timelapse: ${error}`)
+    }
+  })
+
+  photoScene.action('third-timelapse', async (ctx) => {
+    try {
+      const preset: Preset = ctx.preset.lapse({
+        duration: timelapseDuration / 3,
         minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Timelapse now!`)

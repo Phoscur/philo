@@ -33,6 +33,10 @@ function renderPhotoMessage(ctx: PhiloContext) {
       Markup.button.callback('Timelapse now 🎥', 'timelapse'),
     ],
     [
+      Markup.button.callback('Half 🎥', 'half-timelapse'),
+      Markup.button.callback('Third 🎥', 'third-timelapse'),
+    ],
+    [
       Markup.button.callback('Short 🎥', 'short-timelapse'),
       Markup.button.callback('Super Short 🎥', 'super-short-timelapse'),
       Markup.button.callback('Short delay 🎥', 'short-delayed-timelapse'),
