@@ -12,10 +12,8 @@ import getStorageStatus from './df'
 export default class FileStorage {
   protected constructor(public readonly path: string) {}
 
-  static async create(path: string = 'storage') {
-    const storage = new FileStorage(path)
-    await storage.setup()
-    return storage
+  static async create(path: string = 'storage'): Promise<FileStorage> {
+    return new FileStorage(path).setup()
   }
 
   async setup() {
@@ -23,6 +21,7 @@ export default class FileStorage {
       await mkdir(this.path)
       console.log('Created storage folder:', this.path)
     }
+    return this
   }
 
   get cwd() {
