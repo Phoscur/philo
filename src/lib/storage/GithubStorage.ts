@@ -104,7 +104,7 @@ export class GithubStorage extends FileStorage {
   }
 
   async save(fileName: string, source: Buffer) {
-    const file = super.save(fileName, source)
+    await super.save(fileName, source)
     const message = `Add ${fileName}`
     // commit & push
     const dir = this.cwd
@@ -114,6 +114,5 @@ export class GithubStorage extends FileStorage {
     console.log('Git Status', fileName, await git.status({ fs, dir, filepath: fileName }))
     const commits = await git.log({ fs, dir })
     console.log('Git Log length:', commits.length, '- Last commit:', commits[0].commit.message)
-    return file
   }
 }
