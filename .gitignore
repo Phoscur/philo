@@ -1,5 +1,6 @@
 # Image & configuration file storage
 /storage*
+/karlsruhe*
 
 # VSCode SFTP
 .vscode/sftp.json

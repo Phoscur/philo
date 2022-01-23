@@ -17,9 +17,13 @@ export default class FileStorage {
   }
 
   async setup() {
-    if (!(await this.exists())) {
+    try {
       await mkdir(this.path)
       console.log('Created storage folder:', this.path)
+    } catch (error: any) {
+      if (error.code !== 'EEXIST') {
+        throw error
+      }
     }
     return this
   }

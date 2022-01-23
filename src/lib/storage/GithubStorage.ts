@@ -39,12 +39,12 @@ export class GithubStorage extends FileStorage {
   /**
    * Special URL for cloning private github repo (refs https://github.com/isomorphic-git/isomorphic-git/issues/1170#issuecomment-653713207)
    */
-  readonly url: string
+  private readonly url: string
   protected constructor(
     path: string,
-    public readonly token: string,
-    public readonly organisation: string,
-    public readonly author: GithubAuthor
+    private readonly token: string,
+    private readonly organisation: string,
+    private readonly author: GithubAuthor
   ) {
     super(path)
 
@@ -63,25 +63,10 @@ export class GithubStorage extends FileStorage {
     return new GithubStorage(path, token, organisation, author).setup()
   }
 
-  async save(fileName: string, source: Buffer) {
-    const file = super.save(fileName, source)
-    const message = `Add ${fileName}`
-    // commit & push
-    const dir = this.cwd
-    await git.add({ fs, dir, filepath: fileName })
-    await git.commit({ fs, dir, message, author: this.author })
-    await git.push({ fs, dir, http, onAuth: () => ({ username: this.token }) })
-    console.log('Git Status', fileName, await git.status({ fs, dir, filepath: fileName }))
-    console.log('Git Log', await git.log({ fs, dir }))
-    return file
-  }
-
   async setup() {
-    if (!(await this.exists())) {
-      await this.createRepo(this.path)
-      await this.checkout()
-      // TODO? await git.branch({ fs, dir, ref: 'main' })
-    }
+    await this.createRepo(this.path)
+    await this.checkout()
+    // TODO? await git.branch({ fs, dir, ref: 'main' })
     return this
   }
 
@@ -96,9 +81,15 @@ export class GithubStorage extends FileStorage {
       headers: {
         Authorization: `token ${this.token}`,
       },
+    }).catch((error) => {
+      // github returns 422 if the repo already exists
+      if (error.response.status === 422) {
+        return error.response
+      }
+      throw error
     })
     console.log('Repo creation response:', creation.status, creation.statusText)
-    return creation.status === 201
+    return creation.status === 201 || creation.status === 422
   }
 
   async deleteRepo(name: string) {
@@ -108,6 +99,21 @@ export class GithubStorage extends FileStorage {
 
   async checkout() {
     const dir = this.cwd
-    console.log('Clone:', await git.clone({ fs, dir, http, url: this.url }))
+    await git.clone({ fs, dir, http, url: this.url })
+    console.log('Successfully cloned', this.path)
+  }
+
+  async save(fileName: string, source: Buffer) {
+    const file = super.save(fileName, source)
+    const message = `Add ${fileName}`
+    // commit & push
+    const dir = this.cwd
+    await git.add({ fs, dir, filepath: fileName })
+    await git.commit({ fs, dir, message, author: this.author })
+    await git.push({ fs, dir, http, onAuth: () => ({ username: this.token }) })
+    console.log('Git Status', fileName, await git.status({ fs, dir, filepath: fileName }))
+    const commits = await git.log({ fs, dir })
+    console.log('Git Log length:', commits.length, '- Last commit:', commits[0].commit.message)
+    return file
   }
 }
