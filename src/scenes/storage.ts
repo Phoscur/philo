@@ -1,7 +1,7 @@
-import type FileStorage from '../lib/storage'
+import type { Storage } from '../lib/storage'
 import type { PhiloBot, PhiloScene } from '../PhiloContext.interface'
 
-export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage: FileStorage) {
+export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage: Storage) {
   async function filterStorage(filter: string) {
     const files = await storage.list()
     return files.filter((name: string) => name.includes(filter))

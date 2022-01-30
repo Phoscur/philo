@@ -5,11 +5,12 @@ import {
 import { stat, mkdir, readdir, readFile, writeFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import getStorageStatus from './df'
+import { Storage } from './Storage.interface'
 
 /**
  * Filesystem access to cache photos for timelapses
  */
-export default class FileStorage {
+export default class FileStorage implements Storage {
   protected constructor(public readonly path: string) {}
 
   static async create(path: string = 'storage'): Promise<FileStorage> {
@@ -38,7 +39,9 @@ export default class FileStorage {
   }
 
   async exists(name: string = '') {
-    return stat(join(this.path, name)).catch(() => false)
+    return stat(join(this.path, name))
+      .then(() => true)
+      .catch(() => false)
   }
 
   async list() {

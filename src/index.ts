@@ -1,7 +1,7 @@
 import { Context, Telegraf, session } from 'telegraf'
 import buildStage from './scenes'
 import StillCamera from './lib/raspistill'
-import FileStorage, { GithubStorage } from './lib/storage'
+import { DailyRotatingStorage } from './lib/storage'
 import { getFormattedDate } from './lib/time'
 import type PhiloContext from './PhiloContext.interface'
 import type { Preset, InputMediaCameraPhoto } from './PhiloContext.interface'
@@ -17,7 +17,7 @@ async function setupBot() {
     throw new Error('BOT_TOKEN must be provided by ENV!')
   }
 
-  const storage = await GithubStorage.create(/* config from env */)
+  const storage = await DailyRotatingStorage.create(/* config from env */)
   const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
 
   async function takePhoto(preset: Preset): Promise<InputMediaCameraPhoto> {

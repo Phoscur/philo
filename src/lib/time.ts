@@ -9,10 +9,11 @@ dayjs.extend(timezone)
 dayjs.extend(duration)
 dayjs.extend(relativeTime)
 
-const { LOCATION_TIMEZONE, DATE_FORMAT, DAY_FORMAT, HOURS_FORMAT } = process.env
+const { LOCATION_TIMEZONE, DATE_FORMAT, DAY_FORMAT, DAY_FOLDER_FORMAT, HOURS_FORMAT } = process.env
 
 const dateFormat = DATE_FORMAT || 'D.M.YYYY H:mm'
 const dayFormat = DAY_FORMAT || 'D. MMMM YYYY'
+const dayFolderFormat = DAY_FOLDER_FORMAT || 'YYYY-MM-DD'
 const hoursFormat = HOURS_FORMAT || 'HH:mm:ss'
 
 export function changeTimezoneToLocal(time: Date | number | Dayjs) {
@@ -27,6 +28,7 @@ export interface FormattedDate {
   readonly fileNameFormatted: string
   readonly fullFormatted: string
   readonly dayFormatted: string
+  readonly folderDayFormatted: string
   readonly hoursFormatted: string
 }
 
@@ -34,6 +36,9 @@ export function getFormattedDate(now: Dayjs | number = Date.now()): FormattedDat
   const date = dayjs(changeTimezoneToLocal(now))
   return {
     date,
+    get folderDayFormatted() {
+      return date.format(dayFolderFormat)
+    },
     get fileNameFormatted() {
       return date.format('YYYY-MM-DD--HH-mm')
     },
