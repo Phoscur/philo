@@ -1,6 +1,7 @@
 import { Scenes } from 'telegraf'
 import type PhiloContext from '../PhiloContext.interface'
 import type { Storage } from '../lib/storage'
+import type { StreamContainer } from '../lib/tasks'
 
 import createPhotoScene from './photo'
 import timelapseScene from './tscene'
@@ -8,9 +9,9 @@ import timelapseScene from './tscene'
 // import setupTemperatureCommands from './temperature'
 // import setupStorageCommands from './storage'
 
-export default function buildStage(storage: Storage) {
+export default function buildStage(storage: Storage, streams: StreamContainer) {
   // storage and temperature do not have a scenes (yet)
-  return new Scenes.Stage<PhiloContext>([createPhotoScene(storage), timelapseScene], {
+  return new Scenes.Stage<PhiloContext>([createPhotoScene(storage, streams), timelapseScene], {
     default: 'photo',
   })
 }

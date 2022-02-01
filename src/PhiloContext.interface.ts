@@ -6,7 +6,12 @@ import type {
   Message,
   MessageId,
 } from 'telegraf/typings/core/types/typegram'
-import { ExtraCopyMessage, ExtraReplyMessage } from 'telegraf/typings/telegram-types'
+import {
+  ExtraCopyMessage,
+  ExtraReplyMessage,
+  ExtraPhoto,
+  ExtraAnimation,
+} from 'telegraf/typings/telegram-types'
 import type { Storage } from './lib/storage'
 import type { FormattedDate } from './lib/time'
 import type { Preset } from './presets'
@@ -37,14 +42,17 @@ export default interface PhiloContext extends Context {
   preset: Preset
   storage: Storage
   takePhoto: (preset: Preset) => Promise<InputMediaCameraPhoto>
+  sendGroupMessage: (message: string, extra?: ExtraReplyMessage) => Promise<Message.TextMessage>
+  sendGroupPhoto: (photo: string | InputFile, extra?: ExtraPhoto) => Promise<Message.PhotoMessage>
+  sendGroupAnimation: (
+    animation: string | InputFile,
+    extra?: ExtraAnimation
+  ) => Promise<Message.AnimationMessage>
   sendChannelMessage: (message: string, extra?: ExtraReplyMessage) => Promise<Message.TextMessage>
-  sendChannelPhoto: (
-    photo: string | InputFile,
-    extra?: ExtraReplyMessage
-  ) => Promise<Message.PhotoMessage>
+  sendChannelPhoto: (photo: string | InputFile, extra?: ExtraPhoto) => Promise<Message.PhotoMessage>
   sendChannelAnimation: (
     animation: string | InputFile,
-    extra?: ExtraReplyMessage
+    extra?: ExtraAnimation
   ) => Promise<Message.AnimationMessage>
   sendChannelMessageCopy: (extra?: ExtraCopyMessage) => Promise<MessageId>
   randomImage: InputMediaPhoto

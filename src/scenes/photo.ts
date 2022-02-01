@@ -80,12 +80,10 @@ async function setCaption(
   )
   return false
 }
-export default function createPhotoScene(storage: Storage) {
-  const running = new TasksContainer() // (needs sharing beyond the context lifetime of setImmediate)
+export default function createPhotoScene(storage: Storage, streams: StreamContainer) {
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
-  const streams: StreamContainer = new StreamContainer(running)
   setupTimelapse(photoScene, streams)
 
   async function prepareShot(
@@ -277,7 +275,7 @@ export default function createPhotoScene(storage: Storage) {
         ctx,
         ctx.preset,
         timings.length,
-        sunsetTaskHandler(ctx, running, sunset)
+        sunsetTaskHandler(ctx, streams.tasks, sunset)
       )
       if (!message) return
       // the first images gets the album caption
@@ -313,7 +311,7 @@ export default function createPhotoScene(storage: Storage) {
         )
         const taskId = `${message.chat.id}-${message.message_id}`
         try {
-          await running.createWaitTask(taskId, diff)
+          await streams.tasks.createWaitTask(taskId, diff)
         } catch (error) {
           console.error(error)
           aborted = true
@@ -335,7 +333,7 @@ export default function createPhotoScene(storage: Storage) {
     try {
       const { message } = ctx.callbackQuery
       const id = `${message?.chat.id}-${message?.message_id}`
-      if (!running.ongoing(id)) {
+      if (!streams.tasks.ongoing(id)) {
         await ctx.answerCbQuery(`Warning - Task ID[${id}] not found! Nothing to cancel.`)
         await ctx.deleteMessage()
         return
@@ -347,7 +345,7 @@ export default function createPhotoScene(storage: Storage) {
         return ctx.answerCbQuery(`Only Admins can cancel`)
       }
       await ctx.answerCbQuery(`Cancelled!`)
-      await running.cancel(id)
+      await streams.tasks.cancel(id)
       await ctx.deleteMessage()
     } catch (error) {
       console.error('Failed to cancel', error)

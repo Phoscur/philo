@@ -11,13 +11,13 @@ function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length)
 }
 
-async function timelapse(
+export async function timelapse(
   ctx: PhiloContext,
   streams: StreamContainer,
   preset: Preset,
-  due = Date.now()
+  due = Date.now(),
+  group = false
 ) {
-  // TODO const size = 10 max group size
   if (ctx.randomEmulation) {
     throw new Error(
       `Sorry! Random Emulation Mode is enabled [${ctx.randomEmulation}ms] - no timelapses`
@@ -29,6 +29,7 @@ async function timelapse(
   // await ctx.deleteMessage() - parallel timelapses should be supported now!
 
   /* TODO album preview
+  // TODO const size = 10 max group size
   const images = Array(size).fill(ctx.storage.random)
   const messages = await ctx.replyWithMediaGroup(images)
   // the first images gets the album caption
@@ -48,11 +49,14 @@ async function timelapse(
 
   const count = preset.count || 10 // should always have a count (with duration&minutely set), ten is also the max count of images in an album
   const interval = preset.interval || 333
+  const animationMessageFactory = group // the bind is just to make typescript happy, they were bound before
+    ? ctx.sendGroupAnimation.bind(ctx)
+    : ctx.replyWithAnimation.bind(ctx)
   const markup = Markup.inlineKeyboard([
     // TODO finish early Markup.button.callback('Finish', 'finishRunning'),
     Markup.button.callback('Cancel', 'cancelRunning'),
   ])
-  const status = await ctx.replyWithAnimation(ctx.spinnerAnimation.media, {
+  const status = await animationMessageFactory(ctx.spinnerAnimation.media, {
     caption: `${preset}\nTaking ${count} shots ...`,
     ...markup,
   })
@@ -114,7 +118,7 @@ async function timelapse(
       console.log('Stitching:', ctx.storage.cwd, outFile)
       await stitchImages(taskId, ctx.storage.cwd, { outFile, parts })
 
-      await ctx.replyWithAnimation(
+      await animationMessageFactory(
         {
           source: ctx.storage.readStream(outFile),
         },

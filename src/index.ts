@@ -6,11 +6,12 @@ import { getFormattedDate } from './lib/time'
 import type PhiloContext from './PhiloContext.interface'
 import type { Preset, InputMediaCameraPhoto } from './PhiloContext.interface'
 
-import presets, { sunsetTimings } from './presets' // TODO? use storage instead?
+import { dailyMiddlewareFactory } from './daily'
+import presets, { sunsetTimings } from './presets'
+import { StreamContainer, TasksContainer } from './lib/tasks'
 
 const randomEmulation = 0
-const { BOT_TOKEN, GROUP_CHAT_ID, CHANNEL_CHAT_ID, STORAGE_DIRECTORY, RANDOM_IMAGE_URL } =
-  process.env
+const { BOT_TOKEN, GROUP_CHAT_ID, CHANNEL_CHAT_ID, RANDOM_IMAGE_URL, DAILY } = process.env
 
 async function setupBot() {
   if (!BOT_TOKEN) {
@@ -18,6 +19,8 @@ async function setupBot() {
   }
 
   const storage = await DailyRotatingStorage.create(/* config from env */)
+  const running = new TasksContainer() // (needs sharing beyond the context lifetime of setImmediate)
+  const streams = new StreamContainer(running)
   const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
 
   async function takePhoto(preset: Preset): Promise<InputMediaCameraPhoto> {
@@ -37,6 +40,7 @@ async function setupBot() {
       getSessionKey: async (ctx: Context) => (ctx.chat && ctx.chat.id.toString()) || GROUP_CHAT_ID,
     })
   )
+  // init PhiloContext ctx
   bot.use((ctx, next) => {
     ctx.randomEmulation ??= randomEmulation
     ctx.presetName ??= 'base'
@@ -57,6 +61,9 @@ async function setupBot() {
       return takePhoto(preset)
     }
     //function (x: string | InputFile, extra?: ExtraReplyMessage) => bot.telegram.sendX(CHANNEL_CHAT_ID as string, message, extra)
+    ctx.sendGroupMessage = bot.telegram.sendMessage.bind(bot.telegram, GROUP_CHAT_ID as string)
+    ctx.sendGroupPhoto = bot.telegram.sendPhoto.bind(bot.telegram, GROUP_CHAT_ID as string)
+    ctx.sendGroupAnimation = bot.telegram.sendAnimation.bind(bot.telegram, GROUP_CHAT_ID as string)
     ctx.sendChannelMessage = bot.telegram.sendMessage.bind(bot.telegram, CHANNEL_CHAT_ID as string)
     ctx.sendChannelPhoto = bot.telegram.sendPhoto.bind(bot.telegram, CHANNEL_CHAT_ID as string)
     ctx.sendChannelAnimation = bot.telegram.sendAnimation.bind(
@@ -96,7 +103,12 @@ async function setupBot() {
     })
     return next()
   })
-  bot.use(buildStage(storage).middleware())
+
+  bot.use(buildStage(storage, streams).middleware())
+
+  if (DAILY) {
+    bot.use(dailyMiddlewareFactory(streams))
+  }
 
   bot.start((ctx) => {
     ctx.reply('Bot is ready!')

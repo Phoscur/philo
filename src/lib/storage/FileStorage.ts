@@ -35,7 +35,8 @@ export default class FileStorage implements Storage {
 
   async status() {
     const i = await getStorageStatus(this.cwd)
-    return `${i.folder}/${i.available} (${i.percent}: ${i.used}/${i.size}) [${this.path}]`
+    //return `${i.folder}/${i.available} (${i.percent}: ${i.used}/${i.size}) [${this.path}]`
+    return `${i.available} available (${i.percent} used ${i.used}/${i.size}) [${this.path}]`
   }
 
   async exists(name: string = '') {

@@ -10,7 +10,7 @@ import { Storage } from './Storage.interface'
  * Saves raw pictures and produced/selected media seperately
  */
 export default class MediaBackupStorage {
-  constructor(public readonly raw: GithubStorage, public readonly media: GithubStorage) {}
+  protected constructor(public readonly raw: GithubStorage, public readonly media: GithubStorage) {}
 
   static async create(path = `${process.env.MEDIA_STORAGE_NAME}`) {
     const raw = await GithubStorage.create(path + '-raw')
@@ -36,7 +36,7 @@ export default class MediaBackupStorage {
  */
 export class DailyRotatingStorage implements Storage {
   public path = ''
-  constructor(public pathPrefix: string, private data?: GithubStorage) {}
+  protected constructor(public pathPrefix: string, private data?: GithubStorage) {}
 
   static async create(path = `${process.env.GITHUB_REPO_NAME_PREFIX}`) {
     return await new DailyRotatingStorage(path).rotate()
