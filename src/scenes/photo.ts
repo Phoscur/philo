@@ -84,7 +84,7 @@ export default function createPhotoScene(storage: Storage, streams: StreamContai
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)
-  setupTimelapse(photoScene, streams)
+  setupTimelapse(photoScene)
 
   async function prepareShot(
     ctx: PhiloContext,

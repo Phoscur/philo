@@ -1,9 +1,17 @@
 import { Markup } from 'telegraf'
 import { getNextSunset, Sunset } from '../lib/sunset'
 import stitchImages from '../lib/ffmpeg'
-import type { StreamContainer } from '../lib/tasks'
 import type PhiloContext from '../PhiloContext.interface'
-import type { PhiloScene, Preset } from '../PhiloContext.interface'
+import type {
+  TimelapseContext,
+  PhiloScene,
+  Preset,
+  Message,
+  AnimationMessage,
+  ExtraAnimation,
+  InputMediaCameraPhoto,
+  InputFile,
+} from '../PhiloContext.interface'
 
 const MINIMUM_TIMELAPSE_PARTS = 10
 
@@ -11,13 +19,72 @@ function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length)
 }
 
-export async function timelapse(
+export function animationMessageFactory(
   ctx: PhiloContext,
-  streams: StreamContainer,
-  preset: Preset,
-  due = Date.now(),
-  group = false
+  message: Message.AnimationMessage
+): AnimationMessage {
+  const m = Object.create(message)
+  m.editMedia = ctx.telegram.editMessageMedia.bind(
+    ctx.telegram,
+    message.chat.id,
+    message.message_id,
+    undefined
+  )
+  m.editCaption = ctx.telegram.editMessageCaption.bind(
+    ctx.telegram,
+    message.chat.id,
+    message.message_id,
+    undefined
+  )
+  m.delete = ctx.telegram.deleteMessage.bind(ctx.telegram, message.chat.id, message.message_id)
+  return m
+}
+
+export function animationMessageAsyncFactory(
+  ctx: PhiloContext,
+  sendAnimation: (
+    animation: string | InputFile,
+    extra?: ExtraAnimation
+  ) => Promise<Message.AnimationMessage>
 ) {
+  return async function sendAnimationMessage(
+    animation: string | InputFile,
+    extra?: ExtraAnimation
+  ) {
+    return animationMessageFactory(ctx, await sendAnimation(animation, extra))
+  }
+}
+
+export function timelapseContextAsyncFactory(
+  ctx: PhiloContext,
+  sendAnimation: (
+    animation: string | InputFile,
+    extra?: ExtraAnimation
+  ) => Promise<Message.AnimationMessage>
+): TimelapseContext {
+  const t = Object.create(ctx)
+  t.animationMessageFactory = animationMessageAsyncFactory(ctx, sendAnimation)
+  t.spinnerAnimationMessageFactory = animationMessageAsyncFactory(ctx, sendAnimation).bind(
+    null,
+    ctx.spinnerAnimation.media
+  )
+  return t
+}
+
+export function timelapseContextFactory(ctx: PhiloContext): TimelapseContext {
+  const t = Object.create(ctx)
+  t.animationMessageFactory = async (animation: InputMediaCameraPhoto, extra?: ExtraAnimation) => {
+    const message = await ctx.replyWithAnimation(animation.media, extra)
+    return animationMessageFactory(ctx, message)
+  }
+  t.spinnerAnimationMessageFactory = async (extra?: ExtraAnimation) => {
+    const message = await ctx.replyWithAnimation(ctx.spinnerAnimation.media, extra)
+    return animationMessageFactory(ctx, message)
+  }
+  return t
+}
+
+export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Date.now()) {
   if (ctx.randomEmulation) {
     throw new Error(
       `Sorry! Random Emulation Mode is enabled [${ctx.randomEmulation}ms] - no timelapses`
@@ -49,14 +116,11 @@ export async function timelapse(
 
   const count = preset.count || 10 // should always have a count (with duration&minutely set), ten is also the max count of images in an album
   const interval = preset.interval || 333
-  const animationMessageFactory = group // the bind is just to make typescript happy, they were bound before
-    ? ctx.sendGroupAnimation.bind(ctx)
-    : ctx.replyWithAnimation.bind(ctx)
   const markup = Markup.inlineKeyboard([
     // TODO finish early Markup.button.callback('Finish', 'finishRunning'),
     Markup.button.callback('Cancel', 'cancelRunning'),
   ])
-  const status = await animationMessageFactory(ctx.spinnerAnimation.media, {
+  const status = await ctx.spinnerAnimationMessageFactory({
     caption: `${preset}\nTaking ${count} shots ...`,
     ...markup,
   })
@@ -71,24 +135,12 @@ export async function timelapse(
       const image = await ctx.takePhoto(preset)
       console.log('Saving image:', name)
       await ctx.storage.save(name, image.media.source)
-      await ctx.telegram.editMessageMedia(status.chat.id, status.message_id, undefined, image)
-      await ctx.telegram.editMessageCaption(
-        status.chat.id,
-        status.message_id,
-        undefined,
-        `${preset}\nTaking more shots (${count - part}) ...`,
-        markup
-      )
+      await status.editMedia(image)
+      await status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
       photosTaken++
     } catch (error) {
       console.error(error)
-      await ctx.telegram.editMessageCaption(
-        status.chat.id,
-        status.message_id,
-        undefined,
-        `Fail (${photoErrors}! ${error}`,
-        markup
-      )
+      await status.editCaption(`Fail (${photoErrors}! ${error}`, markup)
       photoErrors++
     }
   }
@@ -98,27 +150,16 @@ export async function timelapse(
       if (photosTaken < MINIMUM_TIMELAPSE_PARTS) {
         const message = `Not rendering timelapse only has ${photosTaken}/${MINIMUM_TIMELAPSE_PARTS} parts. Errors: ${photoErrors}`
         console.log(message)
-        await ctx.telegram.editMessageCaption(
-          status.chat.id,
-          status.message_id,
-          undefined,
-          message,
-          markup
-        )
+        await status.editCaption(message, markup)
         return
       }
-      await ctx.telegram.editMessageCaption(
-        status.chat.id,
-        status.message_id,
-        undefined,
-        `Rendering timelapse consisting ${parts} images ...`,
-        markup
-      )
+
+      await status.editCaption(`Rendering timelapse consisting ${parts} images ...`, markup)
       const outFile = `${fileNameFormatted}.${taskId}.mp4`
       console.log('Stitching:', ctx.storage.cwd, outFile)
       await stitchImages(taskId, ctx.storage.cwd, { outFile, parts })
 
-      await animationMessageFactory(
+      await ctx.animationMessageFactory(
         {
           source: ctx.storage.readStream(outFile),
         },
@@ -127,36 +168,24 @@ export async function timelapse(
           ...Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]),
         }
       )
-      await ctx.telegram.deleteMessage(status.chat.id, status.message_id)
+      await status.delete()
     } catch (error) {
       console.error(error)
-      await ctx.telegram.editMessageCaption(
-        status.chat.id,
-        status.message_id,
-        undefined,
-        `Fail (${photoErrors})! ${error}`,
-        markup
-      )
+      await status.editCaption(`Fail (${photoErrors})! ${error}`, markup)
     }
   }
   try {
-    await streams.run()
+    await ctx.streams.run()
     /* TODO reuse emitter: const emitter = */
-    streams.createPartEmitter(taskId, handlePart, handleFinish, count, interval, due)
+    ctx.streams.createPartEmitter(taskId, handlePart, handleFinish, count, interval, due)
   } catch (error) {
     console.log('Failed to start timelapse', taskId, error)
     const message = error ? error + '' : 'An error occured'
-    await ctx.telegram.editMessageCaption(
-      status.chat.id,
-      status.message_id,
-      undefined,
-      message,
-      markup
-    )
+    await status.editCaption(message, markup)
   }
 }
 
-export default function enhancePhotoScene(photoScene: PhiloScene, streams: StreamContainer) {
+export default function enhancePhotoScene(photoScene: PhiloScene) {
   const timelapseDuration = 60 * 1.4 // 1.4 hours total
   photoScene.action('timelapse', async (ctx) => {
     try {
@@ -165,7 +194,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
         minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Timelapse now!`)
-      await timelapse(ctx, streams, preset)
+      await timelapse(timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)), preset)
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }
@@ -178,7 +207,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
         minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Timelapse now!`)
-      await timelapse(ctx, streams, preset)
+      await timelapse(timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)), preset)
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }
@@ -191,7 +220,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
         minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Timelapse now!`)
-      await timelapse(ctx, streams, preset)
+      await timelapse(timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)), preset)
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }
@@ -204,7 +233,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
         minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Short Timelapse now!`)
-      await timelapse(ctx, streams, preset)
+      await timelapse(timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)), preset)
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }
@@ -216,7 +245,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
         minutely: 30,
       })
       await ctx.answerCbQuery(`Starting Super Short Timelapse now!`)
-      await timelapse(ctx, streams, preset)
+      await timelapse(timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)), preset)
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }
@@ -230,7 +259,11 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
         minutely: 5,
       })
       await ctx.answerCbQuery(`Starting Short Timelapse soon!`)
-      await timelapse(ctx, streams, preset, delay)
+      await timelapse(
+        timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)),
+        preset,
+        delay
+      )
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }
@@ -253,7 +286,11 @@ export default function enhancePhotoScene(photoScene: PhiloScene, streams: Strea
       await ctx.answerCbQuery(
         `Sunset is in ${sunset.humanizedDiff}... (wait ${Math.round(diff / 1000)}s)`
       )
-      await timelapse(ctx, streams, preset, diff + Date.now())
+      await timelapse(
+        timelapseContextAsyncFactory(ctx, ctx.replyWithAnimation.bind(ctx)),
+        preset,
+        diff + Date.now()
+      )
     } catch (error) {
       await ctx.answerCbQuery(`Failed timelapse: ${error}`)
     }

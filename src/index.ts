@@ -6,9 +6,10 @@ import { getFormattedDate } from './lib/time'
 import type PhiloContext from './PhiloContext.interface'
 import type { Preset, InputMediaCameraPhoto } from './PhiloContext.interface'
 
-import { dailyMiddlewareFactory } from './daily'
+import { dailySunsetCronFactory } from './daily'
 import presets, { sunsetTimings } from './presets'
 import { StreamContainer, TasksContainer } from './lib/tasks'
+import { animationMessageAsyncFactory } from './scenes/timelapse'
 
 const randomEmulation = 0
 const { BOT_TOKEN, GROUP_CHAT_ID, CHANNEL_CHAT_ID, RANDOM_IMAGE_URL, DAILY } = process.env
@@ -41,13 +42,15 @@ async function setupBot() {
     })
   )
   // init PhiloContext ctx
-  bot.use((ctx, next) => {
+  function setupContext(context?: PhiloContext) {
+    const ctx = context || ({ telegram: bot.telegram } as PhiloContext)
     ctx.randomEmulation ??= randomEmulation
     ctx.presetName ??= 'base'
     ctx.preset ??= presets.base
     ctx.presets ??= presets
     ctx.sunsetTimings ??= sunsetTimings
     ctx.storage ??= storage
+    ctx.streams ??= streams
     ctx.takePhoto = function (preset: Preset) {
       if (this.randomEmulation) {
         return new Promise((resolve) =>
@@ -63,17 +66,16 @@ async function setupBot() {
     //function (x: string | InputFile, extra?: ExtraReplyMessage) => bot.telegram.sendX(CHANNEL_CHAT_ID as string, message, extra)
     ctx.sendGroupMessage = bot.telegram.sendMessage.bind(bot.telegram, GROUP_CHAT_ID as string)
     ctx.sendGroupPhoto = bot.telegram.sendPhoto.bind(bot.telegram, GROUP_CHAT_ID as string)
-    ctx.sendGroupAnimation = bot.telegram.sendAnimation.bind(bot.telegram, GROUP_CHAT_ID as string)
+    ctx.sendGroupAnimation = animationMessageAsyncFactory(
+      ctx,
+      bot.telegram.sendAnimation.bind(bot.telegram, GROUP_CHAT_ID as string)
+    )
     ctx.sendChannelMessage = bot.telegram.sendMessage.bind(bot.telegram, CHANNEL_CHAT_ID as string)
     ctx.sendChannelPhoto = bot.telegram.sendPhoto.bind(bot.telegram, CHANNEL_CHAT_ID as string)
-    ctx.sendChannelAnimation = bot.telegram.sendAnimation.bind(
-      bot.telegram,
-      CHANNEL_CHAT_ID as string
+    ctx.sendChannelAnimation = animationMessageAsyncFactory(
+      ctx,
+      bot.telegram.sendAnimation.bind(bot.telegram, CHANNEL_CHAT_ID as string)
     )
-    ctx.sendChannelMessageCopy = function (extra) {
-      return this.copyMessage(CHANNEL_CHAT_ID as string, extra)
-    }
-
     Object.defineProperties(ctx, {
       spinnerAnimation: {
         get() {
@@ -101,14 +103,17 @@ async function setupBot() {
         },
       },
     })
+    return ctx
+  }
+  bot.use((ctx, next) => {
+    setupContext(ctx)
+    ctx.sendChannelMessageCopy = function (extra) {
+      return this.copyMessage(CHANNEL_CHAT_ID as string, extra)
+    }
     return next()
   })
 
   bot.use(buildStage(storage, streams).middleware())
-
-  if (DAILY) {
-    bot.use(dailyMiddlewareFactory(streams))
-  }
 
   bot.start((ctx) => {
     ctx.reply('Bot is ready!')
@@ -119,6 +124,11 @@ async function setupBot() {
   bot.on('message', (ctx) => ctx.reply('Try /photo'))
 
   bot.launch()
+  if (DAILY) {
+    console.log('Setting up daily timelapse ...')
+    const ctx = setupContext()
+    dailySunsetCronFactory(ctx, ctx.sendGroupMessage, ctx.sendGroupAnimation)
+  }
 
   // Enable graceful stop
   process.once('SIGINT', () => bot.stop('SIGINT'))
