@@ -335,7 +335,6 @@ export default function createPhotoScene(storage: Storage, streams: StreamContai
       const id = `${message?.chat.id}-${message?.message_id}`
       if (!streams.tasks.ongoing(id)) {
         await ctx.answerCbQuery(`Warning - Task ID[${id}] not found! Nothing to cancel.`)
-        await ctx.deleteMessage()
         return
       }
       const user = ctx.from?.username || ''
@@ -346,7 +345,7 @@ export default function createPhotoScene(storage: Storage, streams: StreamContai
       }
       await ctx.answerCbQuery(`Cancelled!`)
       await streams.tasks.cancel(id)
-      await ctx.deleteMessage()
+      await ctx.deleteMessage(message?.message_id)
     } catch (error) {
       console.error('Failed to cancel', error)
     }

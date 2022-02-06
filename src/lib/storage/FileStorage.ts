@@ -63,6 +63,10 @@ export default class FileStorage implements Storage {
     return createWriteStream(file)
   } */
 
+  async add(name: string) {
+    console.log('FileStorage added (noop):', name)
+  }
+
   async save(name: string, source: Buffer) {
     return writeFile(join(this.path, name), source)
   }

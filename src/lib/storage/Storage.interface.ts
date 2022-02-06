@@ -4,9 +4,9 @@ import { Readable } from 'stream'
  * Storage Access Interface
  */
 export interface Storage {
-  status(): Promise<string>
-
+  path: string
   get cwd(): string
+  status(): Promise<string>
   exists(name?: string): Promise<boolean>
 
   list(): Promise<string[]>
@@ -17,6 +17,7 @@ export interface Storage {
 
   /* unused writeStream(name: string) */
 
+  add(name: string): Promise<void>
   save(name: string, source: Buffer): Promise<void>
 
   delete(name: string): Promise<void>

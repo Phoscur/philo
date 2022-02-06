@@ -105,6 +105,10 @@ export class GithubStorage extends FileStorage {
 
   async save(fileName: string, source: Buffer) {
     await super.save(fileName, source)
+    await this.add(fileName)
+  }
+
+  async add(fileName: string) {
     const message = `Add ${fileName}`
     // commit & push
     const dir = this.cwd
