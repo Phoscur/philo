@@ -8,10 +8,11 @@ import { getNextSunset, Sunset } from './lib/sunset'
 import { timelapse } from './scenes/timelapse'
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types'
 
+const MESSAGE_DELAY = 1000
 const SUNDOWN_DELAY_MS = 15000
 const SUNDOWN_REPEAT_DELAY_MS = 60000 * 60 * 16 // 16h (< 24h)
-const SUNDOWN_TIMING_MS = -60000 * 60 * 0.8 // hours before
-const MESSAGE_DELAY = 1000
+const SUNDOWN_TIMING_MS = -60000 * 60 * 1 // 1 hour before
+const SUNDOWN_DURATION_MIN = 60 * 1.4 // 1.4 hours total
 
 export function dailySunsetCronFactory(
   ctx: PhiloContext,
@@ -24,7 +25,7 @@ export function dailySunsetCronFactory(
   const sundownTimer = async () => {
     try {
       const preset: Preset = ctx.preset.lapse({
-        duration: 60 * 1.4, // 1.4 hours total
+        duration: SUNDOWN_DURATION_MIN,
         minutely: 5,
       })
       let sunset: Sunset = await getNextSunset()
