@@ -26,19 +26,25 @@ export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage
   bot.command(['view', 'v'], (ctx) => {
     setImmediate(async () => {
       const [, fileOrFilter] = ctx.message.text.split(' ')
-      const files = await filterStorage(fileOrFilter)
-      const fileName = files[0] || fileOrFilter
-      const source = storage.readStream(fileName)
-      const replyWithFile =
-        fileName.endsWith('.gif') || fileName.endsWith('.mp4')
-          ? ctx.replyWithAnimation.bind(ctx)
-          : ctx.replyWithPhoto.bind(ctx)
-      source.on('error', (err: Error) => {
-        ctx.reply(`Error: ${fileName} - ${err}`)
-      })
-      replyWithFile({
-        source,
-      })
+      try {
+        const files = await filterStorage(fileOrFilter)
+        const fileName = files[0] || fileOrFilter
+        const source = storage.readStream(fileName)
+        const replyWithFile =
+          fileName.endsWith('.gif') || fileName.endsWith('.mp4')
+            ? ctx.replyWithAnimation.bind(ctx)
+            : ctx.replyWithPhoto.bind(ctx)
+        source.on('error', (err: Error) => {
+          ctx.reply(`Error: ${fileName} - ${err}`)
+        })
+        replyWithFile({
+          source,
+        })
+      } catch (err) {
+        console.log('View Command failed')
+        console.error(err)
+        ctx.reply(`Could not find: ${fileOrFilter}`)
+      }
     })
   })
 }
