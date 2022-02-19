@@ -7,12 +7,15 @@ import PhiloContext, {
 import { getNextSunset, Sunset } from './lib/sunset'
 import { timelapse } from './scenes/timelapse'
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types'
+import senseTemperature from './lib/temperature'
 
 const MESSAGE_DELAY = 1000
 const SUNDOWN_DELAY_MS = 15000
 const SUNDOWN_REPEAT_DELAY_MS = 60000 * 60 * 16 // 16h (< 24h)
-const SUNDOWN_TIMING_MS = -60000 * 60 * 1 // 1 hour before
+const SUNDOWN_TIMING_MS = -60000 * 60 * 1.2 // 1.2 hours before
 const SUNDOWN_DURATION_MIN = 60 * 1.4 // 1.4 hours total
+const SUNDOWN_MINUTELY_IMAGE_COUNT = 5
+const SUNDOWN_SENSE_TEMPERATURE = true
 
 export function dailySunsetCronFactory(
   ctx: PhiloContext,
@@ -26,7 +29,7 @@ export function dailySunsetCronFactory(
     try {
       const preset: Preset = ctx.preset.lapse({
         duration: SUNDOWN_DURATION_MIN,
-        minutely: 5,
+        minutely: SUNDOWN_MINUTELY_IMAGE_COUNT,
       })
       let sunset: Sunset = await getNextSunset()
       let diff = sunset.diff + SUNDOWN_TIMING_MS
@@ -35,9 +38,20 @@ export function dailySunsetCronFactory(
         diff = sunset.diff + SUNDOWN_TIMING_MS
       }
       await sleep(diff - MESSAGE_DELAY)
+      let temperatureMessage = ''
+      if (SUNDOWN_SENSE_TEMPERATURE) {
+        try {
+          const { temperature, humidity } = await senseTemperature()
+          temperatureMessage = `Current temperature: ${temperature}°C, humidity: ${humidity}%`
+        } catch (err) {
+          console.error('Failed to read temperature', err)
+        }
+      }
+
       sendText(
         `Sunset is in ${sunset.humanizedDiff}...
 Starting daily timelapse!
+${temperatureMessage}
 Current storage: ` + (await ctx.storage.status())
       )
       await timelapse(

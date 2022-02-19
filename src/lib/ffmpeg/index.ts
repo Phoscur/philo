@@ -46,7 +46,7 @@ export default async function stitchImages(
     '-an',
     optionsWithDefaults.outFile.toString(),
   ]
-
+  console.log('ffmpeg', args)
   try {
     // for some reason ffmpeg needs to spit errors even if it produces a good result
     return await spawnPromisePrependStdErr('ffmpeg', args, { cwd: storagePath })
