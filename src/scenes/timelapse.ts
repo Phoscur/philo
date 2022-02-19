@@ -12,6 +12,7 @@ import type {
   InputFile,
   AnimationMessageConstructor,
 } from '../PhiloContext.interface'
+import { ExtraEditMessageCaption } from 'telegraf/typings/telegram-types'
 
 const MINIMUM_TIMELAPSE_PARTS = 10
 
@@ -30,13 +31,14 @@ export function animationMessageFactory(
     message.message_id,
     undefined
   )
-  m.editCaption = async (text: string) => {
+  m.editCaption = async (text: string, extra?: ExtraEditMessageCaption) => {
     try {
       return await ctx.telegram.editMessageCaption(
         message.chat.id,
         message.message_id,
         undefined,
-        text
+        text,
+        extra
       )
     } catch (err) {
       console.error(
