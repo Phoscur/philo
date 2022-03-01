@@ -14,12 +14,13 @@ import type {
   ExtraAnimation,
 } from 'telegraf/typings/telegram-types'
 export { ExtraAnimation } from 'telegraf/typings/telegram-types'
-import type { Storage } from './lib/storage'
+import type { Message as DiscordMessage } from './lib/discord'
+import type { Storage, Readable } from './lib/storage'
 import type { StreamContainer } from './lib/tasks'
 import type { FormattedDate } from './lib/time'
 import type { Preset } from './presets'
 
-export type { Storage } from './lib/storage'
+export type { Storage, Readable } from './lib/storage'
 export type { Preset } from './presets'
 
 /**
@@ -59,6 +60,7 @@ export interface TimelapseContext {
   animationMessageFactory: AnimationMessageConstructor
   spinnerAnimationMessageFactory: SpinnerAnimationMessageConstructor
   takePhoto: (preset: Preset) => Promise<InputMediaCameraPhoto>
+  onFinish: (caption: string, file: Readable) => Promise<void>
 }
 /**
  * Philo BotContext
@@ -80,6 +82,7 @@ export default interface PhiloContext extends Context {
   sendChannelPhoto: (photo: string | InputFile, extra?: ExtraPhoto) => Promise<Message.PhotoMessage>
   sendChannelAnimation: AnimationMessageConstructor
   sendChannelMessageCopy: (extra?: ExtraCopyMessage) => Promise<MessageId>
+  sendDiscordAnimation: (caption: string, file: Readable) => Promise<DiscordMessage | undefined>
   randomImage: InputMediaPhoto
   spinnerAnimation: InputMediaAnimation
   now: FormattedDate

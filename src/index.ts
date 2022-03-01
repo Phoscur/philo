@@ -1,37 +1,22 @@
 import { Context, Telegraf, session } from 'telegraf'
 import buildStage from './scenes'
-import StillCamera from './lib/raspistill'
 import { DailyRotatingStorage } from './lib/storage'
-import { getFormattedDate } from './lib/time'
 import type PhiloContext from './PhiloContext.interface'
-import type { Preset, InputMediaCameraPhoto } from './PhiloContext.interface'
 
-import { dailySunsetCronFactory } from './daily'
-import presets, { sunsetTimings } from './presets'
 import { StreamContainer, TasksContainer } from './lib/tasks'
-import { animationMessageAsyncFactory } from './scenes/timelapse'
+import { dailySunsetCronFactory } from './daily'
+import { setupContext } from './context'
 
-const randomEmulation = 0
 const { BOT_TOKEN, GROUP_CHAT_ID, CHANNEL_CHAT_ID, RANDOM_IMAGE_URL, DAILY } = process.env
 
 async function setupBot() {
   if (!BOT_TOKEN) {
     throw new Error('BOT_TOKEN must be provided by ENV!')
   }
-
+  const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
   const storage = await DailyRotatingStorage.create(/* config from env */)
   const running = new TasksContainer() // (needs sharing beyond the context lifetime of setImmediate)
   const streams = new StreamContainer(running)
-  const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
-
-  async function takePhoto(preset: Preset): Promise<InputMediaCameraPhoto> {
-    const source = await new StillCamera(preset).takeImage()
-    const media = { source }
-    return {
-      type: 'photo',
-      media,
-    }
-  }
 
   // bot.use(Telegraf.log())
   bot.use(
@@ -41,75 +26,9 @@ async function setupBot() {
       getSessionKey: async (ctx: Context) => (ctx.chat && ctx.chat.id.toString()) || GROUP_CHAT_ID,
     })
   )
-  // init PhiloContext ctx
-  function setupContext(context?: PhiloContext) {
-    const ctx = context || ({ telegram: bot.telegram } as PhiloContext)
-    ctx.randomEmulation ??= randomEmulation
-    ctx.presetName ??= 'base'
-    ctx.preset ??= presets.base
-    ctx.presets ??= presets
-    ctx.sunsetTimings ??= sunsetTimings
-    ctx.storage ??= storage
-    ctx.streams ??= streams
-    ctx.takePhoto = function (preset: Preset) {
-      if (this.randomEmulation) {
-        return new Promise((resolve) =>
-          setTimeout(
-            resolve.bind(null, this.randomImage as InputMediaCameraPhoto),
-            this.randomEmulation
-          )
-        )
-      }
-      console.log('Taking photo with preset: ' + ctx.preset)
-      return takePhoto(preset)
-    }
-    //function (x: string | InputFile, extra?: ExtraReplyMessage) => bot.telegram.sendX(CHANNEL_CHAT_ID as string, message, extra)
-    ctx.sendGroupMessage = bot.telegram.sendMessage.bind(bot.telegram, GROUP_CHAT_ID as string)
-    ctx.sendGroupPhoto = bot.telegram.sendPhoto.bind(bot.telegram, GROUP_CHAT_ID as string)
-    ctx.sendGroupAnimation = animationMessageAsyncFactory(
-      ctx,
-      bot.telegram.sendAnimation.bind(bot.telegram, GROUP_CHAT_ID as string)
-    )
-    ctx.sendChannelMessage = bot.telegram.sendMessage.bind(bot.telegram, CHANNEL_CHAT_ID as string)
-    ctx.sendChannelPhoto = bot.telegram.sendPhoto.bind(bot.telegram, CHANNEL_CHAT_ID as string)
-    ctx.sendChannelAnimation = animationMessageAsyncFactory(
-      ctx,
-      bot.telegram.sendAnimation.bind(bot.telegram, CHANNEL_CHAT_ID as string)
-    )
-    Object.defineProperties(ctx, {
-      spinnerAnimation: {
-        get() {
-          return {
-            media: {
-              source: ctx.storage.readStream('../assets/cool-loading-animated-gif-3.gif'),
-            },
-            type: 'animation',
-          }
-        },
-      },
-      randomImage: {
-        get() {
-          return {
-            media: {
-              url: RANDOM_IMAGE_URL || 'https://picsum.photos/600/400/?random',
-            },
-            type: 'photo',
-          }
-        },
-      },
-      now: {
-        get() {
-          return getFormattedDate()
-        },
-      },
-    })
-    return ctx
-  }
+
   bot.use((ctx, next) => {
-    setupContext(ctx)
-    ctx.sendChannelMessageCopy = function (extra) {
-      return this.copyMessage(CHANNEL_CHAT_ID as string, extra)
-    }
+    setupContext(bot, storage, streams, ctx)
     return next()
   })
 
@@ -126,7 +45,7 @@ async function setupBot() {
   bot.launch()
   if (DAILY) {
     console.log('Setting up daily timelapse ...')
-    const ctx = setupContext()
+    const ctx = setupContext(bot, storage, streams)
     dailySunsetCronFactory(ctx, ctx.sendGroupMessage, ctx.sendGroupAnimation)
   }
 

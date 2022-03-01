@@ -26,3 +26,8 @@ nvm use 14
 ```
 
 I don't know if there is a copyright on it, I just liked the [loading animation](https://smashinghub.com/10-cool-loading-animated-gif.htm) a lot.
+
+Discord:
+
+1. Register App
+2. Authenticate & add to server: https://discord.com/oauth2/authorize?client_id=948316990228033608&scope=bot&permissions=534723950656

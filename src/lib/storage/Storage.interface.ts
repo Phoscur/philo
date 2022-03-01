@@ -1,4 +1,5 @@
 import { Readable } from 'stream'
+export { Readable } from 'stream'
 
 /**
  * Storage Access Interface

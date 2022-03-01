@@ -11,6 +11,7 @@ import type {
   ExtraAnimation,
   InputFile,
   AnimationMessageConstructor,
+  Readable,
 } from '../PhiloContext.interface'
 import { ExtraEditMessageCaption } from 'telegraf/typings/telegram-types'
 
@@ -80,6 +81,9 @@ export function timelapseContextFactory(
     null,
     ctx.spinnerAnimation.media
   )
+  t.onFinish = async (message: string, file: Readable) => {
+    await t.sendDiscordAnimation(message, file)
+  }
   return t
 }
 
@@ -159,12 +163,14 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
       await stitchImages(taskId, ctx.storage.cwd, { outFile, parts })
 
       await ctx.storage.add(outFile)
+      const caption = `${fullFormatted}`
+      await ctx.onFinish(caption, ctx.storage.readStream(outFile)) // TODO? cloning the stream should be more efficient
       await ctx.animationMessageFactory(
         {
           source: ctx.storage.readStream(outFile),
         },
         {
-          caption: `${fullFormatted}`,
+          caption,
           ...Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]),
         }
       )
