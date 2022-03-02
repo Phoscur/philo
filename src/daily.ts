@@ -1,11 +1,10 @@
 import PhiloContext, {
   AnimationMessageConstructor,
   Preset,
-  TimelapseContext,
   Message,
 } from './PhiloContext.interface'
 import { getNextSunset, Sunset } from './lib/sunset'
-import { timelapse } from './scenes/timelapse'
+import { timelapse, timelapseContextFactory } from './scenes/timelapse'
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types'
 import senseTemperature from './lib/temperature'
 
@@ -16,6 +15,10 @@ const SUNDOWN_TIMING_MS = -60000 * 60 * 1.2 // 1.2 hours before
 const SUNDOWN_DURATION_MIN = 60 * 1.4 // 1.4 hours total
 const SUNDOWN_MINUTELY_IMAGE_COUNT = 5
 const SUNDOWN_SENSE_TEMPERATURE = true
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 export function dailySunsetCronFactory(
   ctx: PhiloContext,
@@ -55,7 +58,7 @@ ${temperatureMessage}
 Current storage: ` + (await ctx.storage.status())
       )
       await timelapse(
-        timelapseCronContextFactory(ctx, sendAnimation),
+        timelapseContextFactory(ctx, sendAnimation),
         preset,
         Date.now() + MESSAGE_DELAY
       )
@@ -65,18 +68,4 @@ Current storage: ` + (await ctx.storage.status())
     setTimeout(sundownTimer, SUNDOWN_DELAY_MS + SUNDOWN_REPEAT_DELAY_MS)
   }
   setTimeout(sundownTimer, SUNDOWN_DELAY_MS)
-}
-
-async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-export function timelapseCronContextFactory(
-  ctx: PhiloContext,
-  sendAnimation: AnimationMessageConstructor
-): TimelapseContext {
-  const t = Object.create(ctx)
-  t.animationMessageFactory = sendAnimation
-  t.spinnerAnimationMessageFactory = sendAnimation.bind(null, ctx.spinnerAnimation.media)
-  return t
 }
