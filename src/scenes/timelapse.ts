@@ -82,7 +82,12 @@ export function timelapseContextFactory(
     ctx.spinnerAnimation.media
   )
   t.onFinish = async (message: string, file: Readable) => {
-    await t.sendDiscordAnimation(message, file)
+    try {
+      await t.sendDiscordAnimation(message, file)
+    } catch (err) {
+      console.warn('Discord sharing failed', message)
+      console.error(err)
+    }
   }
   return t
 }
