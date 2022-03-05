@@ -8,7 +8,7 @@ export interface Storage {
   path: string
   get cwd(): string
   status(): Promise<string>
-  exists(name?: string): Promise<boolean>
+  exists(name?: string): Promise<string | undefined>
 
   list(): Promise<string[]>
 

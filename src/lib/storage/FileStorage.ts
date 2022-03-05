@@ -41,8 +41,8 @@ export default class FileStorage implements Storage {
 
   async exists(name: string = '') {
     return stat(join(this.path, name))
-      .then(() => true)
-      .catch(() => false)
+      .then(() => join(process.cwd(), this.path, name))
+      .catch(() => undefined)
   }
 
   async list() {
