@@ -7,12 +7,12 @@ const { DISCORD_CLIENT_ID, DISCORD_GUILD_ID, DISCORD_TOKEN, DISCORD_ANNOUNCEMENT
 
 // TODO instead of extending Client, just (re)define what we actually use
 interface DiscordClient extends Client {
-  sendAnimationAnnouncement(message: string, file: Readable): Promise<Message | undefined>
+  sendAnimationAnnouncement(message: string, file: string): Promise<Message | undefined>
 }
 
 export const DISCORD_ENABLED = DISCORD_CLIENT_ID && DISCORD_TOKEN
 
-export async function sendAnnouncementEmptyStub(message: string, file: Readable) {
+export async function sendAnnouncementEmptyStub(message: string, file: string) {
   return {} as Message
 }
 
@@ -40,7 +40,7 @@ export function createClient(onReady = () => {}): DiscordClient {
 function addMethods(client: Client): DiscordClient {
   const discordClient = client as DiscordClient
   // stitch new method onto client
-  discordClient.sendAnimationAnnouncement = async (content: string, file: Readable) => {
+  discordClient.sendAnimationAnnouncement = async (content: string, file: string) => {
     if (!DISCORD_ANNOUNCEMENT_CHANNEL_ID) return
     const channel = await client.channels.fetch(DISCORD_ANNOUNCEMENT_CHANNEL_ID)
     console.log('Announcing to discord channel', channel?.toString())

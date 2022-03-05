@@ -11,7 +11,6 @@ import type {
   ExtraAnimation,
   InputFile,
   AnimationMessageConstructor,
-  Readable,
 } from '../PhiloContext.interface'
 import { ExtraEditMessageCaption } from 'telegraf/typings/telegram-types'
 
@@ -81,9 +80,10 @@ export function timelapseContextFactory(
     null,
     ctx.spinnerAnimation.media
   )
-  t.onFinish = async (message: string, file: Readable) => {
+  t.onFinish = async (message: string, file: string) => {
     try {
-      await t.sendDiscordAnimation(message, file)
+      const attachment = await t.storage.exists(file)
+      await t.sendDiscordAnimation(message, attachment)
     } catch (err) {
       console.warn('Discord sharing failed', message)
       console.error(err)
@@ -169,7 +169,7 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
 
       await ctx.storage.add(outFile)
       const caption = `${fullFormatted}`
-      await ctx.onFinish(caption, ctx.storage.readStream(outFile)) // TODO? cloning the stream should be more efficient
+      await ctx.onFinish(caption, outFile) //ctx.storage.readStream(outFile)) // TODO? cloning the stream should be more efficient
       await ctx.animationMessageFactory(
         {
           source: ctx.storage.readStream(outFile),

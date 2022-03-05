@@ -60,7 +60,7 @@ export interface TimelapseContext {
   animationMessageFactory: AnimationMessageConstructor
   spinnerAnimationMessageFactory: SpinnerAnimationMessageConstructor
   takePhoto: (preset: Preset) => Promise<InputMediaCameraPhoto>
-  onFinish: (caption: string, file: Readable) => Promise<void>
+  onFinish: (caption: string, file: string) => Promise<void>
 }
 /**
  * Philo BotContext
@@ -82,7 +82,7 @@ export default interface PhiloContext extends Context {
   sendChannelPhoto: (photo: string | InputFile, extra?: ExtraPhoto) => Promise<Message.PhotoMessage>
   sendChannelAnimation: AnimationMessageConstructor
   sendChannelMessageCopy: (extra?: ExtraCopyMessage) => Promise<MessageId>
-  sendDiscordAnimation: (caption: string, file: Readable) => Promise<DiscordMessage | undefined>
+  sendDiscordAnimation: (caption: string, file: string) => Promise<DiscordMessage | undefined>
   randomImage: InputMediaPhoto
   spinnerAnimation: InputMediaAnimation
   now: FormattedDate
