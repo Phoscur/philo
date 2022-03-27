@@ -1,16 +1,18 @@
 import type { Storage } from '../lib/storage'
 import type { PhiloBot, PhiloScene } from '../PhiloContext.interface'
 
+import FileStorage from '../lib/storage'
+
 export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage: Storage) {
-  async function filterStorage(filter: string) {
-    const files = await storage.list()
+  async function filterStorage(store: Storage, filter: string) {
+    const files = await store.list()
     return files.filter((name: string) => name.includes(filter))
   }
 
   bot.command(['list', 'l'], (ctx) => {
     setImmediate(async () => {
       const [_, filter] = ctx.message.text.split(' ')
-      const files = await filterStorage(filter)
+      const files = await filterStorage(storage, filter)
       // TODO cut or split into multiple messages if the list is too long
       ctx.reply(files.join(' ') || 'Storage is empty')
     })
@@ -25,11 +27,21 @@ export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage
 
   bot.command(['view', 'v'], (ctx) => {
     setImmediate(async () => {
-      const [, fileOrFilter] = ctx.message.text.split(' ')
+      const [, filter] = ctx.message.text.split(' ')
+      let [folder, fileOrFilter] = filter.split('/')
+      console.log('View', filter, folder, fileOrFilter)
+      let store // access to sibling folder requires another storage object
+      if (!fileOrFilter) {
+        fileOrFilter = folder
+        store = storage
+      } else {
+        store = await FileStorage.create(folder)
+        console.log('Opening', folder)
+      }
       try {
-        const files = await filterStorage(fileOrFilter)
+        const files = await filterStorage(store, fileOrFilter)
         const fileName = files[0] || fileOrFilter
-        const source = storage.readStream(fileName)
+        const source = store.readStream(fileName)
         const replyWithFile =
           fileName.endsWith('.gif') || fileName.endsWith('.mp4')
             ? ctx.replyWithAnimation.bind(ctx)
