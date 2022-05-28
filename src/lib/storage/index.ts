@@ -1,7 +1,7 @@
-import FileStorage from './FileStorage'
-
+import { StorageManager } from './StorageManager'
+export default StorageManager
+export * from './FileStorage'
 export * from './GithubStorage'
-export * from './DailyRotatingStorage'
+export * from './RotatingStorage'
 export * from './Storage.interface'
-export * from './MediaStorage'
-export default FileStorage
+export * from './StorageManager'

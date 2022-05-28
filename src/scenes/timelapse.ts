@@ -142,7 +142,7 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
     try {
       const image = await ctx.takePhoto(preset)
       console.log('Saving image:', name)
-      await ctx.storage.save(name, image.media.source)
+      await ctx.storage.raw.save(name, image.media.source)
       await status.editMedia(image)
       await status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
       photosTaken++
@@ -162,11 +162,12 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
       }
 
       await status.editCaption(`Rendering timelapse consisting ${parts} images ...`, markup)
+      // TODO outfile should be in ctx.storage.media.cwd
       const outFile = `${fileNameFormatted}.${taskId}.mp4`
-      console.log('Stitching:', ctx.storage.cwd, outFile)
-      await stitchImages(taskId, ctx.storage.cwd, { outFile, parts })
+      console.log('Stitching:', ctx.storage.raw.cwd, outFile)
+      await stitchImages(taskId, ctx.storage.raw.cwd, { outFile, parts })
 
-      await ctx.storage.add(outFile)
+      await ctx.storage.raw.add(outFile)
       const caption = `${fullFormatted}`
       await ctx.onFinish(caption, outFile) //ctx.storage.readStream(outFile)) // TODO? cloning the stream should be more efficient
       await ctx.animationMessageFactory(

@@ -10,7 +10,7 @@ import { Storage } from './Storage.interface'
 /**
  * Filesystem access to cache photos for timelapses
  */
-export default class FileStorage implements Storage {
+export class FileStorage implements Storage {
   protected constructor(public readonly path: string) {}
 
   static async create(path: string = 'storage'): Promise<FileStorage> {

@@ -7,7 +7,7 @@ import type {
 
 import type PhiloContext from '../PhiloContext.interface'
 import type { Preset } from '../PhiloContext.interface'
-import type { Storage } from '../lib/storage'
+import type { StorageManager } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
 import setupTimelapse from './timelapse'
@@ -80,7 +80,7 @@ async function setCaption(
   )
   return false
 }
-export default function createPhotoScene(storage: Storage, streams: StreamContainer) {
+export default function createPhotoScene(storage: StorageManager, streams: StreamContainer) {
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo')
   setupStorageCommands(photoScene, storage)
   setupTemperatureCommands(photoScene)

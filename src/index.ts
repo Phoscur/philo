@@ -1,6 +1,6 @@
 import { Context, Telegraf, session } from 'telegraf'
 import buildStage from './scenes'
-import { DailyRotatingStorage } from './lib/storage'
+import { StorageManager } from './lib/storage'
 import type PhiloContext from './PhiloContext.interface'
 
 import { StreamContainer, TasksContainer } from './lib/tasks'
@@ -14,7 +14,7 @@ async function setupBot() {
     throw new Error('BOT_TOKEN must be provided by ENV!')
   }
   const bot = new Telegraf<PhiloContext>(BOT_TOKEN)
-  const storage = await DailyRotatingStorage.create(/* config from env */)
+  const storage = await StorageManager.create(/* config from env */)
   const running = new TasksContainer() // (needs sharing beyond the context lifetime of setImmediate)
   const streams = new StreamContainer(running)
 

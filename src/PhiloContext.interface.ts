@@ -15,12 +15,12 @@ import type {
 } from 'telegraf/typings/telegram-types'
 export { ExtraAnimation } from 'telegraf/typings/telegram-types'
 import type { Message as DiscordMessage } from './lib/discord'
-import type { Storage, Readable } from './lib/storage'
+import type { StorageManager } from './lib/storage'
 import type { StreamContainer } from './lib/tasks'
 import type { FormattedDate } from './lib/time'
 import type { Preset } from './presets'
 
-export type { Storage, Readable } from './lib/storage'
+export type { Storage, StorageManager, Readable } from './lib/storage'
 export type { Preset } from './presets'
 
 /**
@@ -52,7 +52,7 @@ export interface TimelapseContext {
   randomEmulation: number
   now: FormattedDate
   preset: Preset
-  storage: Storage
+  storage: StorageManager
   streams: StreamContainer
   /* const animationMessageFactory = group // the bind is just to make typescript happy, they were bound before
     ? ctx.sendGroupAnimation.bind(ctx)
@@ -72,7 +72,7 @@ export default interface PhiloContext extends Context {
   presets: { [name: string]: Preset }
   presetName: string
   preset: Preset
-  storage: Storage
+  storage: StorageManager
   streams: StreamContainer
   takePhoto: (preset: Preset) => Promise<InputMediaCameraPhoto>
   sendGroupMessage: (message: string, extra?: ExtraReplyMessage) => Promise<Message.TextMessage>

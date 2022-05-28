@@ -29,7 +29,7 @@ import http from 'isomorphic-git/http/node'
 import fs from 'fs'
 import axios from 'axios'
 
-import FileStorage from './FileStorage'
+import { FileStorage } from './FileStorage'
 
 export interface GithubAuthor {
   name: string

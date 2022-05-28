@@ -1,6 +1,6 @@
 import type { Telegraf } from 'telegraf'
 import type PhiloContext from './PhiloContext.interface'
-import type { Preset, InputMediaCameraPhoto, Storage } from './PhiloContext.interface'
+import type { Preset, InputMediaCameraPhoto, StorageManager } from './PhiloContext.interface'
 import type { StreamContainer } from './lib/tasks'
 
 import { getFormattedDate } from './lib/time'
@@ -15,7 +15,7 @@ const randomEmulation = 0
 
 export function setupContext(
   bot: Telegraf<PhiloContext>,
-  storage: Storage,
+  storage: StorageManager,
   streams: StreamContainer,
   context?: PhiloContext
 ) {

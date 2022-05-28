@@ -1,6 +1,5 @@
 import { join } from 'path'
-import { PassThrough, Readable } from 'stream'
-import { getFormattedDate } from '../time'
+import { DailyRotatingStorage, MonthlyRotatingStorage } from './RotatingStorage'
 import { GithubStorage } from './GithubStorage'
 import { Storage } from './Storage.interface'
 
@@ -9,7 +8,7 @@ import { Storage } from './Storage.interface'
 /**
  * Saves raw pictures and produced/selected media seperately
  */
-export default class MediaBackupStorage {
+export class MediaBackupStorage {
   protected constructor(public readonly raw: GithubStorage, public readonly media: GithubStorage) {}
 
   static async create(path = `${process.env.MEDIA_STORAGE_NAME}`) {
@@ -44,13 +43,25 @@ export default class MediaBackupStorage {
  * manage multiple storage folders and types
  */
 export class StorageManager {
-  constructor(public readonly content: GithubStorage) {}
+  constructor(
+    public readonly inventory: Storage,
+    public readonly media: Storage,
+    public readonly raw: Storage
+  ) {}
   static async create(path = `${process.env.CONTENT_STORAGE_NAME}`) {
-    const content = await GithubStorage.create(path)
-    return new StorageManager(content)
+    const inventory = await GithubStorage.create(path)
+    const raw = await DailyRotatingStorage.create(path) // path-YYYY-MM-DD
+    const media = await MonthlyRotatingStorage.create(path) // path-YYYY-MM
+    return new StorageManager(inventory, media, raw)
   }
 
-  get raw() {
-    return this.content
+  status() {
+    return this.inventory.status()
+  }
+  list() {
+    return ['TODO not implemented']
+  }
+  readStream(name: string) {
+    return this.media.readStream(name)
   }
 }
