@@ -59,8 +59,12 @@ export class GithubStorage extends FileStorage {
       name: `${process.env.GITHUB_AUTHOR_NAME}`,
       email: `${process.env.GITHUB_AUTHOR_EMAIL}`,
     }
-  ): Promise<GithubStorage> {
-    return new GithubStorage(path, token, organisation, author).setup()
+  ): Promise<GithubStorage | FileStorage> {
+    console.log(`[Storage: ${path}] Github enabled: ${process.env.GITHUB_ENABLED}`)
+    if (process.env.GITHUB_ENABLED === 'true') {
+      return new GithubStorage(path, token, organisation, author).setup()
+    }
+    return FileStorage.create(path)
   }
 
   async setup() {
@@ -112,6 +116,8 @@ export class GithubStorage extends FileStorage {
     const message = `Add ${fileName}`
     // commit & push
     const dir = this.cwd
+    /*??0|philo    | TypeError: Cannot create property 'caller' on string 'buffer error'
+0|philo    |     at Object.clone (/home/pi/philo/node_modules/isomorphic-git/index.cjs:7785:16)*/
     await git.add({ fs, dir, filepath: fileName })
     await git.commit({ fs, dir, message, author: this.author })
     await git.push({ fs, dir, http, onAuth: () => ({ username: this.token }) })

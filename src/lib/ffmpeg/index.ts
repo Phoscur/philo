@@ -10,14 +10,17 @@ export interface StitchOptions {
 
 export default async function stitchImages(
   name: string,
-  storagePath: string,
-  options: StitchOptions = {}
+  cwd: string,
+  options: StitchOptions = {},
+  inFolder: string = '.',
+  outFolder: string = '.'
 ) {
+  const partMatch = !options.parts ? '%d' : '%0' + options.parts.toString().length + 'd' // e.g. %04d - without zero padding use %d instead
   const optionsWithDefaults = {
     framerate: 18,
     crf: 28,
-    inFiles: `${name}-${!options.parts ? '%d' : '%0' + options.parts.toString().length + 'd'}.jpg`, // e.g. %04d - without zero padding use %d instead
-    outFile: `${name}.mp4`,
+    inFiles: `${inFolder}/${name}-${partMatch}.jpg`,
+    outFile: `${outFolder}/${name}.mp4`,
     //outFile: name+".mp4",
     ...options,
   }
@@ -49,7 +52,7 @@ export default async function stitchImages(
   console.log('ffmpeg', args)
   try {
     // for some reason ffmpeg needs to spit errors even if it produces a good result
-    return await spawnPromisePrependStdErr('ffmpeg', args, { cwd: storagePath })
+    return await spawnPromisePrependStdErr('ffmpeg', args, { cwd })
   } catch (err: any) {
     if (err && err.code === 'ENOENT') {
       throw new Error(`Could not stitch images [${name}*.jpg] with ffmpeg, is it installed?`)

@@ -20,7 +20,7 @@ const folderMonthSuffix = async () => {
 }
 
 /**
- * Rotating GithubStorage
+ * Rotating (Github)Storage
  * !TODO! free disk space afterwards!
  */
 export class RotatingStorage extends ProxyStorage {
@@ -48,12 +48,12 @@ export class RotatingStorage extends ProxyStorage {
       return this
     }
     if (this.data) {
-      console.log('TODO delete old data', this.data.path)
+      console.log(`TODO [Storage: ${this.data.path}] Delete old data`)
       // TODO remove older data folders
     }
     this.path = `${this.pathPrefix}-${suffix}`
-    console.log('Storage rotated', this.path)
     this.data = await GithubStorage.create(this.path)
+    console.log(`[Storage: ${this.path}] Rotation enabled`)
     return this
   }
 

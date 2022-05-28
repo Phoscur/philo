@@ -1,4 +1,3 @@
-import { join } from 'path'
 import { DailyRotatingStorage, MonthlyRotatingStorage } from './RotatingStorage'
 import { GithubStorage } from './GithubStorage'
 import { Storage } from './Storage.interface'
@@ -6,39 +5,9 @@ import { Storage } from './Storage.interface'
 // TODO TESTS!
 
 /**
- * Saves raw pictures and produced/selected media seperately
- */
-export class MediaBackupStorage {
-  protected constructor(public readonly raw: GithubStorage, public readonly media: GithubStorage) {}
-
-  static async create(path = `${process.env.MEDIA_STORAGE_NAME}`) {
-    const raw = await GithubStorage.create(path + '-raw')
-    const media = await GithubStorage.create(path)
-    return new MediaBackupStorage(raw, media)
-  }
-
-  /**
-   * Save raw image buffer data
-   */
-  saveRaw() {}
-  get rawCwd() {
-    return ''
-  }
-  /**
-   * Save existing media to videos
-   */
-  saveExisting() {}
-  get mediaCwd() {
-    return ''
-  }
-  get infoCwd() {
-    return ''
-  }
-}
-
-/**
- * Collect metadata and references,
+ * Collect metadata and references inventory,
  * manage multiple storage folders and types
+ * save raw pictures and produced/selected media seperately
  */
 export class StorageManager {
   constructor(
@@ -53,6 +22,10 @@ export class StorageManager {
     const raw = await DailyRotatingStorage.create(path) // name=$path-YYYY-MM-DD
     const media = await MonthlyRotatingStorage.create(path) // name=$path-YYYY-MM
     return new StorageManager(inventory, media, raw)
+  }
+
+  get workingDirectory() {
+    return process.cwd()
   }
 
   status() {

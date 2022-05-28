@@ -20,13 +20,17 @@ export class FileStorage implements Storage {
   async setup() {
     try {
       await mkdir(this.path)
-      console.log('Created storage folder:', this.path)
+      console.log(`[Storage: ${this.path}] Folder created`)
     } catch (error: any) {
       if (error.code !== 'EEXIST') {
         throw error
       }
     }
     return this
+  }
+
+  async folder(name: string) {
+    return FileStorage.create(join(this.path, name))
   }
 
   get cwd() {

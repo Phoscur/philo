@@ -2,6 +2,7 @@
 /storage*
 /karlsruhe*
 /ka/*
+/ka*
 
 # VSCode SFTP
 .vscode/sftp.json
