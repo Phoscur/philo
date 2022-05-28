@@ -2,8 +2,6 @@ import { DailyRotatingStorage, MonthlyRotatingStorage } from './RotatingStorage'
 import { GithubStorage } from './GithubStorage'
 import { Storage } from './Storage.interface'
 
-// TODO TESTS!
-
 /**
  * Collect metadata and references inventory,
  * manage multiple storage folders and types
@@ -28,9 +26,26 @@ export class StorageManager {
     return process.cwd()
   }
 
+  get rawDirectory() {
+    return this.raw.path
+  }
+  get mediaDirectory() {
+    return this.raw.path
+  }
+
+  saveRaw(name: string, buffer: Buffer) {
+    return this.raw.save(name, buffer)
+  }
+
+  addMedia(name: string) {
+    return this.media.add(name)
+  }
+
   status() {
     return this.inventory.status()
   }
+
+  // TODO? do we want to list or read raw image frames?
   list() {
     return this.media.list()
   }
