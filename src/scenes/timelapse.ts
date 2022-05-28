@@ -73,7 +73,7 @@ export function timelapseContextFactory(
     extra?: ExtraAnimation
   ) => Promise<Message.AnimationMessage>
 ): TimelapseContext {
-  // TimelapseContext is related/similar to PhiloContext TODO properly declare inheritance
+  // TimelapseContext is related/similar to PhiloContext TODO properly declare inheritance, type is any here
   const t = Object.create(ctx)
   t.animationMessageFactory = animationMessageAsyncFactory(ctx, sendAnimation)
   t.spinnerAnimationMessageFactory = animationMessageAsyncFactory(ctx, sendAnimation).bind(
@@ -152,7 +152,6 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
       photoErrors++
     }
   }
-
   async function handleFinish(parts: number) {
     try {
       if (photosTaken < MINIMUM_TIMELAPSE_PARTS) {
@@ -185,6 +184,7 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
       await status.editCaption(`Fail (${photoErrors})! ${error}`, markup)
     }
   }
+
   try {
     await ctx.streams.run()
     /* TODO reuse emitter: const emitter = */
