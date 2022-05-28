@@ -10,6 +10,7 @@
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
     "dev-sunset": "ts-node-dev -r dotenv/config src/lib/sunset",
     "stitch": "ts-node-dev -r dotenv/config src/manuallyStitch.ts",
+    "archive": "ts-node-dev -r dotenv/config src/manuallyArchive.ts",
     "space-test": "ts-node-dev -r dotenv/config src/lib/storage/df.ts",
     "backup-test": "ts-node-dev -r dotenv/config src/lib/storage/backup.ts",
     "test": "jest",
@@ -34,6 +35,7 @@
   },
   "homepage": "https://github.com/Phoscur/philo#readme",
   "dependencies": {
+    "@aws-sdk/client-glacier": "^3.100.0",
     "axios": "^0.21.1",
     "dayjs": "^1.10.6",
     "discord.js": "^13.6.0",
