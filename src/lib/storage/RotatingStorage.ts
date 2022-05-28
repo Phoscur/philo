@@ -3,23 +3,47 @@ import { ProxyStorage } from './ProxyStorage'
 import { GithubStorage } from './GithubStorage'
 import { getFormattedDate } from '../time'
 
+type SuffixConstructor = () => Promise<string>
+const counterSuffix: () => SuffixConstructor = () =>
+  (() => {
+    let counter = 0
+    return () => Promise.resolve(`${++counter}`)
+  })()
+
+const folderDaySuffix = async () => {
+  const { folderDayFormatted } = await getFormattedDate()
+  return folderDayFormatted
+}
+const folderMonthSuffix = async () => {
+  const { folderMonthFormatted } = await getFormattedDate()
+  return folderMonthFormatted
+}
+
 /**
- * Daily Backups (GithubStorage)
+ * Rotating GithubStorage
  * !TODO! free disk space afterwards!
  */
-export class DailyRotatingStorage extends ProxyStorage {
+export class RotatingStorage extends ProxyStorage {
   public path = ''
-  protected constructor(public pathPrefix: string, protected data?: Storage) {
+  protected constructor(
+    public pathPrefix: string,
+    protected data?: Storage,
+    public readonly pathSuffix: SuffixConstructor = counterSuffix()
+  ) {
     super('', data)
   }
 
-  static async create(path = `${process.env.GITHUB_REPO_NAME_PREFIX}`) {
-    return await new DailyRotatingStorage(path).rotate()
+  static async create(
+    path = `${process.env.GITHUB_REPO_NAME_PREFIX}`,
+    data?: Storage,
+    pathSuffix?: SuffixConstructor
+  ) {
+    return await new RotatingStorage(path, data, pathSuffix).rotate()
   }
 
   async rotate() {
-    const { folderDayFormatted } = await getFormattedDate()
-    if (this.data && ~this.data.path.indexOf(folderDayFormatted)) {
+    const suffix = await this.pathSuffix()
+    if (this.data && ~this.data.path.indexOf(suffix)) {
       // fresh enough
       return this
     }
@@ -27,7 +51,7 @@ export class DailyRotatingStorage extends ProxyStorage {
       console.log('TODO delete old data', this.data.path)
       // TODO remove older data folders
     }
-    this.path = `${this.pathPrefix}-${folderDayFormatted}`
+    this.path = `${this.pathPrefix}-${suffix}`
     console.log('Storage rotated', this.path)
     this.data = await GithubStorage.create(this.path)
     return this
@@ -42,39 +66,14 @@ export class DailyRotatingStorage extends ProxyStorage {
     return data
   }
 }
-
-export class MonthlyRotatingStorage extends ProxyStorage {
-  public path = ''
-  protected constructor(public pathPrefix: string, protected data?: Storage) {
-    super('', data)
-  }
-
+export class MonthlyRotatingStorage extends RotatingStorage {
   static async create(path = `${process.env.GITHUB_REPO_NAME_PREFIX}`) {
-    return await new MonthlyRotatingStorage(path).rotate()
+    return await new MonthlyRotatingStorage(path, undefined, folderMonthSuffix).rotate()
   }
+}
 
-  async rotate() {
-    const { folderMonthFormatted } = await getFormattedDate()
-    if (this.data && ~this.data.path.indexOf(folderMonthFormatted)) {
-      // fresh enough
-      return this
-    }
-    if (this.data) {
-      console.log('TODO delete old data', this.data.path)
-      // TODO remove older data folders
-    }
-    this.path = `${this.pathPrefix}-${folderMonthFormatted}`
-    console.log('Storage rotated', this.path)
-    this.data = await GithubStorage.create(this.path)
-    return this
-  }
-
-  /**
-   * Get storage, rotated as necessary
-   */
-  async getData() {
-    await this.rotate()
-    const data = await super.getData()
-    return data
+export class DailyRotatingStorage extends RotatingStorage {
+  static async create(path = `${process.env.GITHUB_REPO_NAME_PREFIX}`) {
+    return await new DailyRotatingStorage(path, undefined, folderDaySuffix).rotate()
   }
 }

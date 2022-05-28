@@ -34,8 +34,6 @@ export class MediaBackupStorage {
   get infoCwd() {
     return ''
   }
-
-  // TODO save/provide infos.json alongside media with references to raw files
 }
 
 /**
@@ -49,9 +47,11 @@ export class StorageManager {
     public readonly raw: Storage
   ) {}
   static async create(path = `${process.env.CONTENT_STORAGE_NAME}`) {
+    // TODO save/provide infos.json alongside media with references to raw files
     const inventory = await GithubStorage.create(path)
-    const raw = await DailyRotatingStorage.create(path) // path-YYYY-MM-DD
-    const media = await MonthlyRotatingStorage.create(path) // path-YYYY-MM
+
+    const raw = await DailyRotatingStorage.create(path) // name=$path-YYYY-MM-DD
+    const media = await MonthlyRotatingStorage.create(path) // name=$path-YYYY-MM
     return new StorageManager(inventory, media, raw)
   }
 
@@ -59,7 +59,7 @@ export class StorageManager {
     return this.inventory.status()
   }
   list() {
-    return ['TODO not implemented']
+    return this.media.list()
   }
   readStream(name: string) {
     return this.media.readStream(name)
