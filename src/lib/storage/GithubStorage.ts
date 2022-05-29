@@ -99,7 +99,9 @@ export class GithubStorage extends GlacierStorage {
       }
       throw error
     })
-    console.log('Repo creation response:', creation.status, creation.statusText)
+    console.log(
+      `[Github] Repository created: ${this.organisation}/${this.path} - Response: ${creation.status} ${creation.statusText}`
+    )
     return creation.status === 201 || creation.status === 422
   }
 

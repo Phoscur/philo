@@ -53,8 +53,9 @@ export class StorageManager {
     return this.media.readStream(nameWithoutPathPrefix)
   }
 
+  // TODO? inventory.status() should have all the info
   status(): Promise<string> {
-    return this.inventory.status()
+    return this.raw.status()
   }
 
   // TODO? do we want to list or read raw image frames?

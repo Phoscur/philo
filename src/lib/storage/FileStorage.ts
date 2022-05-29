@@ -39,8 +39,13 @@ export class FileStorage implements Storage {
 
   async status() {
     const i = await getStorageStatus(this.cwd)
-    //return `${i.folder}/${i.available} (${i.percent}: ${i.used}/${i.size}) [${this.path}]`
-    return `${i.available} available (${i.percent} used ${i.used}/${i.size}) [${this.path}]`
+    const github = `Github Backup is ${
+      process.env.GITHUB_ENABLED === 'true' ? 'enabled' : 'disabled'
+    }.`
+    const glacier = `Glacier Backup is ${
+      process.env.AWS_GLACIER_ENABLED === 'true' ? 'enabled' : 'disabled'
+    }.`
+    return `${i.available} available (${i.percent} used ${i.used}/${i.size}) [${this.path}] ${github} ${glacier}`
   }
 
   async exists(name: string = '') {
