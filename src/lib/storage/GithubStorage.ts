@@ -29,15 +29,21 @@ import http from 'isomorphic-git/http/node'
 import fs from 'fs'
 import axios from 'axios'
 
-import { FileStorage } from './FileStorage'
+import { GlacierStorage } from './GlacierStorage'
 
 export interface GithubAuthor {
   name: string
   email: string
 }
-export class GithubStorage extends FileStorage {
+
+/**
+ * Create Github Repo & Push added files
+ * with env GITHUB_ENABLED=true
+ */
+export class GithubStorage extends GlacierStorage {
+  // extends FileStorage (TODO? use a different pattern than inheritance)
   /**
-   * Special URL for cloning private github repo (refs https://github.com/isomorphic-git/isomorphic-git/issues/1170#issuecomment-653713207)
+   * Special URL to clone a private github repo (refs https://github.com/isomorphic-git/isomorphic-git/issues/1170#issuecomment-653713207)
    */
   private readonly url: string
   protected constructor(
@@ -59,12 +65,12 @@ export class GithubStorage extends FileStorage {
       name: `${process.env.GITHUB_AUTHOR_NAME}`,
       email: `${process.env.GITHUB_AUTHOR_EMAIL}`,
     }
-  ): Promise<GithubStorage | FileStorage> {
+  ): Promise<GithubStorage | GlacierStorage> {
     console.log(`[Storage: ${path}] Github enabled: ${process.env.GITHUB_ENABLED}`)
     if (process.env.GITHUB_ENABLED === 'true') {
       return new GithubStorage(path, token, organisation, author).setup()
     }
-    return FileStorage.create(path)
+    return GlacierStorage.create(path)
   }
 
   async setup() {
@@ -108,8 +114,8 @@ export class GithubStorage extends FileStorage {
   }
 
   async save(fileName: string, source: Buffer) {
+    // also triggers add()
     await super.save(fileName, source)
-    await this.add(fileName)
   }
 
   async add(fileName: string) {

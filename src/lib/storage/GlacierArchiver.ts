@@ -1,19 +1,42 @@
-import { GlacierClient, CreateVaultCommand, UploadArchiveCommand } from '@aws-sdk/client-glacier'
+import {
+  GlacierClient,
+  CreateVaultCommand,
+  UploadArchiveCommand,
+  UploadArchiveCommandOutput,
+  CreateVaultCommandOutput,
+} from '@aws-sdk/client-glacier'
+
+export const GLACIER_ENABLED = process.env.GLACIER_ENABLED === 'true'
+
+export interface GlacierVault {
+  name: string
+  vault: CreateVaultCommandOutput
+  uploadArchive(data: Buffer, description?: string): Promise<UploadArchiveCommandOutput>
+}
 
 /**
  * Glacier Write-Only Storage
- * Archive files in AWS Glacier
+ * Archive in AWS Glacier Vaults
  * (use AWS CLI to check inventory: https://docs.aws.amazon.com/amazonglacier/latest/dev/retrieving-vault-inventory-cli.html)
  */
 export class GlacierArchiver {
   private readonly client: GlacierClient
-  constructor() {
+
+  private static singleton: GlacierArchiver
+  static get instance() {
+    if (!GlacierArchiver.singleton) {
+      GlacierArchiver.singleton = new GlacierArchiver()
+    }
+    return GlacierArchiver.singleton
+  }
+
+  private constructor() {
     const region = process.env.AWS_REGION
     // additionally used env: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
     this.client = new GlacierClient({ region })
   }
 
-  async createVault(vaultName: string) {
+  async createVault(vaultName: string): Promise<GlacierVault> {
     const { client } = this
     const vault = await client.send(new CreateVaultCommand({ vaultName, accountId: undefined }))
     console.log('[Glacier] Vault created:', vaultName, vault.location)

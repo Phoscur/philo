@@ -1,6 +1,6 @@
 import { StorageManager } from './StorageManager'
 export default StorageManager
-export * from './glacier'
+export * from './GlacierArchiver'
 export * from './FileStorage'
 export * from './GithubStorage'
 export * from './RotatingStorage'

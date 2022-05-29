@@ -13,7 +13,7 @@ export class StorageManager {
     public readonly media: Storage,
     public readonly raw: Storage
   ) {}
-  static async create(path = `${process.env.CONTENT_STORAGE_NAME}`) {
+  static async create(path = `${process.env.CONTENT_STORAGE_NAME_PREFIX}`) {
     // TODO save/provide infos.json alongside media with references to raw files
     const inventory = await GithubStorage.create(path)
 
@@ -30,18 +30,18 @@ export class StorageManager {
     return this.raw.path
   }
   get mediaDirectory() {
-    return this.raw.path
+    return this.media.path
   }
 
-  saveRaw(name: string, buffer: Buffer) {
+  saveRaw(name: string, buffer: Buffer): Promise<void> {
     return this.raw.save(name, buffer)
   }
 
-  addMedia(name: string) {
+  addMedia(name: string): Promise<void> {
     return this.media.add(name)
   }
 
-  status() {
+  status(): Promise<string> {
     return this.inventory.status()
   }
 

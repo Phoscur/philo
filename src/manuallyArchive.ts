@@ -8,7 +8,7 @@ const fileName = `${taskId}-002.jpg`
 const folder = `${storageName}-${dayFormatted}`
 
 async function main() {
-  const archiver = new GlacierArchiver()
+  const archiver = GlacierArchiver.instance
   const storage = await FileStorage.create(folder)
   const vault = await archiver.createVault(folder)
   const file = await storage.read(fileName)

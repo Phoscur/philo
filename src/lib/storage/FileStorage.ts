@@ -68,6 +68,7 @@ export class FileStorage implements Storage {
   } */
 
   async add(name: string) {
+    // add hook is not called by save here, but child classes (GlacierStorage) call this hook when saving
     console.log('FileStorage added (noop):', name)
   }
 
