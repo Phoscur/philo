@@ -74,6 +74,7 @@ export class GithubStorage extends GlacierStorage {
   }
 
   async setup() {
+    await super.setup()
     await this.createRepo(this.path)
     await this.checkout()
     // TODO? await git.branch({ fs, dir, ref: 'main' })

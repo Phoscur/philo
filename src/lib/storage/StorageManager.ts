@@ -41,6 +41,18 @@ export class StorageManager {
     return this.media.add(name)
   }
 
+  async exists(name: string = '') {
+    // TODO handle this better
+    const nameWithoutPathPrefix = name.replace(this.media.path + '/', '')
+    return this.media.exists(nameWithoutPathPrefix)
+  }
+
+  readStream(name: string) {
+    // TODO handle this better
+    const nameWithoutPathPrefix = name.replace(this.media.path + '/', '')
+    return this.media.readStream(nameWithoutPathPrefix)
+  }
+
   status(): Promise<string> {
     return this.inventory.status()
   }
@@ -48,8 +60,5 @@ export class StorageManager {
   // TODO? do we want to list or read raw image frames?
   list() {
     return this.media.list()
-  }
-  readStream(name: string) {
-    return this.media.readStream(name)
   }
 }
