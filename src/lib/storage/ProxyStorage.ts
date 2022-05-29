@@ -50,4 +50,8 @@ export class ProxyStorage implements Storage {
     const proxy = await this.getData()
     return proxy.delete(name)
   }
+  async destroy() {
+    const proxy = await this.getData()
+    return proxy.destroy()
+  }
 }

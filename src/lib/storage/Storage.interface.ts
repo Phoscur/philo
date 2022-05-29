@@ -22,4 +22,5 @@ export interface Storage {
   save(name: string, source: Buffer): Promise<void>
 
   delete(name: string): Promise<void>
+  destroy(): Promise<void>
 }

@@ -20,8 +20,8 @@ const folderMonthSuffix = async () => {
 }
 
 /**
- * Rotating (Github)Storage
- * !TODO! free disk space afterwards!
+ * Rotating (Github|Glacier)Storage
+ * with env DESTRUCTIVE_ROTATION=true it will free disk space afterwards!
  */
 export class RotatingStorage extends ProxyStorage {
   public path = ''
@@ -48,12 +48,17 @@ export class RotatingStorage extends ProxyStorage {
       return this
     }
     if (this.data) {
-      console.log(`TODO [Storage: ${this.data.path}] Delete old data`)
-      // TODO remove older data folders
+      if ('true' === process.env.DESTRUCTIVE_ROTATION) {
+        this.data.destroy()
+      } else {
+        console.log(`[Storage: ${this.data.path}] Rotation is not destructive`)
+      }
     }
     this.path = `${this.pathPrefix}-${suffix}`
     this.data = await GithubStorage.create(this.path)
-    console.log(`[Storage: ${this.path}] Rotation enabled`)
+    console.log(
+      `[Storage: ${this.path}] Rotation enabled, destructive: ${process.env.DESTRUCTIVE_ROTATION}`
+    )
     return this
   }
 

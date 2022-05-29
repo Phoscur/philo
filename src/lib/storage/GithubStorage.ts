@@ -67,7 +67,7 @@ export class GithubStorage extends GlacierStorage {
     }
   ): Promise<GithubStorage | GlacierStorage> {
     console.log(`[Storage: ${path}] Github enabled: ${process.env.GITHUB_ENABLED}`)
-    if (process.env.GITHUB_ENABLED === 'true') {
+    if ('true' === process.env.GITHUB_ENABLED) {
       return new GithubStorage(path, token, organisation, author).setup()
     }
     return GlacierStorage.create(path)
