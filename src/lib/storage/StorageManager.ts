@@ -1,6 +1,6 @@
-import { DailyRotatingStorage, MonthlyRotatingStorage } from './RotatingStorage'
-import { GithubStorage } from './GithubStorage'
-import { Storage } from './Storage.interface'
+// import { Storage } from './Storage.interface'
+import { InventoryStorage } from './InventoryStorage'
+import { DailyRotatingStorage, MonthlyRotatingStorage, RotatingStorage } from './RotatingStorage'
 
 /**
  * Collect metadata and references inventory,
@@ -9,13 +9,12 @@ import { Storage } from './Storage.interface'
  */
 export class StorageManager {
   constructor(
-    public readonly inventory: Storage,
-    public readonly media: Storage,
-    public readonly raw: Storage
+    public readonly inventory: InventoryStorage,
+    public readonly media: RotatingStorage,
+    public readonly raw: RotatingStorage
   ) {}
   static async create(path = `${process.env.CONTENT_STORAGE_NAME_PREFIX}`) {
-    // TODO save/provide infos.json alongside media with references to raw files
-    const inventory = await GithubStorage.create(path)
+    const inventory = await InventoryStorage.create(path)
 
     const raw = await DailyRotatingStorage.create(path) // name=$path-YYYY-MM-DD
     const media = await MonthlyRotatingStorage.create(path) // name=$path-YYYY-MM
@@ -33,12 +32,13 @@ export class StorageManager {
     return this.media.path
   }
 
-  saveRaw(name: string, buffer: Buffer): Promise<void> {
-    return this.raw.save(name, buffer)
+  async saveRaw(name: string, buffer: Buffer): Promise<void> {
+    await this.raw.save(name, buffer)
+    await this.inventory.addRaw(this.rawDirectory, name, this.raw.name)
   }
-
-  addMedia(name: string): Promise<void> {
-    return this.media.add(name)
+  async addMedia(name: string): Promise<void> {
+    await this.media.add(name)
+    await this.inventory.addMedia(this.mediaDirectory, name, this.media.name)
   }
 
   async exists(name: string = '') {

@@ -10,6 +10,7 @@
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
     "dev-sunset": "ts-node-dev -r dotenv/config src/lib/sunset",
     "stitch": "ts-node-dev -r dotenv/config src/manuallyStitch.ts",
+    "inventory": "ts-node-dev -r dotenv/config src/takeInventory.ts",
     "archive": "ts-node-dev -r dotenv/config src/manuallyArchive.ts",
     "download-backup": "ts-node-dev -r dotenv/config src/lib/storage/downloadGithubRepos.ts",
     "space-test": "ts-node-dev -r dotenv/config src/lib/storage/df.ts",

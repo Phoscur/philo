@@ -6,7 +6,11 @@ import { GlacierArchiver, GlacierVault } from './GlacierArchiver'
  * with env AWS_GLACIER_ENABLED=true, else just a normal FileStorage
  */
 export class GlacierStorage extends FileStorage {
-  protected constructor(path: string, protected vault?: GlacierVault) {
+  get name(): string {
+    return this.vault?.name || ''
+  }
+
+  protected constructor(path: string, private vault?: GlacierVault) {
     super(path)
   }
 
@@ -15,7 +19,7 @@ export class GlacierStorage extends FileStorage {
     return FileStorage.create(path)
   }
 
-  async setup() {
+  protected async setup() {
     await super.setup()
     console.log(`[Storage: ${this.path}] Glacier enabled: ${process.env.AWS_GLACIER_ENABLED}`)
     if ('true' !== process.env.AWS_GLACIER_ENABLED) {

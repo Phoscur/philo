@@ -6,6 +6,10 @@ export { Readable } from 'stream'
  */
 export interface Storage {
   path: string
+  /**
+   * GlacierStorage uses this field to give access to the vault name
+   */
+  get name(): string
   get cwd(): string
   status(): Promise<string>
   exists(name?: string): Promise<string | undefined>

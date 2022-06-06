@@ -17,7 +17,7 @@ export class FileStorage implements Storage {
     return new FileStorage(path).setup()
   }
 
-  async setup() {
+  protected async setup() {
     try {
       await mkdir(this.path)
       console.log(`[Storage: ${this.path}] Folder created`)
@@ -33,7 +33,11 @@ export class FileStorage implements Storage {
     return FileStorage.create(join(this.path, name))
   }
 
-  get cwd() {
+  get name(): string {
+    return ''
+  }
+
+  get cwd(): string {
     return join(process.cwd(), this.path)
   }
 

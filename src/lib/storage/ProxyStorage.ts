@@ -13,7 +13,9 @@ export class ProxyStorage implements Storage {
     if (!this.data) throw new Error('Proxy forwarding failure: data is not set')
     return this.data
   }
-
+  get name() {
+    return this.data?.name || ''
+  }
   get cwd() {
     return join(process.cwd(), this.path)
   }

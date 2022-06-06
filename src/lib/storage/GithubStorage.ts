@@ -30,6 +30,7 @@ import fs from 'fs'
 import axios from 'axios'
 
 import { GlacierStorage } from './GlacierStorage'
+import { FileStorage } from './FileStorage'
 
 export interface GithubAuthor {
   name: string
@@ -46,6 +47,7 @@ export class GithubStorage extends GlacierStorage {
    * Special URL to clone a private github repo (refs https://github.com/isomorphic-git/isomorphic-git/issues/1170#issuecomment-653713207)
    */
   private readonly url: string
+
   protected constructor(
     path: string,
     private readonly token: string,
@@ -65,7 +67,7 @@ export class GithubStorage extends GlacierStorage {
       name: `${process.env.GITHUB_AUTHOR_NAME}`,
       email: `${process.env.GITHUB_AUTHOR_EMAIL}`,
     }
-  ): Promise<GithubStorage | GlacierStorage> {
+  ): Promise<GithubStorage | GlacierStorage | FileStorage> {
     console.log(`[Storage: ${path}] Github enabled: ${process.env.GITHUB_ENABLED}`)
     if ('true' === process.env.GITHUB_ENABLED) {
       return new GithubStorage(path, token, organisation, author).setup()
@@ -73,7 +75,7 @@ export class GithubStorage extends GlacierStorage {
     return GlacierStorage.create(path)
   }
 
-  async setup() {
+  protected async setup() {
     await super.setup()
     await this.createRepo(this.path)
     await this.checkout()
@@ -106,7 +108,7 @@ export class GithubStorage extends GlacierStorage {
   }
 
   async deleteRepo(name: string) {
-    throw new Error('Repository deletion is not implemented (yet)')
+    throw new Error(`[Storage: ${name}] Repository deletion is not implemented (yet).`)
     // hint: requires extra scope on auth token: https://stackoverflow.com/questions/19319516/how-to-delete-a-github-repo-using-the-api
   }
 
@@ -121,17 +123,30 @@ export class GithubStorage extends GlacierStorage {
     await super.save(fileName, source)
   }
 
+  protected async gitLog() {
+    return git.log({ fs, dir: this.cwd })
+  }
+  protected async gitStatus(fileName: string) {
+    return git.status({ fs, dir: this.cwd, filepath: fileName })
+  }
+  protected async gitAdd(fileName: string) {
+    return git.add({ fs, dir: this.cwd, filepath: fileName })
+  }
+  protected async gitCommit(message: string) {
+    return git.commit({ fs, dir: this.cwd, message, author: this.author })
+  }
+  protected async gitPush() {
+    return git.push({ fs, dir: this.cwd, http, onAuth: () => ({ username: this.token }) })
+  }
+
   async add(fileName: string) {
     const message = `Add ${fileName}`
     // commit & push
-    const dir = this.cwd
-    /*??0|philo    | TypeError: Cannot create property 'caller' on string 'buffer error'
-0|philo    |     at Object.clone (/home/pi/philo/node_modules/isomorphic-git/index.cjs:7785:16)*/
-    await git.add({ fs, dir, filepath: fileName })
-    await git.commit({ fs, dir, message, author: this.author })
-    await git.push({ fs, dir, http, onAuth: () => ({ username: this.token }) })
-    console.log('Git Status', fileName, await git.status({ fs, dir, filepath: fileName }))
-    const commits = await git.log({ fs, dir })
+    await this.gitAdd(fileName)
+    await this.gitCommit(message)
+    await this.gitPush()
+    console.log('Git Status', fileName, await this.gitStatus(fileName))
+    const commits = await this.gitLog()
     console.log('Git Log length:', commits.length, '- Last commit:', commits[0].commit.message)
   }
 }
