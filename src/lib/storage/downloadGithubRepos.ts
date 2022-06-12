@@ -1,9 +1,11 @@
 import { getFormattedDate } from '../time'
 import { GithubStorage } from './GithubStorage'
+import { InventoryStorage } from './InventoryStorage'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
 async function main() {
+  await InventoryStorage.create(`${process.env.CONTENT_STORAGE_NAME_PREFIX}`)
   for (let d = 7; d > 0; d--) {
     const yesterday = await getFormattedDate(Date.now() - DAY_MS * d)
     const repoName = `${process.env.CONTENT_STORAGE_NAME_PREFIX}-${yesterday.folderDayFormatted}`

@@ -3,6 +3,7 @@
 /karlsruhe*
 /ka/*
 /ka*
+/sunset-*
 
 # VSCode SFTP
 .vscode/sftp.json

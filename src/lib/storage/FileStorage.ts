@@ -2,7 +2,7 @@ import {
   createReadStream,
   // createWriteStream,
 } from 'fs'
-import { stat, mkdir, readdir, readFile, writeFile, unlink, rmdir } from 'fs/promises'
+import { stat, mkdir, readdir, readFile, writeFile, unlink, rm } from 'fs/promises'
 import { join } from 'path'
 import getStorageStatus from './df'
 import { Storage } from './Storage.interface'
@@ -34,7 +34,7 @@ export class FileStorage implements Storage {
   }
 
   get name(): string {
-    return ''
+    return '' // fallback - overridden by subclasses
   }
 
   get cwd(): string {
@@ -90,7 +90,7 @@ export class FileStorage implements Storage {
   }
 
   async destroy() {
-    await rmdir(this.path, { recursive: true })
+    await rm(this.path, { recursive: true })
     console.log(`[Storage: ${this.path}] Folder removed - destroyed`)
   }
 }

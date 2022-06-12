@@ -102,9 +102,9 @@ export class GithubStorage extends GlacierStorage {
       throw error
     })
     console.log(
-      `[Github] Repository created: ${this.organisation}/${this.path} - Response: ${creation.status} ${creation.statusText}`
+      `[Github] Repository created: ${this.organisation}/${this.path} - Response: ${creation?.status} ${creation?.statusText}`
     )
-    return creation.status === 201 || creation.status === 422
+    return creation?.status === 201 || creation?.status === 422
   }
 
   async deleteRepo(name: string) {

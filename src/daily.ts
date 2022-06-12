@@ -54,8 +54,8 @@ export function dailySunsetCronFactory(
       sendText(
         `Sunset is in ${sunset.humanizedDiff}...
 Starting daily timelapse!
-${temperatureMessage}
-Current storage: ` + (await ctx.storage.status())
+${temperatureMessage}`
+        //Current storage: ` + (await ctx.storage.status())
       )
       await timelapse(
         timelapseContextFactory(ctx, sendAnimation),
