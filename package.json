@@ -42,7 +42,7 @@
     "dayjs": "^1.10.6",
     "discord.js": "^13.6.0",
     "isomorphic-git": "^1.10.1",
-    "telegraf": "^4.4.0"
+    "telegraf": "^4.8.5"
   },
   "optionalDependencies": {
     "node-dht-sensor": "^0.4.3"
