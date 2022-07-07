@@ -37,6 +37,20 @@ export interface GithubAuthor {
   email: string
 }
 
+const README_FILE = 'README.md'
+
+function readmeString(path: string, author: GithubAuthor, name: string): string {
+  return `## Photography ${path} by [${author.name}](mailto:${author.email}),
+
+  licensed under
+  [CC BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+  
+  ![CC BY-NC-SA](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)
+
+  ${name}
+  `
+}
+
 /**
  * Create Github Repo & Push added files
  * with env GITHUB_ENABLED=true
@@ -104,7 +118,17 @@ export class GithubStorage extends GlacierStorage {
     console.log(
       `[Github] Repository created: ${this.organisation}/${this.path} - Response: ${creation?.status} ${creation?.statusText}`
     )
+    if (creation?.status === 201) {
+      await this.addReadme()
+    }
     return creation?.status === 201 || creation?.status === 422
+  }
+
+  protected async addReadme() {
+    await this.save(
+      README_FILE,
+      Buffer.from(readmeString(this.path, this.author, this.name), 'utf8')
+    )
   }
 
   async deleteRepo(name: string) {
@@ -142,9 +166,13 @@ export class GithubStorage extends GlacierStorage {
   async add(fileName: string) {
     const message = `Add ${fileName}`
     // commit & push
-    await this.gitAdd(fileName)
-    await this.gitCommit(message)
-    await this.gitPush()
+    try {
+      await this.gitAdd(fileName)
+      await this.gitCommit(message)
+      await this.gitPush()
+    } catch (error) {
+      console.log('Failed to push!')
+    }
     console.log('Git Status', fileName, await this.gitStatus(fileName))
     const commits = await this.gitLog()
     console.log('Git Log length:', commits.length, '- Last commit:', commits[0].commit.message)

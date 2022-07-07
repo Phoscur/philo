@@ -7,7 +7,7 @@ import { StreamContainer, TasksContainer } from './lib/tasks'
 import { dailySunsetCronFactory } from './daily'
 import { setupContext } from './context'
 
-const { BOT_TOKEN, GROUP_CHAT_ID, CHANNEL_CHAT_ID, RANDOM_IMAGE_URL, DAILY } = process.env
+const { BOT_TOKEN, GROUP_CHAT_ID, DAILY } = process.env
 
 async function setupBot() {
   if (!BOT_TOKEN) {

@@ -1,4 +1,3 @@
-import { GlacierStorage } from './GlacierStorage'
 import { GithubStorage, GithubAuthor } from './GithubStorage'
 
 interface Entry {

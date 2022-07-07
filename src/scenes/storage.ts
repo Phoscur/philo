@@ -1,3 +1,4 @@
+import { Markup } from 'telegraf'
 import type { PhiloBot, PhiloScene } from '../PhiloContext.interface'
 
 import StorageManager from '../lib/storage'
@@ -43,9 +44,12 @@ export default function setupStorageCommands(bot: PhiloBot | PhiloScene, storage
         source.on('error', (err: Error) => {
           ctx.reply(`Error: ${fileName} - ${err}`)
         })
-        replyWithFile({
-          source,
-        })
+        replyWithFile(
+          {
+            source,
+          },
+          Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]])
+        )
       } catch (err) {
         console.log('View Command failed')
         console.error(err)
