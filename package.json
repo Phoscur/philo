@@ -42,6 +42,7 @@
     "dayjs": "^1.11.5",
     "discord.js": "^14.2.0",
     "isomorphic-git": "^1.19.1",
+    "libcamera": "^1.0.6",
     "telegraf": "^4.8.6"
   },
   "optionalDependencies": {
