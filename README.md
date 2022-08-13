@@ -2,27 +2,33 @@
 
 Photo &amp; Timelapse Telegram Bot
 
-### MAJOR TODOS
+### MAJOR Features
 
 - create PhotoStream, reusable multitarget, queueing [fix queueing!]
 - more timelapse settings
 
 - save to folders shots & vids (with data.json & readme.md)
-- upload via git
-- clean storage
+- upload to git and aws glacier
+- self cleaning rotating storage
 
 - !! automatically take a timelapse every day !!
 
+### TODO
+
+Discord API exploration and rearchitectured Bot: Sunseph
+
+Use `libcamera`
+
 ## Dependencies
 
-Install nodejs, raspistill and ffmpeg
+Install nodejs and ffmpeg
 
 ```sh
 sudo apt-get update
-sudo apt-get install raspistill ffmpeg -y
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
-nvm install 14
-nvm use 14
+sudo apt-get install ffmpeg -y
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+nvm install 16
+nvm use 16
 ```
 
 I don't know if there is a copyright on it, I just liked the [loading animation](https://smashinghub.com/10-cool-loading-animated-gif.htm) a lot.
