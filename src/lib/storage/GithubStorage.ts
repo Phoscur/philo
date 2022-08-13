@@ -170,11 +170,11 @@ export class GithubStorage extends GlacierStorage {
       await this.gitAdd(fileName)
       await this.gitCommit(message)
       await this.gitPush()
+      console.log('Git Status', fileName, await this.gitStatus(fileName))
+      const commits = await this.gitLog()
+      console.log('Git Log length:', commits.length, '- Last commit:', commits[0].commit.message)
     } catch (error) {
-      console.log('Failed to push!')
+      console.log('Failed to push!', error)
     }
-    console.log('Git Status', fileName, await this.gitStatus(fileName))
-    const commits = await this.gitLog()
-    console.log('Git Log length:', commits.length, '- Last commit:', commits[0].commit.message)
   }
 }

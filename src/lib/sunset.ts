@@ -1,4 +1,5 @@
 import axios from 'axios'
+import https from 'https'
 import { changeTimezoneToLocal, humanizeDuration, getFormattedDate, FormattedDate } from './time'
 
 const { LOCATION_LATITUDE, LOCATION_LONGITUDE } = process.env
@@ -12,7 +13,10 @@ export async function getNextSunset(tomorrow = false): Promise<Sunset> {
     tomorrow ? 'date=tomorrow' : ''
   }`
   // console.log('Sundown timing from', apiUrl)
-  const { data } = await axios.get(apiUrl)
+  const httpsAgent = new https.Agent({
+    rejectUnauthorized: false, // sunrise-sunset does not automatically rotate their certificate
+  })
+  const { data } = await axios.get(apiUrl, { httpsAgent })
   const sunset = data.results.sunset
   const localSunset = changeTimezoneToLocal(sunset)
   const formatted: Sunset = {

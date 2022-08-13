@@ -204,7 +204,7 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
 }
 
 export default function enhancePhotoScene(photoScene: PhiloScene) {
-  const timelapseDuration = 60 * 1.4 // 1.4 hours total
+  const timelapseDuration = 60 * 1.2 // 1.2 hours total
   photoScene.action('timelapse', async (ctx) => {
     try {
       const preset: Preset = ctx.preset.lapse({
