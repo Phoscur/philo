@@ -1,5 +1,4 @@
-import { Client, Intents, Message, MessageAttachment } from 'discord.js'
-import { Readable } from 'stream'
+import { Client, GatewayIntentBits, Message, AttachmentBuilder, ChannelType } from 'discord.js'
 export type { Message } from 'discord.js'
 
 const { DISCORD_CLIENT_ID, DISCORD_GUILD_ID, DISCORD_TOKEN, DISCORD_ANNOUNCEMENT_CHANNEL_ID } =
@@ -19,9 +18,9 @@ export async function sendAnnouncementEmptyStub(message: string, file: string) {
 export function createClient(onReady = () => {}): DiscordClient {
   const client = new Client({
     intents: [
-      Intents.FLAGS.GUILDS,
-      Intents.FLAGS.GUILD_MESSAGES,
-      Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMessageReactions,
     ],
   })
 
@@ -44,8 +43,8 @@ function addMethods(client: Client): DiscordClient {
     if (!DISCORD_ANNOUNCEMENT_CHANNEL_ID) return
     const channel = await client.channels.fetch(DISCORD_ANNOUNCEMENT_CHANNEL_ID)
     console.log('Announcing to discord channel', channel?.toString())
-    if (!channel || !channel.isText()) return
-    const attachment = new MessageAttachment(file)
+    if (!channel || channel.type !== ChannelType.GuildText) return
+    const attachment = new AttachmentBuilder(file)
 
     const message = { content, components: [], embeds: [], files: [attachment] }
     return channel.send(message)
