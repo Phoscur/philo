@@ -29,6 +29,7 @@ sudo apt-get install ffmpeg -y
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 nvm install 16
 nvm use 16
+npm i -g pm2
 ```
 
 I don't know if there is a copyright on it, I just liked the [loading animation](https://smashinghub.com/10-cool-loading-animated-gif.htm) a lot.
