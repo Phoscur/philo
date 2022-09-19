@@ -7,10 +7,13 @@ module.exports = {
       watch: true,
       // Delay between restart
       watch_delay: 1000,
-      ignore_watch: ['node_modules', 'src'],
+      ignore_watch: ['node_modules', 'src', 'sunset-*'],
       watch_options: {
         followSymlinks: false,
       },
     },
   ],
+  env: {
+    PM2_HOME: '~/philo',
+  },
 }

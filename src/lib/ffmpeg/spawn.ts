@@ -21,16 +21,18 @@ export const spawnPromisePrependStdErr = (
 
     childProcess.once('error', (err: Error) => reject(err))
 
-    childProcess.stdout.on(
-      'data',
-      (data: Buffer) => (stdoutData = Buffer.concat([stdoutData, data]))
-    )
-    childProcess.stdout.once('error', (err: Error) => reject(err))
-
-    childProcess.stderr.on(
-      'data',
-      (data: Buffer) => (stderrData = Buffer.concat([stderrData, data]))
-    )
+    childProcess.stdout.on('data', (data: Buffer) => {
+      stdoutData = Buffer.concat([stdoutData, data])
+      console.log('[ffmpeg]', stdoutData.toString())
+    })
+    childProcess.once('error', (err: Error) => {
+      console.error('CMD failed', command, err)
+      // TODO? reject(err)
+    })
+    childProcess.stderr.on('data', (data: Buffer) => {
+      stderrData = Buffer.concat([stderrData, data])
+      console.warn(stderrData.toString())
+    })
     childProcess.stderr.once('error', (err: Error) => {
       console.log(
         'Command unsuccessful',

@@ -90,7 +90,7 @@ export default class StillCamera {
   }
   async takeImage() {
     try {
-      return await spawnPromise('raspistill', [
+      const image = await spawnPromise('libcamera-still', [
         /**
          * Width
          */
@@ -210,6 +210,8 @@ export default class StillCamera {
         '--output',
         '-',
       ])
+      console.log('Image taken!', image?.length)
+      return image
     } catch (err: any) {
       if (err && err.code === 'ENOENT') {
         throw new Error(

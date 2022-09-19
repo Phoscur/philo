@@ -73,8 +73,8 @@ export function timelapseContextFactory(
     extra?: ExtraAnimation
   ) => Promise<Message.AnimationMessage>
 ): TimelapseContext {
-  // TimelapseContext is related/similar to PhiloContext TODO properly declare inheritance, type is any here
-  const t = Object.create(ctx)
+  // TimelapseContext is related/similar to PhiloContext (TODO use factory function?)
+  const t = Object.create(ctx) as TimelapseContext
   t.animationMessageFactory = animationMessageAsyncFactory(ctx, sendAnimation)
   t.spinnerAnimationMessageFactory = animationMessageAsyncFactory(ctx, sendAnimation).bind(
     null,
@@ -83,10 +83,14 @@ export function timelapseContextFactory(
   t.onFinish = async (message: string, file: string) => {
     try {
       const attachment = await t.storage.exists(file)
+      if (!attachment) {
+        throw new Error('Attachment to send does not exist: ' + file)
+      }
       await t.sendDiscordAnimation(message, attachment)
     } catch (err) {
       console.warn('Discord sharing failed', message)
       console.error(err)
+      //t.sendWarning('Discord Upload failed', err)
     }
   }
   return t
@@ -134,6 +138,7 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
   })
   const taskId = `${status.chat.id}-${status.message_id}` // common format with cancelRunning action
   console.log('Starting timelapse', taskId, count, interval)
+  console.time(taskId)
   let photosTaken = 0,
     photoErrors = 0
   async function handlePart(part: number) {
@@ -143,9 +148,12 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
       const image = await ctx.takePhoto(preset)
       console.log('Saving image:', name)
       await ctx.storage.saveRaw(name, image.media.source)
+      //console.log('Saving raw image:', name)
       await status.editMedia(image)
+      //console.log('Updated Media')
       await status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
       photosTaken++
+      console.log('Updated caption, photos taken:', photosTaken)
     } catch (error) {
       console.error(error)
       await status.editCaption(`Fail (${photoErrors}! ${error}`, markup)
@@ -164,7 +172,9 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
       await status.editCaption(`Rendering timelapse consisting ${parts} images ...`, markup)
       const fileName = `${fileNameFormatted}.${taskId}.mp4`
       const outFile = `${ctx.storage.mediaDirectory}/${fileName}`
+      console.timeEnd(taskId)
       console.log('Stitching:', ctx.storage.workingDirectory, outFile)
+      console.time(fileName)
       await stitchImages(
         taskId,
         ctx.storage.workingDirectory,
@@ -172,7 +182,9 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
         ctx.storage.rawDirectory,
         ctx.storage.mediaDirectory
       )
-
+      console.timeEnd(fileName)
+      await new Promise((r) => setTimeout(r, 500)) // need a little breather here, else the file might not be found
+      console.log('Stitched and waited for', fileName)
       await ctx.storage.addMedia(fileName)
       const caption = `${fullFormatted}`
       await ctx.onFinish(caption, outFile) //ctx.storage.readStream(outFile)) // TODO? cloning the stream should be more efficient
@@ -204,7 +216,7 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
 }
 
 export default function enhancePhotoScene(photoScene: PhiloScene) {
-  const timelapseDuration = 60 * 1.2 // 1.2 hours total
+  const timelapseDuration = 60 * 1.4 // 1.4 hours total
   photoScene.action('timelapse', async (ctx) => {
     try {
       const preset: Preset = ctx.preset.lapse({
@@ -287,7 +299,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene) {
     try {
       const timing = -60000 * 60 * 0.75 // hours before
       const preset: Preset = ctx.preset.lapse({
-        duration: 60 * 1.4, // 1.4 hours total
+        duration: 60 * 1.6, // 1.4 hours total
         minutely: 5,
       })
       let sunset: Sunset = await getNextSunset()

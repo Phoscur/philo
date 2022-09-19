@@ -60,6 +60,7 @@ export interface TimelapseContext {
   animationMessageFactory: AnimationMessageConstructor
   spinnerAnimationMessageFactory: SpinnerAnimationMessageConstructor
   takePhoto: (preset: Preset) => Promise<InputMediaCameraPhoto>
+  sendDiscordAnimation: (caption: string, file: string) => Promise<DiscordMessage | undefined>
   onFinish: (caption: string, file: string) => Promise<void>
 }
 /**

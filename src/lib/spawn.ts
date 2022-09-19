@@ -2,6 +2,7 @@ import { spawn, SpawnOptions } from 'child_process'
 
 export const spawnPromise = (command: string, args?: Array<string>, options?: SpawnOptions) =>
   new Promise<Buffer>((resolve, reject) => {
+    console.log('CMD SPAWN', command, args?.join(' '), options)
     const childProcess = spawn(command, args ?? [], options ?? {})
 
     let stdoutData = Buffer.alloc(0)
@@ -15,7 +16,10 @@ export const spawnPromise = (command: string, args?: Array<string>, options?: Sp
       throw new Error(`No 'stderr' available on spawned process '${command}'`)
     }
 
-    childProcess.once('error', (err: Error) => reject(err))
+    childProcess.once('error', (err: Error) => {
+      console.error('CMD failed', command, err)
+      // reject(err)
+    })
 
     childProcess.stdout.on(
       'data',
@@ -30,7 +34,8 @@ export const spawnPromise = (command: string, args?: Array<string>, options?: Sp
     childProcess.stderr.once('error', (err: Error) => reject(err))
 
     childProcess.stdout.on('close', () => {
-      if (stderrData.length > 0) return reject(new Error(stderrData.toString()))
+      console.log('CMD finished', command, stdoutData.length, stderrData.length)
+      // if (stderrData.length > 0) return reject(new Error(stderrData.toString()))
 
       return resolve(stdoutData)
     })

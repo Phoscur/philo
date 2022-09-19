@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Message, AttachmentBuilder, ChannelType } from 'discord.js'
-export type { Message } from 'discord.js'
+export type { Message, DiscordAPIError } from 'discord.js'
 
 const { DISCORD_CLIENT_ID, DISCORD_GUILD_ID, DISCORD_TOKEN, DISCORD_ANNOUNCEMENT_CHANNEL_ID } =
   process.env
@@ -42,12 +42,19 @@ function addMethods(client: Client): DiscordClient {
   discordClient.sendAnimationAnnouncement = async (content: string, file: string) => {
     if (!DISCORD_ANNOUNCEMENT_CHANNEL_ID) return
     const channel = await client.channels.fetch(DISCORD_ANNOUNCEMENT_CHANNEL_ID)
-    console.log('Announcing to discord channel', channel?.toString())
-    if (!channel || channel.type !== ChannelType.GuildText) return
+    console.log(
+      'Announcing to discord channel',
+      channel?.toString(),
+      DISCORD_ANNOUNCEMENT_CHANNEL_ID
+    )
+    // console.log('Channel Type', channel?.type, ChannelType.GuildNews) // 5 5
+    if (!channel || channel.type !== ChannelType.GuildNews) return
     const attachment = new AttachmentBuilder(file)
 
     const message = { content, components: [], embeds: [], files: [attachment] }
-    return channel.send(message)
+    const sent = await channel.send(message)
+    console.log('Announced to discord channel', channel?.toString(), sent)
+    return sent
   }
   return discordClient
 }

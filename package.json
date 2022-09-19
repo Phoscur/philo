@@ -6,10 +6,11 @@
   "scripts": {
     "start": "npm run build && npm run run-built",
     "run-built": "node -r dotenv/config dist/index.js",
-    "build": "rimraf ./dist && tsc",
+    "build": "rimraf ./dist/* && tsc",
     "watch": "ts-node-dev -r dotenv/config src/index.ts",
     "dev-sunset": "ts-node-dev -r dotenv/config src/lib/sunset",
     "shoot": "ts-node-dev -r dotenv/config src/manuallyShoot.ts",
+    "tdiscord": "ts-node-dev -r dotenv/config src/manualDiscord.ts",
     "stitch": "ts-node-dev -r dotenv/config src/manuallyStitch.ts",
     "inventory": "ts-node-dev -r dotenv/config src/takeInventory.ts",
     "archive": "ts-node-dev -r dotenv/config src/manuallyArchive.ts",
