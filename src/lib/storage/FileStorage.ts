@@ -18,6 +18,9 @@ export class FileStorage implements Storage {
   }
 
   protected async setup() {
+    if ('true' === process.env.GITHUB_ENABLED) {
+      return this
+    }
     try {
       await mkdir(this.path)
       console.log(`[Storage: ${this.path}] Folder created`)
@@ -82,7 +85,8 @@ export class FileStorage implements Storage {
   }
 
   async save(name: string, source: Buffer) {
-    return writeFile(join(this.path, name), source)
+    await writeFile(join(this.path, name), source)
+    // console.log('File written', name)
   }
 
   async delete(name: string) {
