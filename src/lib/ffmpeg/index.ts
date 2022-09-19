@@ -39,6 +39,8 @@ export default async function stitchImages(
     ...(gif
       ? []
       : [
+          '-vf',
+          'crop=iw-216:ih-628,scale=1920:1200',
           '-c:v',
           'libx264',
           // crf encoding
@@ -46,10 +48,17 @@ export default async function stitchImages(
           optionsWithDefaults.crf.toString(),
         ]),
     // "-movflags", "+faststart",
+    //'-filter:v "crop=1920:1080:0:0"',
+    //'-filter:v "crop=iw-400:ih-40,scale=1920:1080"',
+    //'-filter:v "crop=iw-216:ih-888,scale=1920:1080"',
+    //'-filter:v "crop=iw-216:ih-628,scale=1920:1200"',
+    //'-vf crop=iw-216:ih-628,scale=1920:1200',
+    //'-vf scale=2028:-1', // rescale width (and height relatively)
+    // input file's resolution: 4056x3048 (1920*2=3840+216; 1080*2=2160+888)
     '-an',
     optionsWithDefaults.outFile.toString(),
   ]
-  console.log('ffmpeg', args)
+  console.log('ffmpeg', ...args)
   try {
     // for some reason ffmpeg needs to spit errors even if it produces a good result
     return await spawnPromisePrependStdErr('ffmpeg', args, { cwd })
