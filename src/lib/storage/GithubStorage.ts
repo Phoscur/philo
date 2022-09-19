@@ -91,6 +91,9 @@ export class GithubStorage extends GlacierStorage {
 
   protected async setup() {
     await super.setup()
+    if ('true' !== process.env.GITHUB_ENABLED) {
+      return this
+    }
     await this.createRepo(this.path)
     await this.checkout()
     // TODO? await git.branch({ fs, dir, ref: 'main' })
@@ -116,7 +119,9 @@ export class GithubStorage extends GlacierStorage {
       throw error
     })
     console.log(
-      `[Github] Repository created: ${this.organisation}/${this.path} - Response: ${creation?.status} ${creation?.statusText}`
+      `[Github] Repository ${this.organisation}/${this.path} ${
+        creation?.status === 422 ? 'already exists!' : 'created.'
+      } Response: ${creation?.status} ${creation?.statusText}`
     )
     if (creation?.status === 201) {
       await this.addReadme()
@@ -137,9 +142,14 @@ export class GithubStorage extends GlacierStorage {
   }
 
   async checkout() {
-    const dir = this.cwd
-    await git.clone({ fs, dir, http, url: this.url })
-    console.log('Successfully cloned', this.path)
+    try {
+      console.log('Checking out', this.path, '...')
+      const dir = this.cwd
+      await git.clone({ fs, dir, http, url: this.url, singleBranch: true, depth: 1 })
+      console.log('Successfully cloned', this.path)
+    } catch (err) {
+      console.error('Checkout failed', this.path, err)
+    }
   }
 
   async save(fileName: string, source: Buffer) {

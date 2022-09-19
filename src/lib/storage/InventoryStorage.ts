@@ -30,13 +30,22 @@ function newEntry(vault?: string): Entry {
   }
 }
 
-const INVENTORY_FILE = 'inventory.json'
+import { getFormattedDate } from '../time'
+
+type PrefixConstructor = () => Promise<string>
+const folderMonthPrefix = async () => {
+  const { folderMonthFormatted } = await getFormattedDate()
+  return folderMonthFormatted
+}
+
+const INVENTORY_FILE_SUFFIX = '-inventory.json'
 
 /**
  * Provide Inventory in JSON format (infos.json) for media and references to raw files
  */
 export class InventoryStorage extends GithubStorage {
   private mediaIndex: MediaIndex
+  private inventoryFilePrefix: PrefixConstructor
   get index() {
     return this.mediaIndex
   }
@@ -49,7 +58,8 @@ export class InventoryStorage extends GithubStorage {
     index?: MediaIndex
   ) {
     super(path, token, organisation, author)
-    this.mediaIndex = index || newMediaIndex(path)
+    this.mediaIndex = index || newMediaIndex('initial') // 'initial' is just a placeholder, need async call to create dynamic name: see setup()
+    this.inventoryFilePrefix = folderMonthPrefix
   }
   static async create(
     path: string = `${process.env.GITHUB_REPO_NAME_PREFIX}`,
@@ -73,14 +83,22 @@ export class InventoryStorage extends GithubStorage {
     return this
   }
 
+  protected async inventoryFilePath(): Promise<string> {
+    return (await this.inventoryFilePrefix()) + INVENTORY_FILE_SUFFIX
+  }
+
   async writeIndex(index?: MediaIndex) {
     if (index) {
       this.mediaIndex = index
     }
-    await this.save(INVENTORY_FILE, Buffer.from(JSON.stringify(this.mediaIndex, null, 2), 'utf8'))
+    const fileName = await this.inventoryFilePath()
+    await this.save(fileName, Buffer.from(JSON.stringify(this.mediaIndex, null, 2), 'utf8'))
   }
 
   async add(fileName: string) {
+    if ('true' !== process.env.GITHUB_ENABLED) {
+      return
+    }
     const message = `Update ${fileName}`
     // commit & push
     await this.gitAdd(fileName)
@@ -92,13 +110,15 @@ export class InventoryStorage extends GithubStorage {
   }
 
   async readIndex(): Promise<MediaIndex> {
+    const fileName = await this.inventoryFilePath()
     try {
-      const inv = await this.read(INVENTORY_FILE)
+      const inv = await this.read(fileName)
+      console.log(`[Inventory: ${fileName}] Loaded!`)
       return JSON.parse(inv.toString()) as MediaIndex
     } catch (error: any) {
       if ('ENOENT' === error.code) {
-        console.log(`[Inventory: ${this.path}] Created new ${INVENTORY_FILE}`)
-        return newMediaIndex(this.path)
+        console.log(`[Inventory: ${fileName}}] Created new ${fileName}`)
+        return newMediaIndex(fileName)
       }
       throw error
     }
