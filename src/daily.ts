@@ -37,6 +37,7 @@ export function dailySunsetCronFactory(
       let sunset: Sunset = await getNextSunset()
       let diff = sunset.diff + SUNDOWN_TIMING_MS
       if (!diff || diff < 0) {
+        console.log('Too late for a timelapse today, scheduling for tomorrow instead!')
         sunset = await getNextSunset(true)
         diff = sunset.diff + SUNDOWN_TIMING_MS
       }

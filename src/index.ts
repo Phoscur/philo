@@ -41,9 +41,10 @@ async function setupBot() {
   bot.command('photo', (ctx) => ctx.scene.enter('photo'))
   bot.command('timelapse', (ctx) => ctx.scene.enter('timelapse'))
   bot.on('message', (ctx) => ctx.reply('Try /photo'))
+  // when using this, the Bot is no longer restarted!
   bot.catch((error) => {
     console.error('Bot ERROR', error)
-  })
+  }) //*/
 
   bot.launch()
   if (DAILY) {

@@ -96,11 +96,18 @@ export class GithubStorage extends GlacierStorage {
     }
     await this.createRepo(this.path)
     await this.checkout()
+    await this.addReadme()
     // TODO? await git.branch({ fs, dir, ref: 'main' })
     return this
   }
 
-  async createRepo(name: string, privateFlag = true) {
+  /**
+   * API call to create a (private) Github repository
+   * @param name for the new repo
+   * @param [privateFlag=true]
+   * @returns true if created, false when already existing
+   */
+  async createRepo(name: string, privateFlag = true): Promise<boolean> {
     const creation = await axios({
       url: 'https://api.github.com/user/repos',
       method: 'POST', // GET will give a list of repos instead
@@ -123,13 +130,11 @@ export class GithubStorage extends GlacierStorage {
         creation?.status === 422 ? 'already exists!' : 'created.'
       } Response: ${creation?.status} ${creation?.statusText}`
     )
-    if (creation?.status === 201) {
-      await this.addReadme()
-    }
-    return creation?.status === 201 || creation?.status === 422
+    return creation?.status === 201
   }
 
   protected async addReadme() {
+    if (await this.exists(README_FILE)) return
     await this.save(
       README_FILE,
       Buffer.from(readmeString(this.path, this.author, this.name), 'utf8')
@@ -141,14 +146,20 @@ export class GithubStorage extends GlacierStorage {
     // hint: requires extra scope on auth token: https://stackoverflow.com/questions/19319516/how-to-delete-a-github-repo-using-the-api
   }
 
-  async checkout() {
+  /**
+   * Attempt `git clone`
+   * @returns true when successful
+   */
+  async checkout(): Promise<boolean> {
     try {
       console.log('Checking out', this.path, '...')
       const dir = this.cwd
       await git.clone({ fs, dir, http, url: this.url, singleBranch: true, depth: 1 })
       console.log('Successfully cloned', this.path)
+      return true
     } catch (err) {
       console.error('Checkout failed', this.path, err)
+      return false
     }
   }
 
@@ -160,8 +171,8 @@ export class GithubStorage extends GlacierStorage {
   protected async gitLog() {
     return git.log({ fs, dir: this.cwd })
   }
-  protected async gitStatus(fileName: string) {
-    return git.status({ fs, dir: this.cwd, filepath: fileName })
+  protected async gitStatus(filepath: string) {
+    return git.status({ fs, dir: this.cwd, filepath })
   }
   protected async gitAdd(fileName: string) {
     return git.add({ fs, dir: this.cwd, filepath: fileName })
@@ -172,12 +183,19 @@ export class GithubStorage extends GlacierStorage {
   protected async gitPush() {
     return git.push({ fs, dir: this.cwd, http, onAuth: () => ({ username: this.token }) })
   }
+  protected async isUnmodified(fileName: string) {
+    return 'unmodified' === (await this.gitStatus(fileName))
+  }
 
   async add(fileName: string) {
     const message = `Add ${fileName}`
     // commit & push
     try {
       await this.gitAdd(fileName)
+      if (await this.isUnmodified(fileName)) {
+        console.log(fileName, 'is unmodified, skipping push.')
+        return
+      }
       await this.gitCommit(message)
       await this.gitPush()
       console.log('Git Status', fileName, await this.gitStatus(fileName))

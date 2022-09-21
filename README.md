@@ -15,6 +15,8 @@ Photo &amp; Timelapse Telegram Bot
 
 ### TODO
 
+Create Gallery and publish on github.io!
+
 Discord API exploration and rearchitectured Bot: Sunseph
 
 Use `libcamera`

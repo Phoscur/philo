@@ -306,6 +306,7 @@ export default function enhancePhotoScene(photoScene: PhiloScene) {
       let diff = sunset.diff + timing
       if (!diff || diff < 0) {
         //return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
+        console.log('Too late for a timelapse today, scheduling for tomorrow instead!')
         sunset = await getNextSunset(true)
         diff = sunset.diff + timing
       }
