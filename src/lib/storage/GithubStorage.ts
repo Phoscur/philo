@@ -120,7 +120,7 @@ export class GithubStorage extends GlacierStorage {
       },
     }).catch((error) => {
       // github returns 422 if the repo already exists
-      if (error.response.status === 422) {
+      if (error.response?.status === 422) {
         return error.response
       }
       throw error
