@@ -147,13 +147,31 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
     try {
       const image = await ctx.takePhoto(preset)
       console.log('Saving image:', name)
-      await ctx.storage.saveRaw(name, image.media.source)
-      //console.log('Saving raw image:', name)
-      await status.editMedia(image)
-      //console.log('Updated Media')
-      await status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
-      photosTaken++
-      console.log('Updated caption, photos taken:', photosTaken)
+      if (part + 1 === count) {
+        // wait for the last save
+        await ctx.storage.saveRaw(name, image.media.source)
+        await status.editMedia(image)
+        await status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
+      } else {
+        // fire off saving task to not delay
+        ctx.storage
+          .saveRaw(name, image.media.source)
+          .then(() => {
+            photosTaken++
+            console.log('Updating caption, photos taken:', photosTaken)
+            return status.editMedia(image)
+          })
+          .catch((error) => {
+            photoErrors++
+            return status.editCaption(`Fail (${photoErrors}! ${error}`, markup)
+          })
+          .then(() =>
+            status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
+          )
+          .catch((error) => {
+            console.warn('Failed to update caption', error)
+          })
+      }
     } catch (error) {
       console.error(error)
       await status.editCaption(`Fail (${photoErrors}! ${error}`, markup)
