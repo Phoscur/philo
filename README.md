@@ -19,7 +19,12 @@ Create Gallery and publish on github.io!
 
 Discord API exploration and rearchitectured Bot: Sunseph
 
-Use `libcamera`
+## Using `libcamera`
+
+We have this new utility since Bullseye (buster 2022).
+While taking the pictures for timelapses goes through `libcamera-still`, you can also use other commands,
+e.g. Videostreaming `libcamera-vid -t 0 --width 1920 --height 1080 --codec h264 --inline --listen -o tcp://0.0.0.0:8888`
+and `vlc tcp/h264://192.168.2.138:8888/` to manually adjust the objective, so you get sharp images.
 
 ## Dependencies
 
