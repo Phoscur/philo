@@ -15,6 +15,7 @@ import type {
 import { ExtraEditMessageCaption } from 'telegraf/typings/telegram-types'
 
 const MINIMUM_TIMELAPSE_PARTS = 10
+const MAXIMUM_ERRORS_REMOTELY_REPORTED = 5
 
 function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length)
@@ -158,16 +159,26 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
           .saveRaw(name, image.media.source)
           .then(() => {
             photosTaken++
+            if (photoErrors > MAXIMUM_ERRORS_REMOTELY_REPORTED) {
+              console.warn('No longer updating caption, photos taken:', photosTaken)
+              return
+            }
             console.log('Updating caption, photos taken:', photosTaken)
             return status.editMedia(image)
           })
           .catch((error) => {
             photoErrors++
+            if (photoErrors > MAXIMUM_ERRORS_REMOTELY_REPORTED) {
+              return
+            }
             return status.editCaption(`Fail (${photoErrors}! ${error}`, markup)
           })
-          .then(() =>
-            status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
-          )
+          .then(() => {
+            if (photoErrors > MAXIMUM_ERRORS_REMOTELY_REPORTED) {
+              return
+            }
+            return status.editCaption(`${preset}\nTaking more shots (${count - part}) ...`, markup)
+          })
           .catch((error) => {
             console.warn('Failed to update caption', error)
           })
