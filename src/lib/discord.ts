@@ -53,7 +53,7 @@ function addMethods(client: Client): DiscordClient {
 
     const message = { content, components: [], embeds: [], files: [attachment] }
     const sent = await channel.send(message)
-    console.log('Announced to discord channel', channel?.toString(), sent)
+    console.log('Announced to discord channel', channel?.toString(), sent?.content)
     return sent
   }
   return discordClient
