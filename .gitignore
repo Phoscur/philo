@@ -4,6 +4,7 @@
 /ka/*
 /ka*
 /sunset-*
+/b/*
 
 # VSCode SFTP
 .vscode/sftp.json

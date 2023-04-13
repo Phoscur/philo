@@ -11,7 +11,7 @@ import senseTemperature from './lib/temperature'
 const MESSAGE_DELAY = 1000
 const SUNDOWN_DELAY_MS = 15000
 const SUNDOWN_REPEAT_DELAY_MS = 60000 * 60 * 14 // 14h (< 24h)
-const SUNDOWN_TIMING_MS = -60000 * 60 * 1.3 // 1.3 hours before
+const SUNDOWN_TIMING_MS = -60000 * 60 * 1.2 // 1.2 hours before
 const SUNDOWN_DURATION_MIN = 60 * 1.8 // ~1.8 hours total
 const SUNDOWN_MINUTELY_IMAGE_COUNT = 5
 const SUNDOWN_SENSE_TEMPERATURE = true

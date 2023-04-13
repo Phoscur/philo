@@ -3,7 +3,7 @@ import { StreamContainer, TaskStream } from './stream'
 
 describe('Task Stream Container', () => {
   beforeAll(() => {
-    StreamContainer.MINIMUM_INTERVAL_SPACING = 1000
+    StreamContainer.MINIMUM_INTERVAL_SPACING = 100
     TasksContainer.setTimeout = ((resolve: () => void) =>
       setTimeout(resolve, 0)) as typeof setTimeout // shortcut wait
   })
@@ -19,7 +19,7 @@ describe('Task Stream Container', () => {
         }, 0)
       )
     })
-    const s: TaskStream = streams.create('id', Date.now() - 1000, 5, 33, spy)
+    const s: TaskStream = streams.create('id', Date.now() - 100, 5, 33, spy)
     const emitter = streams.addStream(s)
     expect(spy).toHaveBeenCalledTimes(0)
     await emitter.done.then(() => {
@@ -90,10 +90,10 @@ describe('Task Stream Container', () => {
     expect.assertions(1)
     const tasks = new TasksContainer(() => {})
     const streams = new StreamContainer(tasks)
-    const add1 = streams.add(streams.create('id', Date.now(), 3, 2000))
-    const add2 = await streams.add(streams.create('id3', Date.now(), 3, 2000))
-    expect(streams.create.bind(streams, 'id2', Date.now(), 3, 2000)).toThrowError(
-      'Stream collision [id2, 2000ms], spacing 3000/2000'
+    const add1 = streams.add(streams.create('id', Date.now(), 3, 200))
+    const add2 = await streams.add(streams.create('id3', Date.now(), 3, 200))
+    expect(streams.create.bind(streams, 'id2', Date.now(), 3, 200)).toThrowError(
+      'Stream collision [id2, 200ms], spacing 300/200'
     )
     await Promise.all([add1, add2])
     await streams.run()
@@ -106,15 +106,15 @@ describe('Task Stream Container', () => {
 
     const due = Date.now()
     const ts = [
-      sc.create('id', due, 1, 5000),
-      sc.create('id2', due, 1, 5000),
-      sc.create('id3', due, 1, 5000),
-      sc.create('id4', due, 1, 5000),
-      sc.create('id5', due, 1, 5000),
+      sc.create('id', due, 1, 500),
+      sc.create('id2', due, 1, 500),
+      sc.create('id3', due, 1, 500),
+      sc.create('id4', due, 1, 500),
+      sc.create('id5', due, 1, 500),
     ]
     const run = ts.map((l) => sc.add(l))
-    expect(sc.create.bind(sc, 'id6', Date.now(), 3, 3000)).toThrowError(
-      'Stream collision [id6, 3000ms], spacing 6000/5000'
+    expect(sc.create.bind(sc, 'id6', Date.now(), 3, 300)).toThrowError(
+      'Stream collision [id6, 300ms], spacing 600/500'
     )
     await Promise.all(run)
   })
@@ -128,8 +128,8 @@ describe('Task Stream Container', () => {
     const spyPromise = new Promise<void>((resolve) => (spy = spyF(resolve)))
     const due = streams.now
     const repetitions = 2
-    const s1 = streams.create('id1', due, repetitions, 5000, spy)
-    const s2 = streams.create('id2', due, repetitions, 5000, spyF())
+    const s1 = streams.create('id1', due, repetitions, 500, spy)
+    const s2 = streams.create('id2', due, repetitions, 500, spyF())
 
     const t1 = streams.add(s1)
     await spyPromise // wait for s1 first execution to finish
@@ -141,8 +141,8 @@ describe('Task Stream Container', () => {
 
     expect(s1.handler).toHaveBeenCalledWith(0, 1)
     expect(s1.handler).toHaveBeenCalledWith(s1.interval, 2)
-    // since s1 was still in progress wait 1000
-    expect(s2.handler).toHaveBeenCalledWith(1000, 1)
+    // since s1 was still in progress wait 100
+    expect(s2.handler).toHaveBeenCalledWith(100, 1)
     expect(s2.handler).toHaveBeenCalledWith(s1.interval, 2)
   })
 
@@ -154,21 +154,21 @@ describe('Task Stream Container', () => {
 
     const due = Date.now()
     const repetitions = 2
-    const s51 = streams.create('id51', due, repetitions, 5000, spy())
-    const s52 = streams.create('id52', due, repetitions, 5000, spy())
-    const s15 = streams.create('id15', due, repetitions, 15000, spy())
+    const s51 = streams.create('id51', due, repetitions, 500, spy())
+    const s52 = streams.create('id52', due, repetitions, 500, spy())
+    const s15 = streams.create('id15', due, repetitions, 1500, spy())
     //const s7 = streams.create('id7', due, 2, 7000, spy())
 
     const all = [s51, s52, s15].map((s) => streams.add(s))
 
-    expect(streams.create.bind(streams, 'id7', Date.now(), 3, 7000)).toThrowError(
-      'Stream collision [id7, 7000ms], interval is locked to modulo 5000'
+    expect(streams.create.bind(streams, 'id7', Date.now(), 3, 700)).toThrowError(
+      'Stream collision [id7, 700ms], interval is locked to modulo 500'
     )
 
-    const s53 = streams.create('id53', due, repetitions, 5000, spy())
+    const s53 = streams.create('id53', due, repetitions, 500, spy())
     await streams.add(s53)
-    expect(streams.create.bind(streams, 'id49', Date.now(), 3, 4999)).toThrowError(
-      'Stream collision [id49, 4999ms], spacing is 1000 for 4x5000'
+    expect(streams.create.bind(streams, 'id49', Date.now(), 3, 499)).toThrowError(
+      'Stream collision [id49, 499ms], spacing is 100 for 4x500'
     )
 
     await Promise.all(all)
