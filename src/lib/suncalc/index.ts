@@ -104,13 +104,13 @@ if (require.main === module) {
     console.log(
       `sunset ${diff > 0 ? 'is next in' : 'was'}`,
       `${humanizedDiff}${diff < 0 ? ' ago' : ''}`,
-      `${Math.round(diff / (60 * 1000))} minutes`
+      `(${Math.round(diff / (60 * 1000))} minutes)`
     )
     console.log(
       `moonset ${moon.diff > 0 ? 'is next in' : 'was'}`,
       `${moon.humanizedDiff}${moon.diff < 0 ? ' ago' : ''}`,
-      `${Math.round(moon.diff / (60 * 1000))} minutes`,
-      `(${Math.round((moon.diff - diff) / (60 * 1000))} minutes later)`
+      `(${Math.round(moon.diff / (60 * 1000))} minutes`,
+      `- ${Math.round((moon.diff - diff) / (60 * 1000))} minutes later)`
     )
     console.log('\nsunset tomorrow is at', hoursFormatted)
     console.log(

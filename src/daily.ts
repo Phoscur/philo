@@ -51,10 +51,15 @@ export function dailySunsetCronFactory(
           console.error('Failed to read temperature', err)
         }
       }
+      let moonsetMessage = ''
+      if (sunset.moon.diff - sunset.diff < 180 * 60 * 1000) {
+        moonsetMessage = `Moonset is in ${sunset.moon.humanizedDiff}!`
+      }
 
       sendText(
         `Sunset is in ${sunset.humanizedDiff}...
 Starting daily timelapse!
+${moonsetMessage}
 ${temperatureMessage}`
         //Current storage: ` + (await ctx.storage.status())
       )
