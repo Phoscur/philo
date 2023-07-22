@@ -3,7 +3,7 @@ import PhiloContext, {
   Preset,
   Message,
 } from './PhiloContext.interface'
-import { getNextSunset, Sunset } from './lib/sunset'
+import { getNextSunset, Sunset } from './lib/suncalc'
 import { timelapse, timelapseContextFactory } from './scenes/timelapse'
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types'
 import senseTemperature from './lib/temperature'
@@ -34,11 +34,11 @@ export function dailySunsetCronFactory(
         duration: SUNDOWN_DURATION_MIN,
         minutely: SUNDOWN_MINUTELY_IMAGE_COUNT,
       })
-      let sunset: Sunset = await getNextSunset()
+      let sunset: Sunset = getNextSunset()
       let diff = sunset.diff + SUNDOWN_TIMING_MS
       if (!diff || diff < 0) {
         console.log('Too late for a timelapse today, scheduling for tomorrow instead!')
-        sunset = await getNextSunset(true)
+        sunset = getNextSunset(true)
         diff = sunset.diff + SUNDOWN_TIMING_MS
       }
       await sleep(diff - MESSAGE_DELAY)

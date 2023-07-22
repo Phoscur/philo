@@ -11,7 +11,7 @@ import type { StorageManager } from '../lib/storage'
 import setupStorageCommands from './storage'
 import setupTemperatureCommands from './temperature'
 import setupTimelapse from './timelapse'
-import { getNextSunset, Sunset } from '../lib/sunset'
+import { getNextSunset, Sunset } from '../lib/suncalc'
 import fancyCount from '../lib/fancyCount'
 import { TasksContainer, StreamContainer } from '../lib/tasks'
 
@@ -260,11 +260,11 @@ export default function createPhotoScene(storage: StorageManager, streams: Strea
 
   photoScene.action('sunsetShots', async (ctx) => {
     const timings = ctx.sunsetTimings
-    let sunset = await getNextSunset()
+    let sunset = getNextSunset()
     let diff = sunset.diff + timings[0] > 0 ? sunset.diff : -1
     if (diff < 0) {
       //return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
-      sunset = await getNextSunset(true)
+      sunset = getNextSunset(true)
       diff = sunset.diff
     }
 
@@ -289,11 +289,11 @@ export default function createPhotoScene(storage: StorageManager, streams: Strea
   })
 
   photoScene.action('sunsetShot', async (ctx) => {
-    let sunset = await getNextSunset()
+    let sunset = getNextSunset()
     let diff = sunset.diff > 0 ? sunset.diff : -1
     if (diff < 0) {
       //return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
-      sunset = await getNextSunset(true)
+      sunset = getNextSunset(true)
       diff = sunset.diff
     }
     await ctx.answerCbQuery(`Taking image in ${sunset.humanizedDiff} ...`)

@@ -1,5 +1,5 @@
 import { Markup } from 'telegraf'
-import { getNextSunset, Sunset } from '../lib/sunset'
+import { getNextSunset, Sunset } from '../lib/suncalc'
 import stitchImages from '../lib/ffmpeg'
 import type PhiloContext from '../PhiloContext.interface'
 import type {
@@ -331,12 +331,12 @@ export default function enhancePhotoScene(photoScene: PhiloScene) {
         duration: 60 * 1.6, // 1.4 hours total
         minutely: 5,
       })
-      let sunset: Sunset = await getNextSunset()
+      let sunset: Sunset = getNextSunset()
       let diff = sunset.diff + timing
       if (!diff || diff < 0) {
         //return ctx.answerCbQuery(`Sorry! Sunset was ${sunset.humanizedDiff} ago.`)
         console.log('Too late for a timelapse today, scheduling for tomorrow instead!')
-        sunset = await getNextSunset(true)
+        sunset = getNextSunset(true)
         diff = sunset.diff + timing
       }
       await ctx.answerCbQuery(
