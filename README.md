@@ -24,7 +24,7 @@ Discord API exploration and rearchitectured Bot: Sunseph
 We have this new utility since Bullseye (buster 2022).
 While taking the pictures for timelapses goes through `libcamera-still`, you can also use other commands,
 e.g. Videostreaming `libcamera-vid -t 0 --width 1920 --height 1080 --codec h264 --inline --listen -o tcp://0.0.0.0:8888`
-and `vlc tcp/h264://192.168.2.138:8888/` to manually adjust the objective, so you get sharp images.
+and `vlc tcp/h264://192.168.2.138:8888/` to manually adjust the objective, so you get sharp images (or `libcamera-vid -t 0 --width 4056 --height 3040 --codec mjpeg --framerate 10 --inline --listen -o tcp://0.0.0.0:8888` and `vlc tcp/mjpeg://192.168.2.150:8888/`).
 
 ## Dependencies
 

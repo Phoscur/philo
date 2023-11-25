@@ -52,8 +52,9 @@ export function dailySunsetCronFactory(
         }
       }
       let moonsetMessage = ''
-      if (sunset.moon.diff - sunset.diff < 180 * 60 * 1000) {
-        moonsetMessage = `Moonset is in ${sunset.moon.humanizedDiff}!`
+      const moonDiff = sunset.moon?.diff || Number.MAX_SAFE_INTEGER
+      if (Math.abs(moonDiff - sunset.diff) < 180 * 60 * 1000) {
+        moonsetMessage = `Moonset is in ${sunset.moon?.humanizedDiff}!`
       }
 
       sendText(

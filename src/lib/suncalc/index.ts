@@ -12,7 +12,7 @@ export interface Moonset extends FormattedDate {
 export interface Sunset extends FormattedDate {
   readonly diff: number
   readonly humanizedDiff: string
-  readonly moon: Moonset
+  readonly moon?: Moonset
 }
 
 export function getNextSunset(tomorrow = false): Sunset {
@@ -73,10 +73,14 @@ export function getAlignmentDate(
     console.log('Moonset:', moonTimes.set.toLocaleString('de-DE', { timeZone }))
     console.log('Time Difference:', Math.round(timeDiff / (60 * 1000)), 'minutes', '\n')
   } */
+  let diff = -1
+  if (moonTimes.set) {
+    diff = Math.abs(times.sunset.getTime() - moonTimes.set.getTime())
+  }
   return {
     sun: times.sunset,
     moon: moonTimes.set,
-    diff: Math.abs(times.sunset.getTime() - moonTimes.set.getTime()),
+    diff,
   }
 }
 
@@ -106,13 +110,19 @@ if (require.main === module) {
       `${humanizedDiff}${diff < 0 ? ' ago' : ''}`,
       `(${Math.round(diff / (60 * 1000))} minutes)`
     )
+    console.log('\nsunset tomorrow is at', hoursFormatted)
+    if (!moon) {
+      return
+    }
     console.log(
       `moonset ${moon.diff > 0 ? 'is next in' : 'was'}`,
       `${moon.humanizedDiff}${moon.diff < 0 ? ' ago' : ''}`,
       `(${Math.round(moon.diff / (60 * 1000))} minutes`,
       `- ${Math.round((moon.diff - diff) / (60 * 1000))} minutes later)`
     )
-    console.log('\nsunset tomorrow is at', hoursFormatted)
+    if (!moon2) {
+      return
+    }
     console.log(
       'moonset tomorrow is',
       Math.round((moon2.diff - diff2) / (60 * 1000)),

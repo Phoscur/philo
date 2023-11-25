@@ -30,6 +30,7 @@ export function printPreset(p: Preset) {
 
 const presets: { [name: string]: Preset } = JSON.parse(process.env.PRESETS || '{}')
 const base: Preset = JSON.parse(process.env.DEFAULT_PRESET || '{}')
+console.log('Loading base preset:', base)
 export const sunsetTimings: number[] = JSON.parse(process.env.SUNSET_TIMINGS || '[0]')
 
 function enhancePreset(preset: Preset) {
