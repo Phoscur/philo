@@ -41,6 +41,12 @@ export class StorageManager {
     await this.inventory.addMedia(this.mediaDirectory, name, this.media.name)
   }
 
+  async processQueue() {
+    await this.raw.processQueue()
+    await this.media.processQueue()
+    await this.inventory.processQueue()
+  }
+
   async exists(name: string = '') {
     // TODO handle this better
     const nameWithoutPathPrefix = name.replace(this.media.path + '/', '')

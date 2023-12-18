@@ -10,6 +10,7 @@ export class ProxyStorage implements Storage {
   }
 
   async getData(): Promise<Storage> {
+    // we need this async access to rotate on demand if necessary
     if (!this.data) throw new Error('Proxy forwarding failure: data is not set')
     return this.data
   }
@@ -47,6 +48,10 @@ export class ProxyStorage implements Storage {
   async save(name: string, source: Buffer) {
     const proxy = await this.getData()
     return proxy.save(name, source)
+  }
+  async processQueue() {
+    const proxy = await this.getData()
+    return proxy.processQueue()
   }
   async delete(name: string) {
     const proxy = await this.getData()

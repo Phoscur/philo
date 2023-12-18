@@ -226,6 +226,8 @@ export async function timelapse(ctx: TimelapseContext, preset: Preset, due = Dat
           ...Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]),
         }
       )
+      await status.editCaption(`Running queued backup tasks ...`, markup) // TODO?! cancel button?
+      await ctx.storage.processQueue()
       await status.delete()
     } catch (error) {
       console.error(error)

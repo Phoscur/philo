@@ -22,8 +22,9 @@ export interface Storage {
 
   /* unused writeStream(name: string) */
 
-  add(name: string): Promise<void>
   save(name: string, source: Buffer): Promise<void>
+  add(name: string): Promise<void>
+  processQueue(): Promise<void>
 
   delete(name: string): Promise<void>
   destroy(): Promise<void>
