@@ -81,7 +81,7 @@ export class GithubStorage extends GlacierStorage {
       name: `${process.env.GITHUB_AUTHOR_NAME}`,
       email: `${process.env.GITHUB_AUTHOR_EMAIL}`,
     }
-  ): Promise<GithubStorage | GlacierStorage | FileStorage> {
+  ): Promise<GithubStorage | GlacierStorage> {
     console.log(`[Storage: ${path}] Github enabled: ${process.env.GITHUB_ENABLED}`)
     if ('true' === process.env.GITHUB_ENABLED) {
       return new GithubStorage(path, token, organisation, author).setup()
@@ -164,7 +164,7 @@ export class GithubStorage extends GlacierStorage {
   }
 
   async save(fileName: string, source: Buffer) {
-    // also triggers add()
+    // also triggers queueing of add()
     await super.save(fileName, source)
   }
 
@@ -188,6 +188,7 @@ export class GithubStorage extends GlacierStorage {
   }
 
   async add(fileName: string) {
+    await super.add(fileName) // TODO? save Glacier (parent) vault name metadata
     const message = `Add ${fileName}`
     // commit & push
     try {
