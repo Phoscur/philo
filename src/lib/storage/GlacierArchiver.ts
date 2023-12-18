@@ -5,13 +5,17 @@ import {
   UploadArchiveCommandOutput,
   CreateVaultCommandOutput,
 } from '@aws-sdk/client-glacier'
+import type { Readable } from 'stream'
 
 export const GLACIER_ENABLED = process.env.GLACIER_ENABLED === 'true'
 
 export interface GlacierVault {
   name: string
   vault: CreateVaultCommandOutput
-  uploadArchive(data: Buffer, description?: string): Promise<UploadArchiveCommandOutput>
+  uploadArchive(
+    data: Readable | ReadableStream | Blob,
+    description?: string
+  ): Promise<UploadArchiveCommandOutput>
 }
 
 /**
@@ -44,7 +48,7 @@ export class GlacierArchiver {
     return {
       name: vaultName,
       vault,
-      async uploadArchive(data: Buffer, archiveDescription?: string) {
+      async uploadArchive(data: Readable | ReadableStream | Blob, archiveDescription?: string) {
         const upload = await client.send(
           new UploadArchiveCommand({
             vaultName,

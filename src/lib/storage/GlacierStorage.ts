@@ -1,11 +1,11 @@
-import { FileStorage } from './FileStorage'
 import { GlacierArchiver, GlacierVault } from './GlacierArchiver'
+import { QueuedBackupStorage } from './QueuedBackupStorage'
 
 /**
  * Archiving in AWS Glacier Vaults
  * with env AWS_GLACIER_ENABLED=true, else just a normal FileStorage
  */
-export class GlacierStorage extends FileStorage {
+export class GlacierStorage extends QueuedBackupStorage {
   get name(): string {
     return this.vault?.name || ''
   }
@@ -14,9 +14,8 @@ export class GlacierStorage extends FileStorage {
     super(path)
   }
 
-  static async create(path: string = 'storage'): Promise<GlacierStorage | FileStorage> {
-    console.log(`[Storage: ${path}] Glacier enabled: ${process.env.AWS_GLACIER_ENABLED}`)
-    return FileStorage.create(path)
+  static async create(path: string = 'storage'): Promise<GlacierStorage> {
+    return new GlacierStorage(path).setup()
   }
 
   protected async setup() {
@@ -34,21 +33,15 @@ export class GlacierStorage extends FileStorage {
     return this
   }
 
-  /**
-   * Save & Add, meanwhile Upload archive
-   * @param fileName also used as archive description
-   * @param source data
-   */
-  async save(fileName: string, source: Buffer) {
-    await Promise.all([
-      super.save(fileName, source).then(() => this.add(fileName)),
-      this.vault
-        ?.uploadArchive(source, fileName)
-        .catch((error) =>
-          console.error(`[Storage: ${this.path}] Glacier Archive creation failed`, error)
-        ),
-    ])
+  async add(fileName: string) {
+    if ('true' !== process.env.AWS_GLACIER_ENABLED) {
+      return
+    }
+    const source = this.readStream(fileName)
+    try {
+      await this.vault?.uploadArchive(source, fileName)
+    } catch (error) {
+      console.error(`[Storage: ${this.path}] Glacier Archive creation failed`, error)
+    }
   }
-
-  // TODO? backup media? async add(fileName: string) {}
 }
