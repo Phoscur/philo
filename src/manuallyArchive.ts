@@ -11,8 +11,8 @@ async function main() {
   const archiver = GlacierArchiver.instance
   const storage = await FileStorage.create(folder)
   const vault = await archiver.createVault(folder)
-  const file = await storage.read(fileName)
-  await vault.uploadArchive(file, fileName)
+  const fileStream = await storage.readStream(fileName)
+  await vault.uploadArchive(fileStream, fileName)
 }
 
 main()

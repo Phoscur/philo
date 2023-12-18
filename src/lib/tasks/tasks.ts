@@ -30,7 +30,7 @@ export class TasksContainer {
           reject('Aborted: ' + id)
         },
       }
-      this.logger(`Task [${id}] running for ${wait}ms`)
+      this.logger(`Task [${id}] is waiting for ${wait}ms...`)
     }).finally(() => {
       delete this.running[id]
     })
