@@ -7,6 +7,7 @@ import { getNextSunset, Sunset } from './lib/suncalc'
 import { timelapse, timelapseContextFactory } from './scenes/timelapse'
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types'
 import senseTemperature from './lib/temperature'
+import getStorageStatus from './lib/storage/df'
 
 const MESSAGE_DELAY = 1000
 const SUNDOWN_DELAY_MS = 15000
@@ -56,13 +57,15 @@ export function dailySunsetCronFactory(
       if (Math.abs(moonDiff - sunset.diff) < 180 * 60 * 1000) {
         moonsetMessage = `Moonset is in ${sunset.moon?.humanizedDiff}!`
       }
+      const status = await getStorageStatus()
+      const storageMessage = `Storage (${status.size}): ${status.percent}`
 
       sendText(
         `Sunset is in ${sunset.humanizedDiff}...
 Starting daily timelapse!
 ${moonsetMessage}
-${temperatureMessage}`
-        //Current storage: ` + (await ctx.storage.status())
+${temperatureMessage}
+${storageMessage}`
       )
       await timelapse(
         timelapseContextFactory(ctx, sendAnimation),
