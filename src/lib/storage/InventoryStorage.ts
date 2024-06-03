@@ -49,6 +49,14 @@ export class InventoryStorage extends GithubStorage {
   get index() {
     return this.mediaIndex
   }
+  get prettyIndex() {
+    const { raw } = this.mediaIndex
+    const output: Record<string, number> = {}
+    for (const folder in raw) {
+      output[folder] = raw[folder].files.length
+    }
+    return JSON.stringify(output, null, 2)
+  }
 
   protected constructor(
     path: string,

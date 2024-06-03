@@ -12,7 +12,7 @@
     "shoot": "ts-node-dev -r dotenv/config src/manuallyShoot.ts",
     "tdiscord": "ts-node-dev -r dotenv/config src/manualDiscord.ts",
     "stitch": "ts-node-dev -r dotenv/config src/manuallyStitch.ts",
-    "inventory": "ts-node-dev -r dotenv/config src/takeInventory.ts",
+    "inventory": "ts-node-dev -r dotenv/config src/manuallyTakeInventory.ts",
     "archive": "ts-node-dev -r dotenv/config src/manuallyArchive.ts",
     "download-backup": "ts-node-dev -r dotenv/config src/lib/storage/downloadGithubRepos.ts",
     "space-test": "ts-node-dev -r dotenv/config src/lib/storage/df.ts",
