@@ -8,6 +8,7 @@ import StillCamera from './lib/raspistill'
 import presets, { sunsetTimings } from './presets'
 import { animationMessageAsyncFactory } from './scenes/timelapse'
 import { createClient, DISCORD_ENABLED, sendAnnouncementEmptyStub } from './lib/discord'
+import { consoleInjector } from './services'
 
 const { GROUP_CHAT_ID, CHANNEL_CHAT_ID, RANDOM_IMAGE_URL } = process.env
 
@@ -28,6 +29,7 @@ export function setupContext(
     }
   }
   const ctx = context || ({ telegram: bot.telegram } as PhiloContext)
+  ctx.injector ??= consoleInjector
   ctx.randomEmulation ??= randomEmulation
   ctx.presetName ??= 'base'
   ctx.preset ??= presets.base

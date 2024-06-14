@@ -19,6 +19,7 @@ import type { StorageManager } from './lib/storage'
 import type { StreamContainer } from './lib/tasks'
 import type { FormattedDate } from './lib/time'
 import type { Preset } from './presets'
+import { Injector } from '@joist/di'
 
 export type { Storage, StorageManager, Readable } from './lib/storage'
 export type { Preset } from './presets'
@@ -89,6 +90,7 @@ export default interface PhiloContext extends Context {
   now: FormattedDate
   // declare scene type
   scene: Scenes.SceneContextScene<PhiloContext>
+  injector: Injector
 }
 
 export interface PhiloBot extends Telegraf<PhiloContext> {}
