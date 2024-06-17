@@ -1,5 +1,4 @@
 import SunCalc from 'suncalc'
-//import 'dotenv/config'
 import { changeTimezoneToLocal, humanizeDuration, getFormattedDate, FormattedDate } from '../time'
 
 const { LOCATION_LATITUDE, LOCATION_LONGITUDE, LOCATION_TIMEZONE } = process.env

@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'philo',
       script: 'dist/index.js',
-      node_args: '-r dotenv/config',
+      node_args: '--env-file=.env',
       watch: true,
       // Delay between restart
       watch_delay: 1000,
