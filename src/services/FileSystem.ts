@@ -1,6 +1,6 @@
 import { join } from 'path'
-import { stat, mkdir, readdir, readFile, writeFile, unlink, rm } from 'fs/promises'
-import { createReadStream } from 'fs'
+import { stat, mkdir, readdir, readFile, writeFile, unlink, rm, watch } from 'fs/promises'
+import { createReadStream, WatchOptions } from 'fs'
 import { inject, injectable } from '@joist/di'
 import { Logger } from './Logger.js'
 
@@ -22,6 +22,14 @@ export class FileSystem {
 
   get path() {
     return this.#path
+  }
+
+  join(...paths: string[]) {
+    return join(this.path, ...paths)
+  }
+
+  watch(options: WatchOptions, file = '') {
+    return watch(join(this.path, file), options)
   }
 
   getAbsolutePath(folder: string) {

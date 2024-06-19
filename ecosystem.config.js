@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'philo',
+      name: 'philopho',
       script: 'dist/index.js',
       node_args: '--env-file=.env',
       watch: true,
