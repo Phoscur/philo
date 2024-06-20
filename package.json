@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "npm run build && npm run run-built",
-    "run-built": "node --env-file=.env dist/index.js",
+    "run-built": "node --env-file=.env dist/main.js",
     "build": "tsc -b --clean",
     "watch": "tsx watch --env-file=.env src/index.ts",
     "still-test": "tsx --env-file=.env src/stillTest.ts",

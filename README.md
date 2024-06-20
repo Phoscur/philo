@@ -1,11 +1,10 @@
-# Philo Philm, Raspberry Pi telegraphing Timelapse Photographer
+# Philopho, Raspberry Pi telegraphing Timelapse Photographer
 
-Photo &amp; Timelapse Telegram Bot
+Photo & Timelapse Telegram Bot
 
 ### MAJOR Features
 
-- create PhotoStream, reusable multitarget, queueing [fix queueing!]
-- more timelapse settings
+- timelapses with libcamera, ffmpeg rendering & publishing on Github Pages
 
 - save to folders shots & vids (with data.json & readme.md)
 - upload to git and aws glacier
@@ -14,6 +13,15 @@ Photo &amp; Timelapse Telegram Bot
 - !! automatically take a timelapse every day !!
 
 ### TODO
+
+Fix regressions, lost features:
+
+- Likes
+- Preview while running
+- Glacier Backup
+- Github Backup Downloads
+- Destructive Rotation
+- Misc commands
 
 Create Gallery and publish on github.io!
 
