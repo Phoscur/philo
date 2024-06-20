@@ -1,9 +1,10 @@
 import { Context, Telegraf, Scenes, session } from 'telegraf';
 
-import { dailySunsetCronFactory } from './daily.js';
 import { type PhiloContext, setupContext } from './context.js';
 import { getStorageStatus } from './lib/df.js';
 import { readTemperatureSensor } from './lib/temperature.js';
+import { setupPhotoControl } from './PhotoControl.js';
+import { dailySunsetCronFactory } from './daily.js';
 
 const { TELEGRAM_TOKEN, GROUP_CHAT_ID, DAILY } = process.env;
 
@@ -25,7 +26,7 @@ function buildStage() {
       ctx.reply(`Sorry failed to read the sensor: ${error}`);
     }
   });
-  setupTimelapse(photoScene);
+  setupPhotoControl(photoScene);
   return new Scenes.Stage<PhiloContext>([photoScene], {
     default: 'photo',
   });
@@ -58,7 +59,7 @@ async function setupBot() {
   });
 
   bot.command('photo', (ctx) => ctx.scene.enter('photo'));
-  bot.command('timelapse', (ctx) => ctx.scene.enter('timelapse'));
+  //bot.command('timelapse', (ctx) => ctx.scene.enter('timelapse'));
   bot.on('message', (ctx) => ctx.reply('Try /photo'));
   // when using this, the Bot is no longer restarted!
   bot.catch((error) => {
@@ -69,7 +70,7 @@ async function setupBot() {
   if (DAILY) {
     console.log('Setting up daily timelapse ...');
     const ctx = setupContext(bot);
-    dailySunsetCronFactory(ctx, ctx.sendGroupMessage, ctx.sendGroupAnimation);
+    dailySunsetCronFactory(ctx);
   }
 
   // Enable graceful stop

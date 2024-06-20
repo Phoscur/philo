@@ -119,6 +119,30 @@ export class Repository {
     logger.log('File', ACTION_NOTIFY_FILE, 'is being created - Url referenced:', url);
     return this.add(ACTION_NOTIFY_FILE, telegramNotifyActionString(title, url));
   }
+
+  async checkPage(file: string) {
+    return this.#git().checkPage(this.#fs().path, file);
+  }
+
+  async enablePages(iterations = 0, file = 'index.html', waitMS = 5000) {
+    const repoName = this.#fs().path;
+    const git = this.#git();
+    const logger = this.#logger();
+
+    let pagesEnabled = await git.enablePages(repoName);
+    logger.log('Enabling GH pages for', repoName, pagesEnabled ? 'was successful' : 'failed');
+    if (!iterations) return pagesEnabled;
+    for (let i = 0; i < iterations; i++) {
+      logger.log('Waiting for the Pages Pipeline', pagesEnabled ? '' : '(to be enabled)');
+      await new Promise((r) => setTimeout(r, waitMS));
+      if (!pagesEnabled) {
+        pagesEnabled = await git.enablePages(repoName);
+      }
+      if (pagesEnabled && (await git.checkPage(repoName, file))) {
+        return true;
+      }
+    }
+  }
 }
 
 export function readmeString(title: string, name: string, email: string, content = '') {

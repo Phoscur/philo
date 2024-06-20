@@ -259,8 +259,8 @@ export class Git {
           : creation?.status === 422
           ? "can't enable pages!"
           : 'now has pages enabled.'
-      } Response: ${creation?.status} ${creation?.statusText}`,
-      creation?.data
+      } Response: ${creation?.status} ${creation?.statusText}`
+      // creation?.data
     );
     return creation?.status === 201 || creation?.status === 409;
   }

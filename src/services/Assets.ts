@@ -1,11 +1,12 @@
-import { inject, injectable, ProviderToken } from '@joist/di';
+import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
-
 @injectable
 export class Assets {
   // use an independent instance of FileSystem
   static providers = [{ provide: FileSystem, use: FileSystem }];
+
   #fs = inject(FileSystem);
+
   constructor(
     public randomImageUrl = `${
       process.env.RANDOM_IMAGE_URL || 'https://picsum.photos/600/400/?random'
@@ -17,7 +18,9 @@ export class Assets {
     const fs = this.#fs();
     return {
       media: {
-        source: fs.readStream(this.spinnerImagePath),
+        // telegraf also accepts a ReadStream as source
+        source: fs.readStream(this.spinnerImagePath) as unknown as NodeJS.ReadableStream,
+        filename: 'spinner.gif',
       },
       type: 'animation',
     };

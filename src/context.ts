@@ -2,6 +2,7 @@ import { Injector } from '@joist/di';
 import { consoleInjector } from './services/index.js';
 import type { Context, Scenes, Telegraf } from 'telegraf';
 import type { Message, Convenience, Opts } from 'telegraf/types';
+// TODO inform discord - also via github action?!
 //import type { Message as DiscordMessage } from './lib/discord.js';
 //import { createClient, DISCORD_ENABLED, sendAnnouncementEmptyStub } from './lib/discord.js';
 

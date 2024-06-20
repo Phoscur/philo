@@ -28,6 +28,10 @@ export class SunMoonTime {
     return sunset;
   }
 
+  getSunsetDiff(date = this.today): number {
+    return this.getSunset(date).getTime() - date.getTime();
+  }
+
   /** not every date has a moonset everywhere! */
   getMoonset(date = this.today): Date | undefined {
     const { set } = SunCalc.getMoonTimes(date, this.latitude, this.longitude);

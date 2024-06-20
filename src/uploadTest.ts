@@ -2,24 +2,24 @@ import { Injector } from '@joist/di';
 import {
   Logger,
   consoleInjector,
-  FileSystem,
   Camera,
   CameraStub,
   Git,
   Repository,
+  Timelapse,
 } from './services/index.js';
 
 const repoPrefix = `${process.env.GITHUB_REPO_NAME_PREFIX}`;
-const repoName = repoPrefix + '-2024-06-20m';
+const repoName = repoPrefix + '-2024-06-20s';
 const timelapseFile = 'timelapse.mp4';
 
 // defineEnvironment
 const injector = new Injector([], consoleInjector);
 const git = injector.get(Git);
 const logger = injector.get(Logger);
-const fs = injector.get(FileSystem);
 const repo = injector.get(Repository);
 const camera = injector.get(Camera);
+const timelapse = injector.get(Timelapse);
 
 async function main() {
   /*const isNew = await fs.setupPath(repoName)
@@ -42,27 +42,16 @@ async function main() {
   const interval = 2000;
   logger.log('Starting timelapse', count, 'frames with', interval, 'ms interval');
   console.time('timelapse');
-  const uploads: (() => Promise<void>)[] = [];
-  let running: Promise<void> | undefined = undefined;
-  const queue = () => {
-    logger.log('Queued uploads:', uploads.length);
-    const n = uploads.shift();
-    if (!n) return (running = undefined);
-    running = n().then(queue);
-  };
-  await camera.watchTimelapse(count, interval, (filename: string) => {
-    logger.log('Timelapse frame created:', filename);
-    // given file written events, we can start uploading (sequentially) in parallel
-    uploads.push(() => repo.upload(filename));
-    //if (running && running.isPending) return
-    if (!running) {
-      queue();
+  await timelapse.shoot(
+    count,
+    interval,
+    (filename: string) => {
+      console.timeLog('timelapse', 'captured frame', filename);
+    },
+    (filename: string) => {
+      console.timeLog('timelapse', 'still uploading - now', filename);
     }
-  });
-  while (running) {
-    console.timeLog('timelapse', 'still uploading');
-    await running;
-  }
+  );
   console.timeEnd('timelapse');
   console.time('githubrender');
   await repo.makeTimelapsePage();
@@ -70,18 +59,7 @@ async function main() {
   logger.log('Added GH Timelapse Action! Waiting 10s ...');
   await new Promise((r) => setTimeout(r, 10000));
 
-  let pagesEnabled = await git.enablePages(repoName);
-  logger.log('Enabling GH pages for', repoName, pagesEnabled ? 'was successful' : 'failed');
-  for (let i = 0; i < 60; i++) {
-    await new Promise((r) => setTimeout(r, 5000));
-    if (!pagesEnabled) {
-      pagesEnabled = await git.enablePages(repoName);
-    }
-    if (pagesEnabled && (await git.checkPage(repoName, timelapseFile))) {
-      return;
-    }
-    logger.log('°*- waiting for the pipeline -*°', pagesEnabled ? '' : '(to be enabled)');
-  }
+  await repo.enablePages(60, repoName);
   console.timeEnd('githubrender');
 }
 

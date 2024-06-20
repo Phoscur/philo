@@ -24,7 +24,7 @@ export class Camera {
         timelapse, // also as initial delay
         timeout,
         framestart: 1,
-        // height: 1200,
+        height: 1200,
         output,
       },
     });
