@@ -14,9 +14,9 @@ export class Camera {
 
   async timelapse(output: string, count = 420, timelapse = 12000) {
     // if (timelapse < 1200) throw new Error('Interval must be at least 1200ms (camera is slow)')
-    console.time('still')
+    //console.time('still')
     const timeout = count * timelapse + 500 // need up to 400ms extra for an extra image
-    console.log('settings', timeout, timelapse)
+    //console.log('settings', timeout, timelapse)
     // takes about 2s to start
     const r = await libcamera.still({
       config: {
@@ -28,7 +28,7 @@ export class Camera {
         output,
       },
     })
-    console.timeEnd('still')
+    //console.timeEnd('still')
     return r
   }
 
@@ -53,7 +53,7 @@ export class Camera {
         try {
           const watcher = this.#fs().watch({ signal })
           for await (const event of watcher) {
-            console.timeLog('still', event.filename)
+            //console.timeLog('still', event.filename)
             if (lastFile === event.filename) continue
             // when a new file is started, the previous one is ready for upload
             if (lastFile) handler(lastFile)

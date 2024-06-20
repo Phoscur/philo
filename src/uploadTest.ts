@@ -9,11 +9,8 @@ import {
   Repository,
 } from './services/index.js'
 
-const telegramToken = `${process.env.TELEGRAM_TOKEN}`
-const telegramChatId = `${process.env.TELEGRAM_CHAT_ID}`
-
 const repoPrefix = `${process.env.GITHUB_REPO_NAME_PREFIX}`
-const repoName = repoPrefix + '-2024-06-20n2'
+const repoName = repoPrefix + '-2024-06-20m'
 const timelapseFile = 'timelapse.mp4'
 
 // defineEnvironment
@@ -67,29 +64,9 @@ async function main() {
     await running
   }
   console.timeEnd('timelapse')
-
-  // scan folder for jpgs
-  const files = await fs.list()
-  const jpegs = files.filter((f) => f.endsWith('jpg'))
-  logger.log('Add', jpegs.length, 'images...')
-  // add & push one by one
-  for (const jpg of jpegs) {
-    // should be done already
-    //await repo.upload(jpg)
-  }
-  // add gh action config & push
-  //await repo.branchPages(); could create this branch in advance - then we can enable pages faster but we get emails for pipeline cancellations
-  await repo.addIndex()
-
-  const success = await git.setActionSecret(repoName, 'TELEGRAM_TO', telegramChatId)
-  logger.log('Set secret TELEGRAM_TO', success ? 'successfully' : 'failed')
-  const sus = await git.setActionSecret(repoName, 'TELEGRAM_TOKEN', telegramToken)
-  logger.log('Set secret TELEGRAM_TOKEN', sus ? 'successfully' : 'failed')
-
-  await repo.createActionsFolder()
-  await repo.addNotificationAction()
-  await repo.addFFMpegAction(jpegs)
-
+  console.time('githubrender')
+  await repo.makeTimelapsePage()
+  console.timeLog('githubrender', 'actions added')
   logger.log('Added GH Timelapse Action! Waiting 10s ...')
   await new Promise((r) => setTimeout(r, 10000))
 
@@ -105,6 +82,7 @@ async function main() {
     }
     logger.log('°*- waiting for the pipeline -*°', pagesEnabled ? '' : '(to be enabled)')
   }
+  console.timeEnd('githubrender')
 }
 
 main() //.catch((e) => {  console.error(e.message, e.code, Object.keys(e)); });

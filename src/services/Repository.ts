@@ -11,6 +11,10 @@ export const ACTION_FOLDERS = ['.github', 'workflows']
 export const ACTION_MAIN_FILE = '.github/workflows/main.yml'
 export const ACTION_NOTIFY_FILE = '.github/workflows/notification.yml'
 
+// TODO? extract TelegramNotificationActionBuilder
+const telegramToken = `${process.env.TELEGRAM_TOKEN}`
+const telegramChatId = `${process.env.TELEGRAM_CHAT_ID}`
+
 /**
  * Github Repository Control
  * - creates readme file
@@ -56,7 +60,7 @@ export class Repository {
     return this.add(README_FILE, readmeString(this.#fs().path, author.name, author.email))
   }
 
-  async addIndex() {
+  async addIndexHtml() {
     const author = this.#git().author
     this.#logger().log('File', INDEX_FILE, 'is being created - by', author.name)
     return this.add(INDEX_FILE, indexString(this.#fs().path, author.name, author.email))
@@ -65,6 +69,22 @@ export class Repository {
   async branchPages() {
     await this.#git().branch(PAGES_BRANCH)
     this.#logger().log('Checked out branch:', PAGES_BRANCH)
+  }
+
+  async makeTimelapsePage() {
+    const logger = this.#logger()
+    const fs = this.#fs()
+
+    const files = await fs.list()
+    const jpegs = files.filter((f) => f.endsWith('jpg'))
+    // TODO? jic add & commit files again?
+
+    logger.log('Creating timelapse page for', jpegs.length, 'images...')
+
+    await this.addIndexHtml()
+    await this.createActionsFolder()
+    await this.addNotificationAction()
+    await this.addFFMpegAction(jpegs)
   }
 
   async createActionsFolder() {
@@ -86,8 +106,16 @@ export class Repository {
 
   async addNotificationAction() {
     const logger = this.#logger()
+    const git = this.#git()
     const title = this.#fs().path
     const url = this.#git().getPageUrl(title)
+
+    // setup telegram secrets
+    const success = await git.setActionSecret(title, 'TELEGRAM_TO', telegramChatId)
+    logger.log('Set secret TELEGRAM_TO', success ? 'successfully' : 'failed')
+    const sus = await git.setActionSecret(title, 'TELEGRAM_TOKEN', telegramToken)
+    logger.log('Set secret TELEGRAM_TOKEN', sus ? 'successfully' : 'failed')
+
     logger.log('File', ACTION_NOTIFY_FILE, 'is being created - Url referenced:', url)
     return this.add(ACTION_NOTIFY_FILE, telegramNotifyActionString(title, url))
   }
