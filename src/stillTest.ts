@@ -1,30 +1,7 @@
-/* import libcamera from 'node-libcamera'
-
-export async function still() {
-  console.time('still')
-  const r = await libcamera.still({
-    roi: {
-      x: 0.3,
-      y: 0.3,
-      w: 0.6,
-      h: 0.6,
-    },
-    timelapse: 12000,
-    framestart: 1,
-    // height: 1200,
-    output: 'test-%d.jpg',
-  })
-  console.timeEnd('still')
-  return r
-}
-
-still() */
-
 import { Injector } from '@joist/di'
-import { Logger, consoleInjector } from './services/Logger.js'
-import { FileSystem, Camera } from './services/index.js'
+import { Logger, consoleInjector, FileSystem, Camera, CameraStub } from './services/index.js'
 
-const repoName = 'still-test-2024-06-01'
+const repoName = 'data-still-test-2024-06-01'
 
 // defineEnvironment
 const injector = new Injector([], consoleInjector)
@@ -33,12 +10,19 @@ const fs = injector.get(FileSystem)
 const camera = injector.get(Camera)
 
 async function main() {
+  const isNew = await fs.setupPath(repoName)
+  if (!isNew) {
+    await fs.destroy()
+    await fs.setupPath(repoName)
+  }
   logger.log('Starting timelapse')
-  await fs.setupPath(repoName)
-  logger.log('Path set up', repoName)
-  await camera.watchTimelapse(async (ev) => {
-    logger.log('Timelapse event', ev)
+  await camera.watchTimelapse(4, 3000, (filename: string) => {
+    logger.log('File done:', filename)
   })
   logger.log('Timelapse finished')
+
+  const files = await fs.list()
+  const jpegs = files.filter((f) => f.endsWith('jpg'))
+  logger.log('Adding', jpegs.length, 'images...')
 }
 main() //.catch((e) => {  console.error(e.message, e.code, Object.keys(e)); });

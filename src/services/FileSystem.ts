@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { stat, mkdir, readdir, readFile, writeFile, unlink, rm, watch } from 'fs/promises'
+import { stat, mkdir, readdir, readFile, writeFile, unlink, rm, watch, copyFile } from 'fs/promises'
 import { createReadStream, WatchOptions } from 'fs'
 import { inject, injectable } from '@joist/di'
 import { Logger } from './Logger.js'
@@ -24,12 +24,12 @@ export class FileSystem {
     return this.#path
   }
 
-  join(...paths: string[]) {
+  joinPath(...paths: string[]) {
     return join(this.path, ...paths)
   }
 
   watch(options: WatchOptions, file = '') {
-    return watch(join(this.path, file), options)
+    return watch(this.joinPath(file), options)
   }
 
   getAbsolutePath(folder: string) {
@@ -84,6 +84,10 @@ export class FileSystem {
     await writeFile(join(this.path, name), source)
   }
 
+  async copyFile(source: string, name: string) {
+    await copyFile(source, join(this.path, name))
+  }
+
   async delete(name: string) {
     return unlink(join(this.path, name))
   }
@@ -91,5 +95,6 @@ export class FileSystem {
   async destroy() {
     await rm(this.path, { recursive: true })
     this.#logger().log(`[Storage: ${this.path}] Folder removed - destroyed`)
+    this.#path = ''
   }
 }
