@@ -21,7 +21,7 @@ Fix regressions, lost features:
 - Glacier Backup
 - Github Backup Downloads
 - Destructive Rotation
-- Misc commands
+- Misc commands: Cancel?!
 
 Create Gallery and publish on github.io!
 

@@ -1,22 +1,41 @@
-import { Context, Telegraf, session } from 'telegraf';
-import buildStage from './scenes';
-import { StorageManager } from './lib/storage';
-import type PhiloContext from './PhiloContext.interface';
+import { Context, Telegraf, Scenes, session } from 'telegraf';
 
-import { StreamContainer, TasksContainer } from './lib/tasks';
-import { dailySunsetCronFactory } from './daily';
-import { setupContext } from './context';
+import { dailySunsetCronFactory } from './daily.js';
+import { type PhiloContext, setupContext } from './context.js';
+import { getStorageStatus } from './lib/df.js';
+import { readTemperatureSensor } from './lib/temperature.js';
 
-const { BOT_TOKEN, GROUP_CHAT_ID, DAILY } = process.env;
+const { TELEGRAM_TOKEN, GROUP_CHAT_ID, DAILY } = process.env;
+
+function buildStage() {
+  // storage and temperature do not have a scenes (yet)
+  const photoScene = new Scenes.BaseScene<PhiloContext>('photo');
+  // basic utility commands
+  photoScene.command(['status', 'storage', 's'], (ctx) => {
+    setImmediate(async () => {
+      const status = await getStorageStatus();
+      ctx.reply(`Storage space: ${status}`);
+    });
+  });
+  photoScene.command(['temperature', 't', 'temperatur', 'humidity'], async (ctx) => {
+    try {
+      const { temperature, humidity } = await readTemperatureSensor();
+      ctx.reply(`Current temperature: ${temperature}°C, humidity: ${humidity}%`);
+    } catch (error) {
+      ctx.reply(`Sorry failed to read the sensor: ${error}`);
+    }
+  });
+  setupTimelapse(photoScene);
+  return new Scenes.Stage<PhiloContext>([photoScene], {
+    default: 'photo',
+  });
+}
 
 async function setupBot() {
-  if (!BOT_TOKEN) {
+  if (!TELEGRAM_TOKEN) {
     throw new Error('BOT_TOKEN must be provided by ENV!');
   }
-  const bot = new Telegraf<PhiloContext>(BOT_TOKEN);
-  const storage = await StorageManager.create(/* config from env */);
-  const running = new TasksContainer(); // (needs sharing beyond the context lifetime of setImmediate)
-  const streams = new StreamContainer(running);
+  const bot = new Telegraf<PhiloContext>(TELEGRAM_TOKEN);
 
   // bot.use(Telegraf.log())
   bot.use(
@@ -28,11 +47,11 @@ async function setupBot() {
   );
 
   bot.use((ctx, next) => {
-    setupContext(bot, storage, streams, ctx);
+    setupContext(bot, ctx);
     return next();
   });
 
-  bot.use(buildStage(storage, streams).middleware());
+  bot.use(buildStage().middleware());
 
   bot.start((ctx) => {
     ctx.reply('Bot is ready!');
@@ -49,7 +68,7 @@ async function setupBot() {
   bot.launch();
   if (DAILY) {
     console.log('Setting up daily timelapse ...');
-    const ctx = setupContext(bot, storage, streams);
+    const ctx = setupContext(bot);
     dailySunsetCronFactory(ctx, ctx.sendGroupMessage, ctx.sendGroupAnimation);
   }
 

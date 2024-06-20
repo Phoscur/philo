@@ -48,7 +48,7 @@ export const spawnPromise = (command: string, args?: Array<string>, options?: Sp
  * @param folderName
  * @returns
  */
-export default async function getStorageStatus(folderName?: string) {
+export async function getStorageStatus(folderName?: string) {
   const dfArgs = ['-h'];
   if (folderName) {
     dfArgs.push(folderName);

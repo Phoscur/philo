@@ -23,7 +23,7 @@ interface SensorResults {
   humidity: number;
 }
 
-export default function readTemperatureSensor(): Promise<SensorResults> {
+export function readTemperatureSensor(): Promise<SensorResults> {
   // TODO catch error? and/or use API instead
   const sensor = require('node-dht-sensor');
   return new Promise((resolve, reject) => {
