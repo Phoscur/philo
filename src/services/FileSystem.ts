@@ -1,8 +1,18 @@
-import { join } from 'path'
-import { stat, mkdir, readdir, readFile, writeFile, unlink, rm, watch, copyFile } from 'fs/promises'
-import { createReadStream, WatchOptions } from 'fs'
-import { inject, injectable } from '@joist/di'
-import { Logger } from './Logger.js'
+import { join } from 'path';
+import {
+  stat,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+  unlink,
+  rm,
+  watch,
+  copyFile,
+} from 'fs/promises';
+import { createReadStream, WatchOptions } from 'fs';
+import { inject, injectable } from '@joist/di';
+import { Logger } from './Logger.js';
 
 /**
  * FileSystem access
@@ -10,91 +20,91 @@ import { Logger } from './Logger.js'
  */
 @injectable
 export class FileSystem {
-  #logger = inject(Logger)
-  cwd = process.cwd()
-  #path = ''
+  #logger = inject(Logger);
+  cwd = process.cwd();
+  #path = '';
 
   async setupPath(p: string) {
-    const isNew = await this.mkdir(p)
-    this.#path = p
-    return isNew
+    const isNew = await this.mkdir(p);
+    this.#path = p;
+    return isNew;
   }
 
   get path() {
-    return this.#path
+    return this.#path;
   }
 
   joinPath(...paths: string[]) {
-    return join(this.path, ...paths)
+    return join(this.path, ...paths);
   }
 
   watch(options: WatchOptions, file = '') {
-    return watch(this.joinPath(file), options)
+    return watch(this.joinPath(file), options);
   }
 
   getAbsolutePath(folder: string) {
-    return join(this.cwd, folder)
+    return join(this.cwd, folder);
   }
 
   get absolutePath() {
-    return join(this.cwd, this.path)
+    return join(this.cwd, this.path);
   }
 
   async mkdir(directory: string) {
     try {
-      await mkdir(join(this.path, directory))
-      this.#logger().log(`[Storage: ${this.path}/${directory}] Folder created`)
-      return true
+      await mkdir(join(this.path, directory));
+      this.#logger().log(`[Storage: ${this.path}/${directory}] Folder created`);
+      return true;
     } catch (error: any) {
       if (error?.code !== 'EEXIST') {
-        throw error
+        throw error;
       }
-      return false
+      return false;
     }
   }
 
   async mkdirp(folders: string[]) {
-    const p = join(this.path, ...folders)
-    await mkdir(p, { recursive: true })
-    this.#logger().log(`[Storage: ${p}] Folder created`)
+    const p = join(this.path, ...folders);
+    await mkdir(p, { recursive: true });
+    this.#logger().log(`[Storage: ${p}] Folder created`);
   }
 
   async exists(name: string) {
     return stat(join(this.path, name))
       .then(() => true)
-      .catch(() => undefined)
+      .catch(() => undefined);
   }
 
   async list() {
-    const list = await readdir(this.path)
-    this.#logger().log('[Storage] List:\n °', list.join('\n ° '))
-    return list
+    const list = await readdir(this.path);
+    this.#logger().log('[Storage] List:\n °', list.join('\n ° '));
+    return list;
   }
 
   async read(name: string) {
-    return readFile(join(this.path, name))
+    return readFile(join(this.path, name));
   }
 
   readStream(name: string) {
-    const file = join(this.path, name)
-    return createReadStream(file)
+    const file = join(this.path, name);
+    return createReadStream(file);
   }
 
   async save(name: string, source: Buffer) {
-    await writeFile(join(this.path, name), source)
+    await writeFile(join(this.path, name), source);
   }
 
   async copyFile(source: string, name: string) {
-    await copyFile(source, join(this.path, name))
+    await copyFile(source, join(this.path, name));
   }
 
   async delete(name: string) {
-    return unlink(join(this.path, name))
+    return unlink(join(this.path, name));
   }
 
   async destroy() {
-    await rm(this.path, { recursive: true })
-    this.#logger().log(`[Storage: ${this.path}] Folder removed - destroyed`)
-    this.#path = ''
+    await rm(this.path, { recursive: true });
+    this.#logger().log(`[Storage: ${this.path}] Folder removed - destroyed`);
+    this.#path = '';
   }
 }
