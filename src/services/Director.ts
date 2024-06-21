@@ -84,9 +84,10 @@ export class Director {
     await this.#switchPath(this.repoPhoto); // TODO? init repo?
 
     preset.setupPreset(presetName);
-    const filename = camera.output;
-    const p = await camera.photo(filename);
-    logger.log('Photo captured:', p);
+    camera.fileNamePrefix = this.now;
+    const { filename } = camera;
+    const co = await camera.photo();
+    logger.log('Photo captured, libcamera output:\n- - -', co, '\n- - -');
 
     this.#cameraMutex = false;
     return {
@@ -131,6 +132,7 @@ export class Director {
 
   #sunsetTimeout: NodeJS.Timeout | undefined;
   async scheduleSunset(onStart = () => {}, onEnd = () => {}) {
+    const logger = this.#logger();
     const sunMoon = this.#sunMoonTime();
 
     const messageDelayMS = 1000;
@@ -145,7 +147,7 @@ export class Director {
       try {
         let diff = sunMoon.getSunsetDiff() + goldenHourTimingMS;
         if (!diff || diff < 0) {
-          console.log('Too late for a timelapse today, scheduling for tomorrow instead!');
+          logger.log('Too late for a timelapse today, scheduling for tomorrow instead!');
           diff = sunMoon.getSunsetDiff(sunMoon.tomorrow) + goldenHourTimingMS;
         }
         await sunMoon.sleep(diff - messageDelayMS);
@@ -154,7 +156,7 @@ export class Director {
         await this.timelapse('sunset', { count, intervalMS });
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
-        console.log('Error:', error);
+        logger.log('Sunset Timelapse Error:', error);
       }
       onEnd();
       this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS + rescheduleRepeatDelayMS);

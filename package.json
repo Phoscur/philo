@@ -7,7 +7,8 @@
   "scripts": {
     "start": "npm run build && npm run run-built",
     "run-built": "node --env-file=.env dist/main.js",
-    "build": "tsc -b --clean",
+    "build": "tsc -b",
+    "clean-build": "tsc -b --clean",
     "watch": "tsx watch --env-file=.env src/main.ts",
     "test": "tsx --env-file=.env src/test.ts",
     "test-sunmoon": "tsx --env-file=.env src/services/SunMoonTime.ts",

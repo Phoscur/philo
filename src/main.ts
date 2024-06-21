@@ -1,26 +1,9 @@
-import { Context, Telegraf, Scenes, session } from 'telegraf';
+import { Context, Telegraf, session } from 'telegraf';
+import { buildStage } from './photoStage.js';
+import { consoleInjector } from './services/index.js';
+import type { PhiloContext } from './context.js';
 
-import { type PhiloContext, setupContext } from './context.js';
-import { setupPhotoControl } from './PhotoControl.js';
-import { Hardware, Producer } from './services/index.js';
-
-const { TELEGRAM_TOKEN, GROUP_CHAT_ID, DAILY } = process.env;
-
-function buildStage() {
-  // storage and temperature do not have a scenes (yet)
-  const photoScene = new Scenes.BaseScene<PhiloContext>('photo');
-  // basic utility commands
-  photoScene.command(['status', 's'], (ctx) => {
-    const hd = ctx.di.get(Hardware);
-    setImmediate(async () => {
-      ctx.reply(await hd.getStatus());
-    });
-  });
-  setupPhotoControl(photoScene);
-  return new Scenes.Stage<PhiloContext>([photoScene], {
-    default: 'photo',
-  });
-}
+const { TELEGRAM_TOKEN, GROUP_CHAT_ID } = process.env;
 
 async function setupBot() {
   if (!TELEGRAM_TOKEN) {
@@ -37,12 +20,7 @@ async function setupBot() {
     })
   );
 
-  bot.use((ctx, next) => {
-    setupContext(bot, ctx);
-    return next();
-  });
-
-  bot.use(buildStage().middleware());
+  bot.use(buildStage(bot, consoleInjector).middleware());
 
   bot.start((ctx) => {
     ctx.reply('Bot is ready!');
@@ -57,12 +35,6 @@ async function setupBot() {
   }); //*/
 
   bot.launch();
-  if (DAILY) {
-    console.log('Setting up daily timelapse ...');
-    const ctx = setupContext(bot);
-    const producer = ctx.di.get(Producer);
-    producer.scheduleDailySunset(ctx);
-  }
 
   // Enable graceful stop
   process.once('SIGINT', () => bot.stop('SIGINT'));

@@ -1,5 +1,4 @@
 import { Injector } from '@joist/di';
-import { consoleInjector } from './services/index.js';
 import type { Context, Scenes, Telegraf } from 'telegraf';
 import type { Message, Convenience, Opts } from 'telegraf/types';
 // TODO inform discord - also via github action?!
@@ -26,13 +25,25 @@ export function createMessengerChat(bot: Telegraf<PhiloContext>, chatId: string)
   };
 }
 
+export interface ChatContext {
+  channel: MessengerChat;
+  group: MessengerChat;
+}
+
+export function setupChatContext(
+  bot: Telegraf<PhiloContext>,
+  ctx: ChatContext = {} as ChatContext
+): ChatContext {
+  ctx.group = createMessengerChat(bot, `${process.env.GROUP_CHAT_ID}`);
+  ctx.channel = createMessengerChat(bot, `${process.env.CHANNEL_CHAT_ID}`);
+  return ctx;
+}
+
 /**
  * Philo BotContext
  * with two chats: channel and group
  */
-export interface PhiloContext extends Context {
-  channel: MessengerChat;
-  group: MessengerChat;
+export interface PhiloContext extends Context, ChatContext {
   // sendDiscordAnimation: (caption: string, file: string) => Promise<DiscordMessage | undefined>;
   // declare scene type
   scene: Scenes.SceneContextScene<PhiloContext>;
@@ -40,18 +51,16 @@ export interface PhiloContext extends Context {
 }
 
 export interface PhiloBot extends Telegraf<PhiloContext> {}
-export interface PhiloScene extends Scenes.BaseScene<PhiloContext> {}
 
 export function setupContext(
   bot: Telegraf<PhiloContext>,
-  context?: PhiloContext,
-  injector?: Injector
-) {
+  injector: Injector,
+  context?: PhiloContext
+): PhiloContext {
   const ctx = context ?? ({ telegram: bot.telegram } as PhiloContext);
-  ctx.di ??= injector ?? consoleInjector;
+  ctx.di = injector;
 
-  ctx.group = createMessengerChat(bot, `${process.env.GROUP_CHAT_ID}`);
-  ctx.channel = createMessengerChat(bot, `${process.env.CHANNEL_CHAT_ID}`);
+  setupChatContext(bot, ctx);
 
   /*if (!DISCORD_ENABLED) {
     console.log('- Discord connection is disabled');

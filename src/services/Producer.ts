@@ -1,8 +1,8 @@
 import { inject, injectable } from '@joist/di';
 import { Director } from './Director.js';
 import { Hardware } from './Hardware.js';
-import type { PhiloContext } from '../context.js';
 import { Logger } from './Logger.js';
+import type { MessengerChat } from '../context.js';
 
 /**
  * Given messenger context, Producer will interact with the Director to produce content.
@@ -13,11 +13,11 @@ export class Producer {
   #director = inject(Director);
   #hd = inject(Hardware);
 
-  scheduleDailySunset(ctx: PhiloContext) {
+  scheduleDailySunset(chat: MessengerChat) {
     this.#director().scheduleSunset(
       async () => {
         const hdStatus = await this.#hd().getStatus();
-        ctx.group.sendMessage(`Sunset is soon... Starting daily timelapse!\n${hdStatus}`);
+        chat.sendMessage(`Sunset is soon... Starting daily timelapse!\n${hdStatus}`);
       },
       () => {
         this.#logger().log('Finished producing the daily timelapse.');

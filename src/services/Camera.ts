@@ -18,8 +18,8 @@ export class Camera {
   options: PiCameraConfig = {
     roi: '', // x,y,w,h
     framestart: 1,
-    height: false,
-    width: false,
+    // height: false,
+    // width: false,
   };
 
   printOptions(timelapse = 0, count = 0) {
@@ -36,11 +36,15 @@ export class Camera {
     return `${roi}\n${widthAndHeight}\n${duration} ${minutely}\n${interval}\n${c}`;
   }
 
-  get output() {
-    return this.#fs().joinPath(`${this.fileNamePrefix}.jpg`);
+  get filename() {
+    return `${this.fileNamePrefix}.jpg`;
   }
 
-  async photo(output: string) {
+  get output() {
+    return this.#fs().joinPath(this.filename);
+  }
+
+  async photo(output: string = this.output) {
     return libcamera.still({
       config: {
         ...this.options,
@@ -49,8 +53,12 @@ export class Camera {
     });
   }
 
+  get timelapseName() {
+    return `${this.fileNamePrefix}-%02d.jpg`;
+  }
+
   get timelapseOutput() {
-    return this.#fs().joinPath(`${this.fileNamePrefix}-%02d.jpg`);
+    return this.#fs().joinPath(this.timelapseName);
   }
 
   async timelapse(output: string, count = 420, timelapse = 12000) {
