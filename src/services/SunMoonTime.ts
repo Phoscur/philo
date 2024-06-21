@@ -61,7 +61,7 @@ export class SunMoonTime {
   }
 }
 
-if (require.main === module) {
+if (import.meta.url.endsWith(process.argv[1].split(/\/|\\/).pop() as string)) {
   const year = 2024;
   const maxHours = 4;
   const sunMoonTime = new SunMoonTime();

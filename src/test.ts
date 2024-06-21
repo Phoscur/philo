@@ -7,21 +7,22 @@ import {
   Git,
   Repository,
   Timelapse,
+  FileSystem,
 } from './services/index.js';
 
-const repoPrefix = `${process.env.GITHUB_REPO_NAME_PREFIX}`;
-const repoName = repoPrefix + '-2024-06-20s';
+const repoName = 'timelapse-test-2024-06-20s';
 const timelapseFile = 'timelapse.mp4';
 
 // defineEnvironment
 const injector = new Injector([], consoleInjector);
 const git = injector.get(Git);
 const logger = injector.get(Logger);
+const fs = injector.get(FileSystem);
 const repo = injector.get(Repository);
 const camera = injector.get(Camera);
 const timelapse = injector.get(Timelapse);
 
-async function main() {
+async function upload() {
   /*const isNew = await fs.setupPath(repoName)
   if (!isNew) {
     await fs.destroy()
@@ -63,4 +64,34 @@ async function main() {
   console.timeEnd('githubrender');
 }
 
-main(); //.catch((e) => {  console.error(e.message, e.code, Object.keys(e)); });
+async function still() {
+  const isNew = await fs.setupPath(repoName);
+  if (!isNew) {
+    await fs.destroy();
+    await fs.setupPath(repoName);
+  }
+  logger.log('Starting timelapse');
+  await camera.watchTimelapse(4, 3000, (filename: string) => {
+    logger.log('File done:', filename);
+  });
+  logger.log('Timelapse finished');
+
+  const files = await fs.list();
+  const jpegs = files.filter((f) => f.endsWith('jpg'));
+  logger.log('Adding', jpegs.length, 'images...');
+}
+
+switch (process.argv[2]) {
+  case 'upload':
+    upload();
+    break;
+  case 'still':
+    still();
+    break;
+  default:
+    console.log(
+      'Unknown argument:',
+      process.argv[2],
+      'use "upload" or "still" - e.g. "npm test -- still'
+    );
+}

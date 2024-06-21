@@ -87,7 +87,7 @@ function parseDuString(du: string): string {
   return Math.round(parseInt(du) / 10000) / 100 + 'G';
 }
 
-if (require.main === module) {
+if (import.meta.url.endsWith(process.argv[1].split(/\/|\\/).pop() as string)) {
   const test = async () => {
     const df = await spawnPromise('df', ['-h', 'storage']);
     console.log('df', df.toString(), parseDfString(df.toString()));

@@ -48,7 +48,7 @@ export async function getTemperatureHumidityMessage() {
   return `Current temperature: ${temperature}°C, humidity: ${humidity}%`;
 }
 
-if (require.main === module) {
+if (import.meta.url.endsWith(process.argv[1])) {
   readTemperatureSensor()
     .then(({ temperature, humidity }) => {
       console.log(`temp: ${temperature}°C, humidity: ${humidity}%`);
