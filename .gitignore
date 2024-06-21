@@ -1,10 +1,9 @@
 # Image & configuration file storage
 /storage*
+/photo*
+/timelapse*
 /data*
-/ka/*
-/ka*
 /sunset-*
-/b/*
 
 # VSCode SFTP
 .vscode/sftp.json

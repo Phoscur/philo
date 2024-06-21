@@ -2,8 +2,7 @@ import { Context, Telegraf, Scenes, session } from 'telegraf';
 
 import { type PhiloContext, setupContext } from './context.js';
 import { setupPhotoControl } from './PhotoControl.js';
-import { dailySunsetCronFactory } from './daily.js';
-import { Hardware } from './services/Hardware.js';
+import { Hardware, Producer } from './services/index.js';
 
 const { TELEGRAM_TOKEN, GROUP_CHAT_ID, DAILY } = process.env;
 
@@ -61,7 +60,8 @@ async function setupBot() {
   if (DAILY) {
     console.log('Setting up daily timelapse ...');
     const ctx = setupContext(bot);
-    dailySunsetCronFactory(ctx);
+    const producer = ctx.di.get(Producer);
+    producer.scheduleDailySunset(ctx);
   }
 
   // Enable graceful stop

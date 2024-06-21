@@ -42,9 +42,13 @@ export interface PhiloContext extends Context {
 export interface PhiloBot extends Telegraf<PhiloContext> {}
 export interface PhiloScene extends Scenes.BaseScene<PhiloContext> {}
 
-export function setupContext(bot: Telegraf<PhiloContext>, context?: PhiloContext) {
-  const ctx = context || ({ telegram: bot.telegram } as PhiloContext);
-  ctx.di ??= consoleInjector;
+export function setupContext(
+  bot: Telegraf<PhiloContext>,
+  context?: PhiloContext,
+  injector?: Injector
+) {
+  const ctx = context ?? ({ telegram: bot.telegram } as PhiloContext);
+  ctx.di ??= injector ?? consoleInjector;
 
   ctx.group = createMessengerChat(bot, `${process.env.GROUP_CHAT_ID}`);
   ctx.channel = createMessengerChat(bot, `${process.env.CHANNEL_CHAT_ID}`);

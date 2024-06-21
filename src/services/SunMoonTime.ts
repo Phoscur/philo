@@ -59,6 +59,10 @@ export class SunMoonTime {
       minutes: Math.floor(diff / 1000 / 60),
     };
   }
+
+  async sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }
 
 if (import.meta.url.endsWith(process.argv[1].split(/\/|\\/).pop() as string)) {

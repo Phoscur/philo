@@ -38,6 +38,15 @@ export class CameraStub implements Interface<Camera> {
     return '';
   }
 
+  get output() {
+    return this.#fs().joinPath(`${this.fileNamePrefix}.jpg`);
+  }
+
+  async photo(output: string) {
+    await this.#fs().save(output, jpegSignature);
+    return 'stub-photo';
+  }
+
   get timelapseOutput() {
     return this.#fs().joinPath(`${this.fileNamePrefix}-%02d.jpg`);
   }

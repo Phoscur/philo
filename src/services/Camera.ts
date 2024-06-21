@@ -36,7 +36,11 @@ export class Camera {
     return `${roi}\n${widthAndHeight}\n${duration} ${minutely}\n${interval}\n${c}`;
   }
 
-  async capture(output: string) {
+  get output() {
+    return this.#fs().joinPath(`${this.fileNamePrefix}.jpg`);
+  }
+
+  async photo(output: string) {
     return libcamera.still({
       config: {
         ...this.options,
