@@ -5,3 +5,5 @@ export * from './Repository.js';
 export * from './Camera.js';
 export * from './CameraStub.js';
 export * from './Timelapse.js';
+export * from './Assets.js';
+export * from './Preset.js';

@@ -1,6 +1,5 @@
 import { PhiloScene } from './context.js';
-import { Assets } from './services/Assets.js';
-import { Camera } from './services/Camera.js';
+import { Assets, Camera } from './services/index.js';
 
 export function setupPhotoControl(scene: PhiloScene) {
   scene.command(['photo', 'p'], (ctx) => {

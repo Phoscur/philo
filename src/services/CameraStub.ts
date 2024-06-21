@@ -1,6 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
-import { Camera } from './Camera.js';
+import { Camera, PiCameraConfig } from './Camera.js';
 
 export function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length);
@@ -33,8 +33,12 @@ export class CameraStub implements Interface<Camera> {
   #fs = inject(FileSystem);
 
   fileNamePrefix = 'test';
+  options: PiCameraConfig = {};
+  printOptions(timelapse?: number, count?: number): string {
+    return '';
+  }
 
-  get output() {
+  get timelapseOutput() {
     return this.#fs().joinPath(`${this.fileNamePrefix}-%02d.jpg`);
   }
 
@@ -42,7 +46,7 @@ export class CameraStub implements Interface<Camera> {
     const fs = this.#fs();
     const fileNames = ascendingPaddedNumbers(count);
     for (const [index, fileName] of fileNames.entries()) {
-      const file = this.output.replace('%d', fileName);
+      const file = this.timelapseOutput.replace('%d', fileName);
       if (copyFiles) {
         await fs.copyFile(examples[index % examples.length], file);
         continue;
@@ -57,7 +61,7 @@ export class CameraStub implements Interface<Camera> {
   }
 
   async watchTimelapse(count = 15, interval = 1500, handler = (filename: string) => {}) {
-    const timelapse = this.timelapse(this.output, count, interval);
+    const timelapse = this.timelapse(this.timelapseOutput, count, interval);
     const ac = new AbortController();
     const { signal } = ac;
     return Promise.all([
