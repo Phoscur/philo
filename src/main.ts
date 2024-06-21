@@ -7,7 +7,7 @@ const { TELEGRAM_TOKEN, GROUP_CHAT_ID } = process.env;
 
 async function setupBot() {
   if (!TELEGRAM_TOKEN) {
-    throw new Error('BOT_TOKEN must be provided by ENV!');
+    throw new Error('TELEGRAM_TOKEN must be provided by ENV!');
   }
   const bot = new Telegraf<PhiloContext>(TELEGRAM_TOKEN);
 

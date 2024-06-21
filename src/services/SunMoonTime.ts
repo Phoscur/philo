@@ -18,9 +18,14 @@ export class SunMoonTime {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days, hour, 0, 0);
   }
 
+  /**
+   * Reset "today", always noon!
+   * @param date
+   */
   resetToday(date = new Date()) {
-    this.today = date;
+    this.today = new Date(date.valueOf());
     this.today.setHours(12, 0, 0, 0);
+    return this.today;
   }
 
   getSunset(date = this.today): Date {

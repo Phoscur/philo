@@ -34,8 +34,8 @@ export function setupChatContext(
   bot: Telegraf<PhiloContext>,
   ctx: ChatContext = {} as ChatContext
 ): ChatContext {
-  ctx.group = createMessengerChat(bot, `${process.env.GROUP_CHAT_ID}`);
-  ctx.channel = createMessengerChat(bot, `${process.env.CHANNEL_CHAT_ID}`);
+  ctx.group = createMessengerChat(bot, `${process.env.TELEGRAM_CHAT_ID}`);
+  ctx.channel = createMessengerChat(bot, `${process.env.TELEGRAM_CHANNEL_ID}`);
   return ctx;
 }
 

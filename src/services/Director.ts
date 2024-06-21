@@ -54,6 +54,7 @@ export class Director {
 
   resetTime() {
     this.#time = new Date();
+    this.#sunMoonTime().resetToday(this.#time);
   }
 
   async setupPublicRepo(name: string) {
@@ -145,11 +146,13 @@ export class Director {
 
     const sundownTimer = async () => {
       try {
-        let diff = sunMoon.getSunsetDiff() + goldenHourTimingMS;
+        this.resetTime();
+        let diff = sunMoon.getSunsetDiff(this.#time) + goldenHourTimingMS;
         if (!diff || diff < 0) {
           logger.log('Too late for a timelapse today, scheduling for tomorrow instead!');
-          diff = sunMoon.getSunsetDiff(sunMoon.tomorrow) + goldenHourTimingMS;
+          diff = sunMoon.getSunsetDiff(sunMoon.addDay(this.#time)) + goldenHourTimingMS;
         }
+        logger.log('Sunset timelapse scheduled in', (diff / 60 / 60000).toFixed(2), 'hours');
         await sunMoon.sleep(diff - messageDelayMS);
         onStart();
         await sunMoon.sleep(messageDelayMS);

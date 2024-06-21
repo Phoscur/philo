@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'philopho',
-      script: 'dist/index.js',
+      script: 'dist/main.js',
       node_args: '--env-file=.env',
       watch: true,
       // Delay between restart
@@ -16,4 +16,4 @@ module.exports = {
   env: {
     PM2_HOME: '~/philo',
   },
-}
+};
