@@ -1,10 +1,6 @@
-import { readTemperatureSensor } from './lib/temperature.js';
-import { getStorageStatus } from './lib/df.js';
 import { PhiloContext } from './context.js';
-import { SunMoonTime } from './services/SunMoonTime.js';
-import { Timelapse } from './services/Timelapse.js';
+import { SunMoonTime, Timelapse, Preset, Hardware } from './services/index.js';
 
-const SUNDOWN_SENSE_TEMPERATURE = true;
 const MESSAGE_DELAY = 1000;
 const RESCHEDULE_DELAY_MS = 15000;
 const RESCHEDULE_REPEAT_DELAY_MS = 60000 * 60 * 14; // 14h (< 24h)
@@ -20,7 +16,10 @@ async function sleep(ms: number) {
 
 export function dailySunsetCronFactory(ctx: PhiloContext) {
   const sundownTimer = async () => {
+    const hd = ctx.di.get(Hardware);
+    const preset = ctx.di.get(Preset);
     const sunMoon = ctx.di.get(SunMoonTime);
+    const service = ctx.di.get(Timelapse);
     try {
       let diff = sunMoon.getSunsetDiff() + GOLDEN_HOUR_TIMING_MS;
       if (!diff || diff < 0) {
@@ -28,25 +27,10 @@ export function dailySunsetCronFactory(ctx: PhiloContext) {
         diff = sunMoon.getSunsetDiff(sunMoon.tomorrow) + GOLDEN_HOUR_TIMING_MS;
       }
       await sleep(diff - MESSAGE_DELAY);
-      let temperatureMessage = '';
-      if (SUNDOWN_SENSE_TEMPERATURE) {
-        try {
-          const { temperature, humidity } = await readTemperatureSensor();
-          temperatureMessage = `Current temperature: ${temperature}°C, humidity: ${humidity}%`;
-        } catch (err) {
-          console.error('Failed to read temperature', err);
-        }
-      }
-      const status = await getStorageStatus();
-      const storageMessage = `Storage (${status.size}): ${status.percent}`;
 
-      ctx.group.sendMessage(
-        `Sunset is soon... Starting daily timelapse!
-${temperatureMessage}
-${storageMessage}`
-      );
+      preset.setupSunset();
+      ctx.group.sendMessage(`Sunset is soon... Starting daily timelapse!\n${await hd.getStatus()}`);
       await sleep(MESSAGE_DELAY);
-      const service = ctx.di.get(Timelapse);
       await service.shoot(count, interval);
     } catch (error) {
       console.error(`Failed timelapse: ${error}`);

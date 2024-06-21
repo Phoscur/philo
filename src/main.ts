@@ -1,10 +1,9 @@
 import { Context, Telegraf, Scenes, session } from 'telegraf';
 
 import { type PhiloContext, setupContext } from './context.js';
-import { getStorageStatus } from './lib/df.js';
-import { readTemperatureSensor } from './lib/temperature.js';
 import { setupPhotoControl } from './PhotoControl.js';
 import { dailySunsetCronFactory } from './daily.js';
+import { Hardware } from './services/Hardware.js';
 
 const { TELEGRAM_TOKEN, GROUP_CHAT_ID, DAILY } = process.env;
 
@@ -12,19 +11,11 @@ function buildStage() {
   // storage and temperature do not have a scenes (yet)
   const photoScene = new Scenes.BaseScene<PhiloContext>('photo');
   // basic utility commands
-  photoScene.command(['status', 'storage', 's'], (ctx) => {
+  photoScene.command(['status', 's'], (ctx) => {
+    const hd = ctx.di.get(Hardware);
     setImmediate(async () => {
-      const status = await getStorageStatus();
-      ctx.reply(`Storage space: ${status}`);
+      ctx.reply(await hd.getStatus());
     });
-  });
-  photoScene.command(['temperature', 't', 'temperatur', 'humidity'], async (ctx) => {
-    try {
-      const { temperature, humidity } = await readTemperatureSensor();
-      ctx.reply(`Current temperature: ${temperature}°C, humidity: ${humidity}%`);
-    } catch (error) {
-      ctx.reply(`Sorry failed to read the sensor: ${error}`);
-    }
   });
   setupPhotoControl(photoScene);
   return new Scenes.Stage<PhiloContext>([photoScene], {

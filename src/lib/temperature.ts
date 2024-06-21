@@ -43,6 +43,11 @@ export function readTemperatureSensor(): Promise<SensorResults> {
   });
 }
 
+export async function getTemperatureHumidityMessage() {
+  const { temperature, humidity } = await readTemperatureSensor();
+  return `Current temperature: ${temperature}°C, humidity: ${humidity}%`;
+}
+
 if (require.main === module) {
   readTemperatureSensor()
     .then(({ temperature, humidity }) => {
