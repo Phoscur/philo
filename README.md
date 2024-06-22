@@ -22,6 +22,7 @@ Fix regressions, lost features:
 - Github Backup Downloads
 - Destructive Rotation
 - Misc commands: Cancel?!
+- Local FFMpeg when Github disabled
 
 Create Gallery and publish on github.io!
 

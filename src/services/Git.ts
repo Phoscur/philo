@@ -27,6 +27,10 @@ export class Git {
     return `https://${this.author.name}:${this.token}@github.com/${this.author.name}/`;
   }
 
+  get publicUrlPrefix() {
+    return `https://github.com/${this.author.name}/`;
+  }
+
   /**
    * Add, commit and push
    */
@@ -62,7 +66,7 @@ export class Git {
     const { log } = this.#logger();
     const dir = this.#fs().getAbsolutePath(repo);
     try {
-      log('Checking out:', this.privateUrlPrefix + repo);
+      log('Checking out:', this.publicUrlPrefix + repo);
       await this.git.clone({
         fs,
         dir,

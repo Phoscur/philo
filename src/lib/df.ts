@@ -3,7 +3,7 @@ import { spawn, SpawnOptions } from 'child_process';
 // TODO? is this the spawn handler we want to keep?
 export const spawnPromise = (command: string, args?: Array<string>, options?: SpawnOptions) =>
   new Promise<Buffer>((resolve, reject) => {
-    console.log('CMD SPAWN', command, args?.join(' '), options);
+    // console.log('CMD SPAWN', command, args?.join(' '), options);
     const childProcess = spawn(command, args ?? [], options ?? {});
 
     let stdoutData = Buffer.alloc(0);

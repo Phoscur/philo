@@ -6,7 +6,6 @@ import { Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
 import { FileSystem } from './FileSystem.js';
 import { SunMoonTime } from './SunMoonTime.js';
-import { on } from 'events';
 
 /**
  * In charge of directing captures and timelapses, and managing the repositories.
@@ -46,10 +45,10 @@ export class Director {
     return `${this.repoPhotoPrefix}`;
   }
   get repoTimelapse() {
-    return `${this.repoTimelapsePrefix}_${this.today}`;
+    return `${this.repoTimelapsePrefix}-${this.today}`;
   }
   get repoSunset() {
-    return `${this.repoSunsetPrefix}_${this.today}`;
+    return `${this.repoSunsetPrefix}-${this.today}`;
   }
 
   resetTime() {
@@ -131,6 +130,16 @@ export class Director {
     return true;
   }
 
+  async enableAndWaitForPages() {
+    const repo = this.#repo();
+    await repo.makeTimelapsePage();
+    const waitMS = 10000;
+    await this.#sunMoonTime().sleep(waitMS);
+    const checkIterations = 60;
+    const delayMS = 5000;
+    await repo.enablePages(checkIterations, 'index.html', delayMS);
+  }
+
   #sunsetTimeout: NodeJS.Timeout | undefined;
   async scheduleSunset(onStart = () => {}, onEnd = () => {}) {
     const logger = this.#logger();
@@ -141,22 +150,25 @@ export class Director {
     const rescheduleRepeatDelayMS = 60000 * 60 * 14; // 14h (< 24h)
     const goldenHourTimingMS = -60000 * 60 * 1.2; // 1.2 hours before
     const minutelyCount = 5;
-    const count = minutelyCount * 110;
+    const count = minutelyCount * 30;
+    //const count = minutelyCount * 110;
     const intervalMS = 12000; // 12s
 
     const sundownTimer = async () => {
       try {
         this.resetTime();
         let diff = sunMoon.getSunsetDiff(this.#time) + goldenHourTimingMS;
-        if (!diff || diff < 0) {
+        if (!diff || diff < messageDelayMS) {
           logger.log('Too late for a timelapse today, scheduling for tomorrow instead!');
           diff = sunMoon.getSunsetDiff(sunMoon.addDay(this.#time)) + goldenHourTimingMS;
         }
         logger.log('Sunset timelapse scheduled in', (diff / 60 / 60000).toFixed(2), 'hours');
         await sunMoon.sleep(diff - messageDelayMS);
+        await this.setupPublicRepo(this.repoSunset);
         onStart();
         await sunMoon.sleep(messageDelayMS);
         await this.timelapse('sunset', { count, intervalMS });
+        await this.enableAndWaitForPages();
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);

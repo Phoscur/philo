@@ -133,7 +133,7 @@ export class Repository {
     logger.log('Enabling GH pages for', repoName, pagesEnabled ? 'was successful' : 'failed');
     if (!iterations) return pagesEnabled;
     for (let i = 0; i < iterations; i++) {
-      logger.log('Waiting for the Pages Pipeline', pagesEnabled ? '' : '(to be enabled)');
+      logger.log('Waiting for the Pages Pipeline', pagesEnabled ? '' : '(to be enabled)', '...');
       await new Promise((r) => setTimeout(r, waitMS));
       if (!pagesEnabled) {
         pagesEnabled = await git.enablePages(repoName);

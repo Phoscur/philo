@@ -14,7 +14,8 @@ export class Producer {
   #hd = inject(Hardware);
 
   scheduleDailySunset(chat: MessengerChat) {
-    this.#director().scheduleSunset(
+    const director = this.#director();
+    director.scheduleSunset(
       async () => {
         const hdStatus = await this.#hd().getStatus();
         chat.sendMessage(`Sunset is soon... Starting daily timelapse!\n${hdStatus}`);

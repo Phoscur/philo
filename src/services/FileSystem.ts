@@ -16,6 +16,7 @@ import { Logger } from './Logger.js';
 
 /**
  * FileSystem access
+ * Operations are relative to the current working directory and setup path directory
  * @throws {Error} all kinds of file system errors
  */
 @injectable
@@ -30,6 +31,10 @@ export class FileSystem {
     return isNew;
   }
 
+  /**
+   * Current folder of interest to operate on
+   * So all operations are relative to this path (advantage & pitfall of this design)
+   */
   get path() {
     return this.#path;
   }
@@ -50,10 +55,14 @@ export class FileSystem {
     return join(this.cwd, this.path);
   }
 
+  /**
+   * Creates a new folder in the current working directory
+   * @returns {boolean} false if folder already exists
+   */
   async mkdir(directory: string) {
     try {
-      await mkdir(join(this.path, directory));
-      this.#logger().log(`[Storage: ${this.path}/${directory}] Folder created`);
+      await mkdir(join(this.cwd, directory));
+      this.#logger().log(`[Storage: ${this.cwd}/${directory}] Folder created`);
       return true;
     } catch (error: any) {
       if (error?.code !== 'EEXIST') {
