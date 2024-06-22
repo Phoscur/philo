@@ -18,7 +18,7 @@ export class Camera {
   options: PiCameraConfig = {
     roi: '', // x,y,w,h
     framestart: 1,
-    // height: false,
+    height: 1080,
     // width: false,
   };
 
@@ -53,12 +53,13 @@ export class Camera {
     });
   }
 
-  get timelapseName() {
-    return `${this.fileNamePrefix}-%02d.jpg`;
+  getTimelapseName(count = 420) {
+    const len = count.toString().length;
+    return `${this.fileNamePrefix}-%0${len}d.jpg`;
   }
 
-  get timelapseOutput() {
-    return this.#fs().joinPath(this.timelapseName);
+  getTimelapseOutput(count = 420) {
+    return this.#fs().joinPath(this.getTimelapseName(count));
   }
 
   async timelapse(output: string, count = 420, timelapse = 12000) {
@@ -87,7 +88,7 @@ export class Camera {
    * @returns
    */
   async watchTimelapse(count = 420, interval = 12000, handler = (ev: any) => {}) {
-    const timelapse = this.timelapse(this.timelapseOutput, count, interval);
+    const timelapse = this.timelapse(this.getTimelapseOutput(count), count, interval);
     const ac = new AbortController();
     const { signal } = ac;
     return Promise.all([

@@ -10,7 +10,7 @@ import {
   FileSystem,
 } from './services/index.js';
 
-const repoName = 'timelapse-test-2024-06-20s';
+const repoName = 'timelapse-test-2024-06-22';
 const timelapseFile = 'timelapse.mp4';
 
 // defineEnvironment
@@ -19,7 +19,8 @@ const git = injector.get(Git);
 const logger = injector.get(Logger);
 const fs = injector.get(FileSystem);
 const repo = injector.get(Repository);
-const camera = injector.get(Camera);
+//const camera = injector.get(Camera);
+const camera = injector.get(CameraStub);
 const timelapse = injector.get(Timelapse);
 
 async function upload() {
@@ -60,7 +61,7 @@ async function upload() {
   logger.log('Added GH Timelapse Action! Waiting 10s ...');
   await new Promise((r) => setTimeout(r, 10000));
 
-  await repo.enablePages(60, repoName);
+  await repo.enablePages(60);
   console.timeEnd('githubrender');
 }
 

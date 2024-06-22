@@ -23,19 +23,14 @@ export const examples = [
   './data-example/42095079-1091-10.jpg',
 ];
 
-type Interface<T> = {
-  // Workaround TS2720: Strip private fields - see https://github.com/microsoft/TypeScript/issues/471
-  [P in keyof T]: T[P];
-};
-
 @injectable
-export class CameraStub implements Interface<Camera> {
+export class CameraStub extends Camera {
   #fs = inject(FileSystem);
 
   fileNamePrefix = 'test';
   options: PiCameraConfig = {};
   printOptions(timelapse?: number, count?: number): string {
-    return '';
+    return `stub-options ${timelapse} ${count}`;
   }
 
   get filename() {
@@ -51,19 +46,19 @@ export class CameraStub implements Interface<Camera> {
     return 'stub-photo';
   }
 
-  get timelapseName() {
-    return `${this.fileNamePrefix}-%02d.jpg`;
+  getTimelapseName() {
+    return `${this.fileNamePrefix}-%d.jpg`;
   }
 
-  get timelapseOutput() {
-    return this.#fs().joinPath(`${this.fileNamePrefix}-%02d.jpg`);
+  getTimelapseOutput() {
+    return this.#fs().joinPath(this.getTimelapseName());
   }
 
-  async timelapse(output: string, count = 9, pause = 10, copyFiles = false) {
+  async timelapse(output: string, count = 9, pause = 10, copyFiles = true) {
     const fs = this.#fs();
     const fileNames = ascendingPaddedNumbers(count);
     for (const [index, fileName] of fileNames.entries()) {
-      const file = this.timelapseOutput.replace('%d', fileName);
+      const file = this.getTimelapseName().replace('%d', fileName);
       if (copyFiles) {
         await fs.copyFile(examples[index % examples.length], file);
         continue;
@@ -75,32 +70,5 @@ export class CameraStub implements Interface<Camera> {
       await new Promise((res) => setTimeout(res, pause));
     }
     return 'stub-timelapse';
-  }
-
-  async watchTimelapse(count = 15, interval = 1500, handler = (filename: string) => {}) {
-    const timelapse = this.timelapse(this.timelapseOutput, count, interval);
-    const ac = new AbortController();
-    const { signal } = ac;
-    return Promise.all([
-      (async () => {
-        await timelapse;
-        ac.abort();
-      })(),
-      (async () => {
-        try {
-          const watcher = this.#fs().watch({ signal });
-          for await (const event of watcher) {
-            if ('change' === event.eventType) {
-              // can't use await here, because it would block us from receiving events
-              // don't need to wait for multiple events like with the real camera, files are written atomically here
-              handler(event.filename || '');
-            }
-          }
-        } catch (err: any) {
-          if (err?.name === 'AbortError') return;
-          throw err;
-        }
-      })(),
-    ]);
   }
 }
