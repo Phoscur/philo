@@ -23,23 +23,19 @@ interface SensorResults {
   humidity: number;
 }
 
-export function readTemperatureSensor(): Promise<SensorResults> {
+export async function readTemperatureSensor(): Promise<SensorResults> {
   // TODO catch error? and/or use API instead
-  const sensor = require('node-dht-sensor');
+  const sensor = (await import('node-dht-sensor')).default;
   return new Promise((resolve, reject) => {
-    sensor.read(
-      DHT_VERSION,
-      GPIO_PIN,
-      function (err: Error, temperature: number, humidity: number) {
-        if (err) {
-          return reject(err);
-        }
-        resolve({
-          temperature,
-          humidity,
-        });
+    sensor.read(DHT_VERSION, GPIO_PIN, function (err: any, temperature: number, humidity: number) {
+      if (err) {
+        return reject(err);
       }
-    );
+      resolve({
+        temperature,
+        humidity,
+      });
+    });
   });
 }
 
@@ -49,9 +45,10 @@ export async function getTemperatureHumidityMessage() {
 }
 
 if (import.meta.url.endsWith(process.argv[1])) {
-  readTemperatureSensor()
-    .then(({ temperature, humidity }) => {
-      console.log(`temp: ${temperature}°C, humidity: ${humidity}%`);
+  getTemperatureHumidityMessage()
+    .then((message) => {
+      console.log(message);
     })
+    // reports [Error: failed to read sensor] when the sensor is not connected
     .catch(console.error);
 }

@@ -50,6 +50,7 @@
   "devDependencies": {
     "@types/libsodium-wrappers": "^0.7.14",
     "@types/node": "^20.14.2",
+    "@types/node-dht-sensor": "^0.4.2",
     "@types/suncalc": "^1.9.0",
     "tsx": "^4.15.6",
     "typescript": "^5.4.5"

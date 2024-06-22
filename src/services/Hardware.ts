@@ -7,7 +7,9 @@ import { Logger } from './Logger.js';
 export class Hardware {
   #logger = inject(Logger);
 
-  constructor(readonly temperatureSensorEnabled = true) {}
+  constructor(
+    readonly temperatureSensorEnabled = process.env.ENABLE_TEMPERATURE_SENSOR === 'true'
+  ) {}
 
   async getStatus() {
     const status = await getStorageStatus();
