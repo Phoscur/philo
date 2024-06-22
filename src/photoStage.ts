@@ -3,7 +3,7 @@ import { Injector } from '@joist/di';
 import { PhiloContext, setupChatContext, setupContext } from './context.js';
 import { Assets, Director, Hardware, Producer } from './services/index.js';
 
-const DAILY = process.env.DAILY === 'true';
+const DAILY = process.env.ENABLE_DAILY_TIMELAPSE_SUNSET === 'true';
 
 export function buildStage(bot: Telegraf<PhiloContext>, di: Injector) {
   // storage and temperature do not have a scenes (yet)

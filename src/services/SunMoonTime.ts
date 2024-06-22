@@ -33,8 +33,8 @@ export class SunMoonTime {
     return sunset;
   }
 
-  getSunsetDiff(date = this.today): number {
-    return this.getSunset(date).getTime() - date.getTime();
+  getSunsetDiff(date = this.today, now = date): number {
+    return this.getSunset(date).getTime() - now.getTime();
   }
 
   /** not every date has a moonset everywhere! */
