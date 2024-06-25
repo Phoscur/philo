@@ -13,7 +13,8 @@
     "watch": "tsx watch --env-file=.env src/main.ts",
     "test": "tsx --env-file=.env src/test.ts",
     "test-sunmoon": "tsx --env-file=.env src/services/SunMoonTime.ts",
-    "test-df": "tsx watch src/lib/df.ts"
+    "test-df": "tsx watch src/lib/df.ts",
+    "download-backup": "tsx --env-file=.env src/downloadBackups.ts"
   },
   "repository": {
     "type": "git",

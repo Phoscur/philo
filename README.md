@@ -19,7 +19,6 @@ Fix regressions, lost features:
 - Likes
 - Preview while running
 - Glacier Backup
-- Github Backup Downloads
 - Destructive Rotation
 - Misc commands: Cancel?!
 - Local FFMpeg when Github disabled

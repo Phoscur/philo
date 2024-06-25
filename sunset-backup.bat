@@ -1,7 +1,7 @@
 @echo off
 echo Run Sunset Backup now...
 echo =================================================================================================================
-cmd /c ts-node -r dotenv/config %USERPROFILE%/Projects/philo/src/lib/storage/downloadGithubRepos.ts
+cmd /c node --env-file=.env %USERPROFILE%/Projects/philo/dist/downloadBackups.js
 echo =================================================================================================================
 echo Done. Press any key to close!
 pause>nul

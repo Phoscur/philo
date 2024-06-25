@@ -2,7 +2,7 @@ import axios from 'axios';
 import sodium from 'libsodium-wrappers';
 import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/node/index.js';
-import fs from 'fs/promises';
+import { promises } from 'fs';
 import { Octokit } from '@octokit/rest';
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
@@ -61,14 +61,15 @@ export class Git {
 
   /**
    * Attempt `git clone` including checkout
+   * @returns {Promise<boolean>} success
    */
-  async checkout(repo: string) {
+  async checkout(repo: string, branch = this.ref) {
     const { log } = this.#logger();
     const dir = this.#fs().getAbsolutePath(repo);
     try {
       log('Checking out:', this.publicUrlPrefix + repo);
       await this.git.clone({
-        fs,
+        fs: { promises },
         dir,
         http,
         url: this.privateUrlPrefix + repo,
@@ -76,7 +77,7 @@ export class Git {
         depth: 1,
       });
       log('Successfully cloned:', dir);
-      await this.branch(this.ref);
+      if (branch) await this.branch(this.ref);
       return true;
     } catch (err: any) {
       log('Checkout failed:', dir, err?.message);
@@ -93,23 +94,24 @@ export class Git {
    */
   async log() {
     const dir = this.#fs().absolutePath;
-    return this.git.log({ fs, dir });
+    return this.git.log({ fs: { promises }, dir });
   }
+
   async status(filepath: string) {
     const dir = this.#fs().absolutePath;
-    return this.git.status({ fs, dir, filepath });
+    return this.git.status({ fs: { promises }, dir, filepath });
   }
 
   async add(fileName: string) {
     const dir = this.#fs().absolutePath;
-    await this.git.add({ fs, dir, filepath: fileName });
+    await this.git.add({ fs: { promises }, dir, filepath: fileName });
   }
 
   async branch(name: string) {
     const logger = this.#logger();
     const dir = this.#fs().absolutePath;
     try {
-      await this.git.branch({ fs, dir, ref: name, checkout: true });
+      await this.git.branch({ fs: { promises }, dir, ref: name, checkout: true });
     } catch (e: any) {
       if (e?.code === 'AlreadyExistsError') {
         logger.log(`Branch "${name}" already exists`);
@@ -123,7 +125,7 @@ export class Git {
 
   async commit(message: string) {
     const dir = this.#fs().absolutePath;
-    return this.git.commit({ fs, dir, message, author: this.author });
+    return this.git.commit({ fs: { promises }, dir, message, author: this.author });
   }
 
   /**
@@ -132,7 +134,7 @@ export class Git {
   async push() {
     const dir = this.#fs().absolutePath;
     return this.git.push({
-      fs,
+      fs: { promises },
       dir,
       http,
       // ref: this.ref,

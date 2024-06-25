@@ -74,6 +74,11 @@ export class Director {
     return this.#fs().setupPath(name);
   }
 
+  async switchRepo(name: string, checkout = true) {
+    if (checkout) await this.#repo().checkout(name);
+    return this.#switchPath(name);
+  }
+
   async photo(presetName: string) {
     const logger = this.#logger();
     const camera = this.#camera();

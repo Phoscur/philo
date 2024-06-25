@@ -36,6 +36,13 @@ export class Repository {
     await fs.setupPath(repo);
   }
 
+  /**
+   * Download an existing repository
+   */
+  async checkout(repo: string) {
+    return this.#git().checkout(repo);
+  }
+
   async upload(file: string) {
     const git = this.#git();
     await git.upload(file);

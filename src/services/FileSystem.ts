@@ -86,7 +86,7 @@ export class FileSystem {
 
   async list() {
     const list = await readdir(this.path);
-    this.#logger().log('[Storage] List:\n °', list.join('\n ° '));
+    // this.#logger().log('[Storage] List:\n °', list.join('\n ° '));
     return list;
   }
 

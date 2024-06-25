@@ -13,6 +13,12 @@ export class Producer {
   #director = inject(Director);
   #hd = inject(Hardware);
 
+  async timelapse(chat: MessengerChat) {
+    const director = this.#director();
+    await director.setupPublicRepo(director.repoTimelapse);
+    await director.timelapse('default', { count: 100, intervalMS: 2000 });
+  }
+
   scheduleDailySunset(chat: MessengerChat) {
     const director = this.#director();
     director.scheduleSunset(
