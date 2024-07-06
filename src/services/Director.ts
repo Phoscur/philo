@@ -107,7 +107,8 @@ export class Director {
 
   async timelapse(
     presetName: string,
-    options: { count: number; intervalMS: number; prefix?: string }
+    options: { count: number; intervalMS: number; prefix?: string },
+    onFile = (filename: string) => {}
   ) {
     const logger = this.#logger();
     const timelapse = this.#timelapse();
@@ -128,7 +129,7 @@ export class Director {
     await timelapse.shoot(
       options.count,
       options.intervalMS,
-      (filename: string) => {},
+      onFile,
       (filename: string) => {},
       options.prefix
     );

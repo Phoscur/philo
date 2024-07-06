@@ -2,7 +2,7 @@ import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
 @injectable
 export class Assets {
-  // use an independent instance of FileSystem
+  // use an independent instance of FileSystem, so the path cannot be manipulated
   static providers = [{ provide: FileSystem, use: FileSystem }];
 
   #fs = inject(FileSystem);

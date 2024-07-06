@@ -87,10 +87,9 @@ export class Camera {
    * @param handler
    * @returns
    */
-  async watchTimelapse(count = 420, interval = 12000, handler = (ev: any) => {}) {
+  async watchTimelapse(count = 420, interval = 12000, handler = (filename: string) => {}) {
     const timelapse = this.timelapse(this.getTimelapseOutput(count), count, interval);
     const ac = new AbortController();
-    const { signal } = ac;
     return Promise.all([
       (async () => {
         await timelapse;
@@ -99,7 +98,7 @@ export class Camera {
       (async () => {
         let lastFile: string | null = '';
         try {
-          const watcher = this.#fs().watch({ signal });
+          const watcher = this.#fs().watch(ac);
           for await (const event of watcher) {
             //console.timeLog('still', event.filename)
             if (lastFile === event.filename) continue;
@@ -110,7 +109,7 @@ export class Camera {
         } catch (err: any) {
           if (err?.name === 'AbortError') {
             // the very last file is now ready too
-            handler(lastFile);
+            handler(lastFile ?? '');
             return;
           }
           throw err;

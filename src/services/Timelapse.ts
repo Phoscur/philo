@@ -42,7 +42,6 @@ export class Timelapse {
       onFrame(filename);
       // given file written events, we can start uploading (sequentially) in parallel
       uploads.push(() => repo.upload(filename).then(() => onUpload(filename)));
-      //if (running && running.isPending) return
       if (!running) {
         queue();
       }
