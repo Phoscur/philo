@@ -34,20 +34,20 @@ export class Git {
   /**
    * Add, commit and push
    */
-  async upload(fileName: string) {
+  async upload(repo: string, fileName: string) {
     const { log } = this.#logger();
     const message = `Add ${fileName}`;
     // commit & push
     try {
-      await this.add(fileName);
-      if (await this.isUnmodified(fileName)) {
+      await this.add(repo, fileName);
+      if (await this.isUnmodified(repo, fileName)) {
         log(fileName, 'is unmodified, skipping push.');
         return;
       }
-      await this.commit(message);
-      await this.push();
-      log('Git Status', fileName, await this.status(fileName));
-      const commits = await this.log();
+      await this.commit(repo, message);
+      await this.push(repo);
+      log('Git Status', fileName, await this.status(repo, fileName));
+      const commits = await this.log(repo);
       log(
         'Git Log length:',
         commits.length.toString(),
@@ -77,7 +77,7 @@ export class Git {
         depth: 1,
       });
       log('Successfully cloned:', dir);
-      if (branch) await this.branch(this.ref);
+      if (branch) await this.branch(repo, this.ref);
       return true;
     } catch (err: any) {
       log('Checkout failed:', dir, err?.message);
@@ -92,24 +92,24 @@ export class Git {
   /**
    * @returns {Promise<Log[]>}
    */
-  async log() {
-    const dir = this.#fs().absolutePath;
+  async log(repo: string) {
+    const dir = this.#fs().getAbsolutePath(repo);
     return this.git.log({ fs: { promises }, dir });
   }
 
-  async status(filepath: string) {
-    const dir = this.#fs().absolutePath;
+  async status(repo: string, filepath: string) {
+    const dir = this.#fs().getAbsolutePath(repo);
     return this.git.status({ fs: { promises }, dir, filepath });
   }
 
-  async add(fileName: string) {
-    const dir = this.#fs().absolutePath;
+  async add(repo: string, fileName: string) {
+    const dir = this.#fs().getAbsolutePath(repo);
     await this.git.add({ fs: { promises }, dir, filepath: fileName });
   }
 
-  async branch(name: string) {
+  async branch(repo: string, name: string) {
     const logger = this.#logger();
-    const dir = this.#fs().absolutePath;
+    const dir = this.#fs().getAbsolutePath(repo);
     try {
       await this.git.branch({ fs: { promises }, dir, ref: name, checkout: true });
     } catch (e: any) {
@@ -123,16 +123,16 @@ export class Git {
     logger.log('Using branch:', name);
   }
 
-  async commit(message: string) {
-    const dir = this.#fs().absolutePath;
+  async commit(repo: string, message: string) {
+    const dir = this.#fs().getAbsolutePath(repo);
     return this.git.commit({ fs: { promises }, dir, message, author: this.author });
   }
 
   /**
    * @returns {Promise<import('isomorphic-git').PushResult>}
    */
-  async push() {
-    const dir = this.#fs().absolutePath;
+  async push(repo: string) {
+    const dir = this.#fs().getAbsolutePath(repo);
     return this.git.push({
       fs: { promises },
       dir,
@@ -142,8 +142,8 @@ export class Git {
     });
   }
 
-  async isUnmodified(fileName: string) {
-    return 'unmodified' === (await this.status(fileName));
+  async isUnmodified(repo: string, fileName: string) {
+    return 'unmodified' === (await this.status(repo, fileName));
   }
 
   //

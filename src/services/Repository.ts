@@ -1,6 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { Git } from './Git.js';
-import { FileSystem } from './FileSystem.js';
+import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
 
 export const PAGES_BRANCH = 'gh-pages';
@@ -15,6 +15,113 @@ export const ACTION_NOTIFY_FILE = '.github/workflows/notification.yml';
 const telegramToken = `${process.env.TELEGRAM_TOKEN}`;
 const telegramChatId = `${process.env.TELEGRAM_CHAT_ID}`;
 
+export class Repo {
+  constructor(
+    public readonly dir: Directory,
+    public readonly logger: Logger,
+    public readonly git: Git
+  ) {}
+
+  async upload(file: string) {
+    await this.git.upload(this.dir.path, file);
+  }
+
+  async add(file: string, content: string) {
+    if (await this.dir.exists(file)) {
+      this.logger.log('File', file, 'exists already, skipping upload!');
+      return;
+    }
+    await this.dir.save(file, Buffer.from(content, 'utf8'));
+    await this.upload(file);
+    return file;
+  }
+
+  async addReadme() {
+    const author = this.git.author;
+    this.logger.log('File', README_FILE, 'is being created - by', author.name);
+    return this.add(README_FILE, readmeString(this.dir.path, author.name, author.email));
+  }
+
+  async addIndexHtml() {
+    const author = this.git.author;
+    this.logger.log('File', INDEX_FILE, 'is being created - by', author.name);
+    return this.add(INDEX_FILE, indexString(this.dir.path, author.name, author.email));
+  }
+
+  async branchPages() {
+    await this.git.branch(this.dir.path, PAGES_BRANCH);
+    this.logger.log('Checked out branch:', PAGES_BRANCH);
+  }
+
+  async createActionsFolder() {
+    return this.dir.mkdirp(ACTION_FOLDERS);
+  }
+
+  async makeTimelapsePage() {
+    const files = await this.dir.list();
+    const jpegs = files.filter((f) => f.endsWith('jpg'));
+    // TODO? jic add & commit files again?
+
+    this.logger.log('Creating timelapse page for', jpegs.length, 'images...');
+
+    await this.addIndexHtml();
+    await this.createActionsFolder();
+    await this.addNotificationAction();
+    await this.addFFMpegAction(jpegs);
+  }
+
+  async addFFMpegAction(fileNames: string[]) {
+    if (!fileNames.length) {
+      return '%01.jpg'; // instead of just failing here, we will pretend to have files named [1-9].jpg
+    }
+    const parts = fileNames[fileNames.length - 1].split('-');
+    parts.pop(); // throw away the counting part
+    const len = fileNames.length.toString().length;
+    const jpegs = `${parts.join('-')}-%0${len}d.jpg`;
+    this.logger.log('File', ACTION_MAIN_FILE, 'is being created - FFMpeg Command:', jpegs);
+    return this.add(ACTION_MAIN_FILE, ffmpegActionString(jpegs));
+  }
+
+  async addNotificationAction() {
+    const title = this.dir.path;
+    const url = this.git.getPageUrl(title);
+
+    // setup telegram secrets
+    const success = await this.git.setActionSecret(title, 'TELEGRAM_TO', telegramChatId);
+    this.logger.log('Set secret TELEGRAM_TO', success ? 'successfully' : 'failed');
+    const sus = await this.git.setActionSecret(title, 'TELEGRAM_TOKEN', telegramToken);
+    this.logger.log('Set secret TELEGRAM_TOKEN', sus ? 'successfully' : 'failed');
+
+    this.logger.log('File', ACTION_NOTIFY_FILE, 'is being created - Url referenced:', url);
+    return this.add(ACTION_NOTIFY_FILE, telegramNotifyActionString(title, url));
+  }
+
+  async checkPage(file: string) {
+    return this.git.checkPage(this.dir.path, file);
+  }
+
+  async enablePages(iterations = 0, file = 'index.html', waitMS = 5000) {
+    const repoName = this.dir.path;
+    let pagesEnabled = await this.git.enablePages(repoName);
+    this.logger.log('Enabling GH pages for', repoName, pagesEnabled ? 'was successful' : 'failed');
+    if (!iterations) return pagesEnabled;
+    for (let i = 0; i < iterations; i++) {
+      this.logger.log(
+        'Waiting for the Pages Pipeline',
+        pagesEnabled ? '' : '(to be enabled)',
+        '...'
+      );
+      await new Promise((r) => setTimeout(r, waitMS));
+      if (!pagesEnabled) {
+        pagesEnabled = await this.git.enablePages(repoName);
+      }
+      if (pagesEnabled && (await this.git.checkPage(repoName, file))) {
+        return true;
+      }
+    }
+  }
+}
+
 /**
  * Github Repository Control
  * - creates readme file
@@ -27,134 +134,31 @@ export class Repository {
   #fs = inject(FileSystem);
   #logger = inject(Logger);
 
-  async setup(repo: string, privateFlag = true) {
-    const fs = this.#fs();
-    const git = this.#git();
-
-    await git.createRepository(repo, privateFlag);
-    await git.checkout(repo);
-    await fs.setupPath(repo);
+  async #newRepo(name: string) {
+    return new Repo(await this.#fs().createDirectory(name), this.#logger(), this.#git());
   }
 
   /**
+   * New Repository via API & checkout
+   */
+  async create(name: string, privateFlag = true) {
+    const git = this.#git();
+
+    await git.createRepository(name, privateFlag);
+    return this.checkout(name);
+  }
+  /**
    * Download an existing repository
    */
-  async checkout(repo: string) {
-    return this.#git().checkout(repo);
-  }
-
-  async upload(file: string) {
-    const git = this.#git();
-    await git.upload(file);
-  }
-
-  async add(file: string, content: string) {
-    const fs = this.#fs();
-    const logger = this.#logger();
-
-    if (await fs.exists(file)) {
-      logger.log('File', file, 'exists already, skipping upload!');
-      return;
-    }
-    await fs.save(file, Buffer.from(content, 'utf8'));
-    await this.upload(file);
-    return file;
-  }
-
-  async addReadme() {
-    const author = this.#git().author;
-    this.#logger().log('File', README_FILE, 'is being created - by', author.name);
-    return this.add(README_FILE, readmeString(this.#fs().path, author.name, author.email));
-  }
-
-  async addIndexHtml() {
-    const author = this.#git().author;
-    this.#logger().log('File', INDEX_FILE, 'is being created - by', author.name);
-    return this.add(INDEX_FILE, indexString(this.#fs().path, author.name, author.email));
-  }
-
-  async branchPages() {
-    await this.#git().branch(PAGES_BRANCH);
-    this.#logger().log('Checked out branch:', PAGES_BRANCH);
-  }
-
-  async makeTimelapsePage() {
-    const logger = this.#logger();
-    const fs = this.#fs();
-
-    const files = await fs.list();
-    const jpegs = files.filter((f) => f.endsWith('jpg'));
-    // TODO? jic add & commit files again?
-
-    logger.log('Creating timelapse page for', jpegs.length, 'images...');
-
-    await this.addIndexHtml();
-    await this.createActionsFolder();
-    await this.addNotificationAction();
-    await this.addFFMpegAction(jpegs);
-  }
-
-  async createActionsFolder() {
-    return this.#fs().mkdirp(ACTION_FOLDERS);
-  }
-
-  async addFFMpegAction(fileNames: string[]) {
-    const logger = this.#logger();
-    if (!fileNames.length) {
-      return '%01.jpg'; // instead of just failing here, we will pretend to have files named [1-9].jpg
-    }
-    const parts = fileNames[fileNames.length - 1].split('-');
-    parts.pop(); // throw away the counting part
-    const len = fileNames.length.toString().length;
-    const jpegs = `${parts.join('-')}-%0${len}d.jpg`;
-    logger.log('File', ACTION_MAIN_FILE, 'is being created - FFMpeg Command:', jpegs);
-    return this.add(ACTION_MAIN_FILE, ffmpegActionString(jpegs));
-  }
-
-  async addNotificationAction() {
-    const logger = this.#logger();
-    const git = this.#git();
-    const title = this.#fs().path;
-    const url = this.#git().getPageUrl(title);
-
-    // setup telegram secrets
-    const success = await git.setActionSecret(title, 'TELEGRAM_TO', telegramChatId);
-    logger.log('Set secret TELEGRAM_TO', success ? 'successfully' : 'failed');
-    const sus = await git.setActionSecret(title, 'TELEGRAM_TOKEN', telegramToken);
-    logger.log('Set secret TELEGRAM_TOKEN', sus ? 'successfully' : 'failed');
-
-    logger.log('File', ACTION_NOTIFY_FILE, 'is being created - Url referenced:', url);
-    return this.add(ACTION_NOTIFY_FILE, telegramNotifyActionString(title, url));
-  }
-
-  async checkPage(file: string) {
-    return this.#git().checkPage(this.#fs().path, file);
-  }
-
-  async enablePages(iterations = 0, file = 'index.html', waitMS = 5000) {
-    const repoName = this.#fs().path;
-    const git = this.#git();
-    const logger = this.#logger();
-
-    let pagesEnabled = await git.enablePages(repoName);
-    logger.log('Enabling GH pages for', repoName, pagesEnabled ? 'was successful' : 'failed');
-    if (!iterations) return pagesEnabled;
-    for (let i = 0; i < iterations; i++) {
-      logger.log('Waiting for the Pages Pipeline', pagesEnabled ? '' : '(to be enabled)', '...');
-      await new Promise((r) => setTimeout(r, waitMS));
-      if (!pagesEnabled) {
-        pagesEnabled = await git.enablePages(repoName);
-      }
-      if (pagesEnabled && (await git.checkPage(repoName, file))) {
-        return true;
-      }
-    }
+  async checkout(repo: string, skip = false) {
+    if (!skip) await this.#git().checkout(repo);
+    return this.#newRepo(repo);
   }
 }
 
 export function readmeString(title: string, name: string, email: string, content = '') {
   return `## ${title} by [${name}](mailto:${email})
-\nlicensed under Creative Commons: [![CC BY-NC-SA](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+  \nlicensed under Creative Commons: [![CC BY-NC-SA](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 \n${content}\n`;
 }
 

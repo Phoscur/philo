@@ -34,20 +34,16 @@ export class CameraStub extends Camera {
     return `${this.name}.jpg`;
   }
 
-  get output() {
-    return this.#fs().joinPath(this.filename);
+  get dir() {
+    return this.#fs().dir('storage-test', false);
   }
 
-  async photo(output: string) {
-    await this.#fs().save(output, jpegSignature);
+  async photo(output = this.filename) {
+    await this.dir.save(output, jpegSignature);
   }
 
-  getTimelapseName() {
+  /*getTimelapseName() {
     return `${this.name}-%d.jpg`;
-  }
-
-  getTimelapseOutput() {
-    return this.#fs().joinPath(this.getTimelapseName());
   }
 
   async timelapse(output: string, count = 9, pause = 10, copyFiles = true) {
@@ -66,5 +62,5 @@ export class CameraStub extends Camera {
       await new Promise((res) => setTimeout(res, pause));
     }
     return 'stub-timelapse';
-  }
+  }*/
 }

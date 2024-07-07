@@ -1,6 +1,7 @@
 import { inject, injectable } from '@joist/di';
 import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
+import stitchImages from '../lib/ffmpeg.js';
 @injectable
 export class Timelapse {
   #logger = inject(Logger);
@@ -22,6 +23,9 @@ export class Timelapse {
   getFrameName(i: number) {
     return `${this.namePrefix}-${this.padZero(i.toString(), this.count.toString().length)}`;
   }
+  get output() {
+    return `${this.namePrefix}.mp4`;
+  }
 
   get prettyOptions() {
     const { intervalMS, count } = this;
@@ -38,28 +42,39 @@ export class Timelapse {
 
   #intervalId: NodeJS.Timeout | undefined = undefined;
   #stopFlag = false;
-  async shoot(onFile = (filename: string) => {}) {
+  async shoot(
+    { cwd, inFolder, outFolder }: { cwd: string; inFolder: string; outFolder: string },
+    onFile = (filename: string) => {}
+  ) {
     const logger = this.#logger();
     const camera = this.#cam();
 
-    return new Promise<void>((resolve, reject) => {
+    // manual interval capture (so libcamera won't crash beyond 370 frames)
+    await new Promise<void>((resolve, reject) => {
       logger.timeLog('timelapse', 'Start with options:\n', this.prettyOptions);
       let frame = 1;
       let errors = 0;
+      const stop = () => {
+        logger.timeEnd('timelapse');
+        clearInterval(this.#intervalId);
+        this.#stopFlag = false;
+      };
       this.#intervalId = setInterval(
         () =>
           (async () => {
             try {
+              if (this.#stopFlag) {
+                stop();
+                return resolve();
+              }
               camera.name = this.getFrameName(frame);
               logger.time('timelapse');
               await camera.photo();
               logger.time('timelapse');
               onFile(camera.filename);
 
-              if (frame >= this.count || this.#stopFlag) {
-                logger.timeEnd('timelapse');
-                clearInterval(this.#intervalId);
-                this.#stopFlag = false;
+              if (frame >= this.count) {
+                stop();
                 return resolve();
               }
               frame++;
@@ -68,9 +83,7 @@ export class Timelapse {
               logger.log(`Frame [${frame}] Error: ${error?.message}`);
               if (errors > 3) {
                 logger.log('Too many errors, stopped timelapse!');
-                logger.timeLog('timelapse');
-                clearInterval(this.#intervalId);
-                this.#stopFlag = false;
+                stop();
                 reject(error);
               }
             }
@@ -78,6 +91,8 @@ export class Timelapse {
         this.intervalMS
       );
     });
+
+    await stitchImages(this.namePrefix, cwd, { parts: this.count }, inFolder, outFolder);
   }
   stop() {
     this.#stopFlag = true;

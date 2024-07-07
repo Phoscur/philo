@@ -34,8 +34,17 @@ export class Director {
   ) {}
 
   /** YYYY-MM-DD slice from ISO */
+  static yyyymmdd(date: Date) {
+    return date.toISOString().slice(0, 10);
+  }
+
   get prettyToday() {
-    return this.#time.toISOString().slice(0, 10);
+    return Director.yyyymmdd(this.#time);
+  }
+
+  /** YYYY-MM slice from ISO */
+  get prettyMonth() {
+    return this.#time.toISOString().slice(0, 7);
   }
 
   /** YYYY-MM-DD--HH-mm date string */
@@ -49,8 +58,14 @@ export class Director {
   get repoTimelapse() {
     return `${this.repoTimelapsePrefix}-${this.prettyToday}`;
   }
+  get repoTimelapseStitched() {
+    return `${this.repoTimelapsePrefix}-${this.prettyMonth}`;
+  }
   get repoSunset() {
     return `${this.repoSunsetPrefix}-${this.prettyToday}`;
+  }
+  get repoSunsetStitched() {
+    return `${this.repoSunsetPrefix}-${this.prettyMonth}`;
   }
 
   resetTime() {
@@ -60,64 +75,65 @@ export class Director {
 
   async setupPublicRepo(name: string) {
     const repo = this.#repo();
-    await repo.setup(name, false);
-    await repo.addReadme();
+    const r = await repo.create(name, false);
+    await r.addReadme();
+    return r;
   }
 
   async setupPrivateRepo(name: string) {
     const repo = this.#repo();
-    await repo.setup(name, true);
-  }
-
-  async #switchPath(name: string) {
-    return this.#fs().setupPath(name);
-  }
-
-  async switchRepo(name: string, checkout = true) {
-    if (checkout) await this.#repo().checkout(name);
-    return this.#switchPath(name);
+    return repo.create(name, true);
   }
 
   async photo(presetName: string) {
     const logger = this.#logger();
     const camera = this.#camera();
     const preset = this.#preset();
+    const fs = this.#fs();
 
-    await this.#switchPath(this.repoPhoto); // TODO? init repo?
+    const dir = await fs.createDirectory(this.repoPhoto);
 
     preset.setupPreset(presetName);
     camera.name = this.prettyNow;
     const { filename } = camera;
-    const co = await camera.photo();
+    const co = await camera.photo(dir.join(filename));
     logger.log('Photo captured, libcamera output:\n- - -', co, '\n- - -');
 
     return {
       filename,
       // TODO use path instead?
-      source: this.#fs().readStream(filename) as unknown as NodeJS.ReadableStream,
+      source: dir.readStream(filename) as unknown as NodeJS.ReadableStream,
     };
   }
 
   async timelapse(
     presetName: string,
     options: { count: number; intervalMS: number; prefix?: string },
-    onFile = (filename: string) => {}
+    onFile = (filename: string) => {},
+    outFolder = this.repoTimelapseStitched
   ) {
     const logger = this.#logger();
+    const fs = this.#fs();
     const timelapse = this.#timelapse();
     const preset = this.#preset();
 
-    if (presetName === 'sunset') {
-      await this.#switchPath(this.repoSunset);
-    } else {
-      await this.#switchPath(this.repoTimelapse);
-    }
+    const dir =
+      presetName === 'sunset'
+        ? await fs.createDirectory(this.repoSunset)
+        : await fs.createDirectory(this.repoTimelapse);
 
     preset.setupPreset(presetName);
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
     timelapse.namePrefix = options.prefix || presetName;
-    await timelapse.shoot(onFile);
+    await timelapse.shoot(
+      {
+        cwd: fs.cwd,
+        inFolder: dir.path,
+        outFolder,
+      },
+      onFile
+    );
     logger.log('Timelapse completed');
   }
 
@@ -125,15 +141,15 @@ export class Director {
     return this.#timelapse().stop();
   }
 
-  async enableAndWaitForPages() {
-    const repo = this.#repo();
+  /*async enableAndWaitForPages(r) {
+    const repo = this.#repo().checkout(r);
     await repo.makeTimelapsePage();
     const waitMS = 10000;
     await this.#sunMoonTime().sleep(waitMS);
     const checkIterations = 60;
     const delayMS = 5000;
     await repo.enablePages(checkIterations, 'index.html', delayMS);
-  }
+  }*/
 
   #sunsetTimeout: NodeJS.Timeout | undefined;
   async scheduleSunset(onStart = () => {}, onEnd = () => {}) {
@@ -169,9 +185,10 @@ export class Director {
           },
           () => {
             // TODO upload
-          }
+          },
+          this.repoSunsetStitched
         );
-        await this.enableAndWaitForPages();
+        // await this.enableAndWaitForPages();
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);
