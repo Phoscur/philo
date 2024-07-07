@@ -1,9 +1,21 @@
 import { Injector } from '@joist/di';
 import type { Context, Scenes, Telegraf } from 'telegraf';
-import type { Message, Convenience, Opts, InputMedia } from 'telegraf/types';
+import type { Message, Convenience, Opts, InputMedia, MessageId } from 'telegraf/types';
 // TODO inform discord - also via github action?!
 //import type { Message as DiscordMessage } from './lib/discord.js';
 //import { createClient, DISCORD_ENABLED, sendAnnouncementEmptyStub } from './lib/discord.js';
+/* onFinish = async (message: string, file: string) => {
+    try {
+      const attachment = await storage.exists(file);
+      if (!attachment) {
+        throw new Error('Attachment to send does not exist: ' + file);
+      }
+      await client.sendDiscordAnimation(message, attachment);
+    } catch (err) {
+      console.warn('Discord sharing failed', message);
+      console.error(err);
+    }
+  }; */
 
 export interface ChatAnimationMessage {
   editCaption(caption: string, extra?: Convenience.ExtraEditMessageCaption): Promise<void>;
@@ -16,6 +28,7 @@ export interface ChatAnimationMessage {
 
 export interface ChatMessenger {
   sendMessage(message: string, extra?: Convenience.ExtraReplyMessage): Promise<Message.TextMessage>;
+  sendMessageCopy(messageId: number, extra?: Convenience.ExtraReplyMessage): Promise<MessageId>;
   sendPhoto(
     photo: Opts<'sendPhoto'>['photo'],
     extra?: Convenience.ExtraPhoto
@@ -32,26 +45,41 @@ export interface ChatMessenger {
 
 export function createTelegramMessengerChat(
   bot: Telegraf<PhiloContext>,
-  chatId: string
+  chatId: string,
+  copyTargetChatId: string
 ): ChatMessenger {
   return {
     sendMessage: bot.telegram.sendMessage.bind(bot.telegram, chatId),
+    sendMessageCopy: bot.telegram.copyMessage.bind(bot.telegram, chatId, copyTargetChatId),
     sendPhoto: bot.telegram.sendPhoto.bind(bot.telegram, chatId),
     sendAnimation: bot.telegram.sendAnimation.bind(bot.telegram, chatId),
     createAnimation: async (
       animation: Opts<'sendAnimation'>['animation'],
       extra?: Convenience.ExtraAnimation
     ): Promise<ChatAnimationMessage> => {
-      const msg = await bot.telegram.sendAnimation(chatId, animation, extra);
+      const message = await bot.telegram.sendAnimation(chatId, animation, extra);
       return {
         editCaption: async (caption, extra) => {
-          await bot.telegram.editMessageCaption(chatId, msg.message_id, undefined, caption, extra);
+          try {
+            await bot.telegram.editMessageCaption(
+              chatId,
+              message.message_id,
+              undefined,
+              caption,
+              extra
+            );
+          } catch (err) {
+            console.error(
+              `Cannot edit message caption ${message.message_id} (${message.chat.id}): ${caption}`
+            );
+            console.error(err);
+          }
         },
         editMedia: async (media, extra) => {
-          await bot.telegram.editMessageMedia(chatId, msg.message_id, undefined, media, extra);
+          await bot.telegram.editMessageMedia(chatId, message.message_id, undefined, media, extra);
         },
         delete: async () => {
-          await bot.telegram.deleteMessage(chatId, msg.message_id);
+          await bot.telegram.deleteMessage(chatId, message.message_id);
         },
       };
     },
@@ -67,8 +95,16 @@ export function setupChatContext(
   bot: Telegraf<PhiloContext>,
   ctx: ChatContext = {} as ChatContext
 ): ChatContext {
-  ctx.group = createTelegramMessengerChat(bot, `${process.env.TELEGRAM_CHAT_ID}`);
-  ctx.channel = createTelegramMessengerChat(bot, `${process.env.TELEGRAM_CHANNEL_ID}`);
+  ctx.group = createTelegramMessengerChat(
+    bot,
+    `${process.env.TELEGRAM_CHAT_ID}`,
+    `${process.env.TELEGRAM_CHANNEL_ID}`
+  );
+  ctx.channel = createTelegramMessengerChat(
+    bot,
+    `${process.env.TELEGRAM_CHANNEL_ID}`,
+    'no copy target'
+  );
   return ctx;
 }
 
@@ -81,6 +117,7 @@ export interface PhiloContext extends Context, ChatContext {
   // declare scene type
   scene: Scenes.SceneContextScene<PhiloContext>;
   di: Injector;
+  presetName: string;
 }
 
 export interface PhiloBot extends Telegraf<PhiloContext> {}
@@ -92,6 +129,7 @@ export function setupContext(
 ): PhiloContext {
   const ctx = context ?? ({ telegram: bot.telegram } as PhiloContext);
   ctx.di = injector;
+  ctx.presetName = 'default';
 
   setupChatContext(bot, ctx);
 

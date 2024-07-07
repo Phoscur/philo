@@ -36,7 +36,7 @@ async function upload() {
     return;
   }
   logger.log('Creating and checking out repository', repoName);
-  camera.fileNamePrefix = 'frame';
+  camera.name = 'frame';
   await repo.setup(repoName, false);
   await repo.addReadme();
 

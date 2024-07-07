@@ -1,6 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { Logger } from './Logger.js';
-import { Camera, PiCameraConfig } from './Camera.js';
+import { Camera, StillOptions } from './Camera.js';
 
 @injectable
 export class Preset {
@@ -25,7 +25,7 @@ export class Preset {
     }
   }
 
-  get presets() {
+  get presets(): Record<string, StillOptions> {
     try {
       return JSON.parse(`${process.env.PRESETS}`);
     } catch (error: any) {
@@ -34,7 +34,11 @@ export class Preset {
     }
   }
 
-  #setupPreset(p: PiCameraConfig, name: string) {
+  get(name: string): StillOptions {
+    return this.presets[name] ?? this.default;
+  }
+
+  #setupPreset(p: StillOptions) {
     const cam = this.#cam();
     return (cam.options = {
       ...cam.options,
@@ -44,21 +48,28 @@ export class Preset {
 
   setupPreset(name: string) {
     const preset = this.presets[name] || this.default;
-    const options = this.#setupPreset(preset, name);
+    const options = this.#setupPreset(preset);
     this.#logger().log(
       'Preset setup:',
-      this.presets[name] ? name : `"${name}" not found using "default" instead`,
+      this.presets[name] ?? name === 'default'
+        ? name
+        : `"${name}" not found using "default" instead`,
       options
     );
   }
 
-  setupSunset() {
-    const preset = this.sunset;
-    const options = this.#setupPreset(preset, 'sunset');
-    this.#logger().log('Preset setup sunset:', options);
+  printPreset(preset: StillOptions) {
+    const roi = preset.roi ? `Region of interest: ${preset.roi}` : '';
+    const widthAndHeight =
+      preset.width || preset.height
+        ? `Width: ${preset.width || '*'}, height: ${preset.height || '*'}`
+        : '';
+    return `${roi}\n${widthAndHeight}`;
   }
 
-  printCurrent(timelapseOptions = { interval: 0, count: 0 }) {
-    return this.#cam().printOptions(timelapseOptions.interval, timelapseOptions.count);
+  setupSunset() {
+    const preset = this.sunset;
+    const options = this.#setupPreset(preset);
+    this.#logger().log('Preset setup sunset:', options);
   }
 }

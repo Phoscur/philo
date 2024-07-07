@@ -21,7 +21,6 @@ export class Director {
   #timelapse = inject(Timelapse);
   #sunMoonTime = inject(SunMoonTime);
 
-  #cameraMutex = false;
   #time = new Date();
 
   constructor(
@@ -35,23 +34,23 @@ export class Director {
   ) {}
 
   /** YYYY-MM-DD slice from ISO */
-  get today() {
+  get prettyToday() {
     return this.#time.toISOString().slice(0, 10);
   }
 
   /** YYYY-MM-DD--HH-mm date string */
-  get now() {
-    return `${this.today}--${this.#time.toISOString().slice(11, 16).replace(':', '-')}`;
+  get prettyNow() {
+    return `${this.prettyToday}--${this.#time.toISOString().slice(11, 16).replace(':', '-')}`;
   }
 
   get repoPhoto() {
     return `${this.repoPhotoPrefix}`;
   }
   get repoTimelapse() {
-    return `${this.repoTimelapsePrefix}-${this.today}`;
+    return `${this.repoTimelapsePrefix}-${this.prettyToday}`;
   }
   get repoSunset() {
-    return `${this.repoSunsetPrefix}-${this.today}`;
+    return `${this.repoSunsetPrefix}-${this.prettyToday}`;
   }
 
   resetTime() {
@@ -84,20 +83,14 @@ export class Director {
     const camera = this.#camera();
     const preset = this.#preset();
 
-    if (this.#cameraMutex) {
-      logger.log('Camera is busy, skipping capture');
-      return false;
-    }
-    this.#cameraMutex = true;
     await this.#switchPath(this.repoPhoto); // TODO? init repo?
 
     preset.setupPreset(presetName);
-    camera.fileNamePrefix = this.now;
+    camera.name = this.prettyNow;
     const { filename } = camera;
     const co = await camera.photo();
     logger.log('Photo captured, libcamera output:\n- - -', co, '\n- - -');
 
-    this.#cameraMutex = false;
     return {
       filename,
       // TODO use path instead?
@@ -114,11 +107,6 @@ export class Director {
     const timelapse = this.#timelapse();
     const preset = this.#preset();
 
-    if (this.#cameraMutex) {
-      logger.log('Camera is busy, skipping timelapse');
-      return false;
-    }
-    this.#cameraMutex = true;
     if (presetName === 'sunset') {
       await this.#switchPath(this.repoSunset);
     } else {
@@ -126,17 +114,15 @@ export class Director {
     }
 
     preset.setupPreset(presetName);
-    await timelapse.shoot(
-      options.count,
-      options.intervalMS,
-      onFile,
-      (filename: string) => {},
-      options.prefix
-    );
+    timelapse.count = options.count;
+    timelapse.intervalMS = options.intervalMS;
+    timelapse.namePrefix = options.prefix || presetName;
+    await timelapse.shoot(onFile);
     logger.log('Timelapse completed');
+  }
 
-    this.#cameraMutex = false;
-    return true;
+  cancel() {
+    return this.#timelapse().stop();
   }
 
   async enableAndWaitForPages() {
@@ -174,10 +160,17 @@ export class Director {
         await this.setupPublicRepo(this.repoSunset);
         onStart();
         await sunMoon.sleep(messageDelayMS);
-        await this.timelapse('sunset', {
-          count: this.dailySunsetFrameCount,
-          intervalMS: this.dailySunsetTimelapseIntervalMS,
-        });
+        await this.timelapse(
+          'sunset',
+          {
+            count: this.dailySunsetFrameCount,
+            intervalMS: this.dailySunsetTimelapseIntervalMS,
+            prefix: 'sunset-timelapse',
+          },
+          () => {
+            // TODO upload
+          }
+        );
         await this.enableAndWaitForPages();
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);

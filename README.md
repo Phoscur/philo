@@ -34,6 +34,8 @@ While taking the pictures for timelapses goes through `libcamera-still`, you can
 e.g. Videostreaming `libcamera-vid -t 0 --width 1920 --height 1080 --codec h264 --inline --listen -o tcp://0.0.0.0:8888`
 and `vlc tcp/h264://192.168.2.138:8888/` to manually adjust the objective, so you get sharp images (or `libcamera-vid -t 0 --width 4056 --height 3040 --codec mjpeg --framerate 10 --inline --listen -o tcp://0.0.0.0:8888` and `vlc tcp/mjpeg://192.168.2.150:8888/`).
 
+I've failed to use this to make captures with more than 370 frames on my RaspberryPi 3 (it just crashes without a stack), so now we are back to scheduling each frame ourselves again. Also, I tried both packages `node-libcamera` and `libcamera` (which is a bit smaller), but we might aswell have full control about the spawned process without using additional dependencies
+
 ## Dependencies
 
 Install nodejs and ffmpeg

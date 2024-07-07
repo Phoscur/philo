@@ -1,6 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
-import { Camera, PiCameraConfig } from './Camera.js';
+import { Camera, StillOptions } from './Camera.js';
 
 export function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length);
@@ -27,14 +27,11 @@ export const examples = [
 export class CameraStub extends Camera {
   #fs = inject(FileSystem);
 
-  fileNamePrefix = 'test';
-  options: PiCameraConfig = {};
-  printOptions(timelapse?: number, count?: number): string {
-    return `stub-options ${timelapse} ${count}`;
-  }
+  name = 'test';
+  options: StillOptions = {};
 
   get filename() {
-    return `${this.fileNamePrefix}.jpg`;
+    return `${this.name}.jpg`;
   }
 
   get output() {
@@ -43,11 +40,10 @@ export class CameraStub extends Camera {
 
   async photo(output: string) {
     await this.#fs().save(output, jpegSignature);
-    return 'stub-photo';
   }
 
   getTimelapseName() {
-    return `${this.fileNamePrefix}-%d.jpg`;
+    return `${this.name}-%d.jpg`;
   }
 
   getTimelapseOutput() {

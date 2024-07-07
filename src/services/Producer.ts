@@ -6,7 +6,7 @@ import { Assets } from './Assets.js';
 import type { ChatAnimationMessage, ChatMessenger } from '../context.js';
 
 /**
- * Given messenger context, Producer will interact with the Director to produce content.
+ * Given (Telegram) messenger context, Producer will interact with the Director to stream content production.
  */
 @injectable
 export class Producer {
@@ -15,18 +15,42 @@ export class Producer {
   #assets = inject(Assets);
   #hd = inject(Hardware);
 
-  async createAnimation(chat: ChatMessenger): Promise<ChatAnimationMessage> {
+  async createAnimation(chat: ChatMessenger, caption?: string): Promise<ChatAnimationMessage> {
     const assets = this.#assets();
     const animation = assets.spinnerAnimation.media;
-    const message = await chat.createAnimation(animation);
+    const message = await chat.createAnimation(animation, { caption });
     return message;
   }
 
-  async timelapse(chat: ChatMessenger) {
+  async shot(chat: ChatMessenger, presetName?: string) {
     const director = this.#director();
-    await director.setupPublicRepo(director.repoTimelapse);
+    const message = await this.createAnimation(chat, 'Taking a shot 🥃...');
+    const media = await director.photo(presetName ?? 'default');
+    await message.editMedia({ type: 'photo', media });
+    // await message.editCaption(director.prettyNow, markup); - use Markup here?
+    return {
+      message,
+      media,
+      title: director.prettyNow,
+    };
+  }
+
+  async timelapse(
+    chat: ChatMessenger,
+    {
+      count,
+      intervalMS,
+      prefix,
+      presetName,
+    }: { count: number; intervalMS: number; prefix?: string; presetName?: string } = {
+      count: 20,
+      intervalMS: 2000,
+    }
+  ) {
+    const director = this.#director();
+    await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
-    await director.timelapse('default', { count: 100, intervalMS: 2000 }, (filename) => {
+    await director.timelapse(presetName ?? 'default', { count, intervalMS, prefix }, (filename) => {
       (async () => {
         try {
           await message.editCaption(`Last Timelapse frame created: ${filename}`);
@@ -36,14 +60,21 @@ export class Producer {
         }
       })();
     });
+    // TODO stitch
+  }
+
+  cancel() {
+    const director = this.#director();
+    return director.cancel();
   }
 
   scheduleDailySunset(chat: ChatMessenger) {
     const director = this.#director();
     director.scheduleSunset(
       async () => {
+        // TODO? jic: await this.cancel()
         const hdStatus = await this.#hd().getStatus();
-        chat.sendMessage(`Sunset is soon... Starting daily timelapse!\n${hdStatus}`);
+        chat.sendMessage(`🌇 Sunset is soon... Starting daily timelapse 🎥\n${hdStatus}`);
       },
       () => {
         this.#logger().log('Finished producing the daily timelapse.');
