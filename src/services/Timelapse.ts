@@ -51,6 +51,7 @@ export class Timelapse {
 
     // manual interval capture (so libcamera won't crash beyond 370 frames)
     await new Promise<void>((resolve, reject) => {
+      logger.time('timelapse');
       logger.timeLog('timelapse', 'Start with options:\n', this.prettyOptions);
       let frame = 1;
       let errors = 0;
@@ -68,9 +69,9 @@ export class Timelapse {
                 return resolve();
               }
               camera.name = this.getFrameName(frame);
-              logger.time('timelapse');
+              logger.timeLog('timelapse', 'frame', frame, 'of', this.count);
               await camera.photo();
-              logger.time('timelapse');
+              logger.timeLog('timelapse', 'frame', frame, 'captured');
               onFile(camera.filename);
 
               if (frame >= this.count) {
@@ -93,6 +94,7 @@ export class Timelapse {
     });
 
     await stitchImages(this.namePrefix, cwd, { parts: this.count }, inFolder, outFolder);
+    return this.output;
   }
   stop() {
     this.#stopFlag = true;

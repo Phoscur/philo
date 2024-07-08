@@ -12,6 +12,10 @@ export class Camera {
     height: 1080,
   };
 
+  constructor() {
+    console.log('Camera created');
+  }
+
   #mutex: Promise<unknown> | false = false;
   get busy() {
     return this.#mutex;

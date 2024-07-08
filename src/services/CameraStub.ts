@@ -1,6 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
-import { Camera, StillOptions } from './Camera.js';
+import { Camera, StillOptions } from './index.js';
 
 export function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length);
@@ -23,15 +23,33 @@ export const examples = [
   './data-example/42095079-1091-10.jpg',
 ];
 
+function* exampleFiles(): Generator<string> {
+  let i = 0;
+  while (true) {
+    yield examples[i++ % examples.length];
+  }
+}
+
+const exapmleStream = exampleFiles();
+
 @injectable
 export class CameraStub extends Camera {
   #fs = inject(FileSystem);
 
-  name = 'test';
+  name = 'still-test-stub';
   options: StillOptions = {};
 
   get filename() {
     return `${this.name}.jpg`;
+  }
+
+  copyMode = false;
+
+  constructor() {
+    super();
+    try {
+      console.error('wtf');
+    } catch (err: any) {}
   }
 
   get dir() {
@@ -39,6 +57,10 @@ export class CameraStub extends Camera {
   }
 
   async photo(output = this.filename) {
+    if (this.copyMode) {
+      await this.dir.copyFile(exapmleStream.next().value, output);
+      return;
+    }
     await this.dir.save(output, jpegSignature);
   }
 

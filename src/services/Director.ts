@@ -2,6 +2,7 @@ import { inject, injectable } from '@joist/di';
 import { Repository } from './Repository.js';
 import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
+import { CameraStub } from './CameraStub.js';
 import { Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
 import { FileSystem } from './FileSystem.js';
@@ -112,10 +113,15 @@ export class Director {
     onFile = (filename: string) => {},
     outFolder = this.repoTimelapseStitched
   ) {
-    const logger = this.#logger();
+    const camera = this.#camera();
     const fs = this.#fs();
     const timelapse = this.#timelapse();
     const preset = this.#preset();
+
+    if (!(camera instanceof CameraStub)) {
+      console.log('stub', (camera as CameraStub).copyMode);
+      throw Error('stub?');
+    }
 
     const dir =
       presetName === 'sunset'
@@ -126,7 +132,7 @@ export class Director {
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
     timelapse.namePrefix = options.prefix || presetName;
-    await timelapse.shoot(
+    return timelapse.shoot(
       {
         cwd: fs.cwd,
         inFolder: dir.path,
@@ -134,7 +140,6 @@ export class Director {
       },
       onFile
     );
-    logger.log('Timelapse completed');
   }
 
   cancel() {

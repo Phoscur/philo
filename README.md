@@ -18,10 +18,11 @@ Fix regressions, lost features:
 
 - Likes
 - Preview while running
-- Glacier Backup
-- Destructive Rotation
 - Misc commands: Cancel?!
 - Local FFMpeg when Github disabled
+- Glacier Backup
+- Check/Retry Github Upload
+- Destructive Rotation
 
 Create Gallery and publish on github.io!
 

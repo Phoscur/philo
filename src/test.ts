@@ -1,4 +1,4 @@
-import { Injector } from '@joist/di';
+import { defineEnvironment, Injector } from '@joist/di';
 import {
   Logger,
   consoleInjector,
@@ -8,20 +8,32 @@ import {
   Repository,
   Timelapse,
   FileSystem,
+  Director,
 } from './services/index.js';
 
 const repoName = 'timelapse-test-2024-06-22';
 const timelapseFile = 'timelapse.mp4';
 const outFolder = 'timelapse-test-output';
 
-// defineEnvironment
-const injector = new Injector([], consoleInjector);
+defineEnvironment([]);
+const injector = new Injector(
+  [
+    {
+      provide: Camera,
+      factory: () => new CameraStub(),
+    },
+  ],
+  consoleInjector
+);
+const camera = injector.get(Camera);
+(camera as CameraStub).copyMode = true;
+const director = injector.get(Director);
+
 const git = injector.get(Git);
 const logger = injector.get(Logger);
 const fs = injector.get(FileSystem);
 const repo = injector.get(Repository);
-//const camera = injector.get(Camera);
-const camera = injector.get(CameraStub);
+//const camera = injector.get(CameraStub);
 const timelapse = injector.get(Timelapse);
 
 async function upload() {
@@ -57,14 +69,30 @@ async function upload() {
   console.timeEnd('githubrender');
 }
 
+async function lapse() {
+  //await fs.createDirectory(path);
+  logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
+  const photosFolder = director.repoTimelapse;
+  const outFolder = director.repoTimelapseStitched;
+  const output = await director.timelapse('default', {
+    count: 20,
+    intervalMS: 2000,
+  });
+  logger.log('Capture finished', outFolder, output);
+
+  const images = await fs.dir(photosFolder).list();
+  const videos = await fs.dir(outFolder).list();
+  logger.log('Result', images, videos);
+}
+
 async function still() {
-  const path = camera.dir.path;
+  const path = camera instanceof CameraStub ? camera.dir.path : 'storage-test';
   await fs.createDirectory(path);
   logger.log('Starting still capture');
   await camera.photo();
   logger.log('Capture finished');
 
-  const files = await camera.dir.list();
+  const files = await fs.dir(path).list();
   const jpegs = files.filter((f) => f.endsWith('jpg'));
   logger.log('Result', jpegs);
 }
@@ -73,13 +101,18 @@ switch (process.argv[2]) {
   case 'upload':
     upload();
     break;
+  case 'lapse':
+    lapse();
+    break;
   case 'still':
     still();
     break;
   default:
+    lapse();
+    break;
     console.log(
       'Unknown argument:',
       process.argv[2],
-      'use "upload" or "still" - e.g. "npm test -- still'
+      'use "upload", "lapse" or "still" - e.g. "npm test -- still'
     );
 }

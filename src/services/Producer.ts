@@ -60,7 +60,7 @@ export class Producer {
         }
       })();
     });
-    // TODO stitch
+    // TODO post video
   }
 
   cancel() {
