@@ -8,6 +8,7 @@ export class Directory {
   constructor(
     public readonly logger: Logger,
     public readonly fs: FileSystem,
+    /** directory name or base path relative to the cwd */
     public readonly path: string,
     public readonly isNew = false
   ) {}

@@ -1,7 +1,6 @@
-import { defineEnvironment, Injector } from '@joist/di';
 import {
   Logger,
-  consoleProvider,
+  createInjector,
   Camera,
   CameraStub,
   Git,
@@ -9,35 +8,24 @@ import {
   Timelapse,
   FileSystem,
   Director,
+  createInjectorWithStubbedDependencies,
 } from './services/index.js';
 
 const repoName = 'timelapse-test-2024-06-22';
 const timelapseFile = 'timelapse.mp4';
 const outFolder = 'timelapse-test-output';
 
-defineEnvironment([]);
-const injector = new Injector([
-  {
-    provide: Camera,
-    factory: () => new CameraStub(),
-  },
-  {
-    provide: Logger,
-    factory(): Logger {
-      return console;
-    },
-  },
-]);
+const useNoStub = process.argv.includes('--no-stub');
+const injector = useNoStub ? createInjector() : createInjectorWithStubbedDependencies();
 const camera = injector.get(Camera);
+//const camera = injector.get(CameraStub);
 (camera as CameraStub).copyMode = true;
+const timelapse = injector.get(Timelapse);
 const director = injector.get(Director);
-
 const git = injector.get(Git);
 const logger = injector.get(Logger);
 const fs = injector.get(FileSystem);
 const repo = injector.get(Repository);
-//const camera = injector.get(CameraStub);
-const timelapse = injector.get(Timelapse);
 
 async function upload() {
   /*const isNew = await fs.setupPath(repoName)
@@ -56,9 +44,12 @@ async function upload() {
   const r = await repo.create(repoName, false);
   await r.addReadme();
 
+  const photoDir = await fs.createDirectory(repoName);
+  const videoDir = await fs.createDirectory(outFolder);
+
   timelapse.count = 3 * 18; // 3-5 times framerate
   timelapse.intervalMS = 2000;
-  await timelapse.shoot({ cwd: fs.cwd, inFolder: repoName, outFolder }, (filename: string) => {
+  await timelapse.shoot(photoDir, videoDir, (filename: string) => {
     console.log('captured frame', filename);
   });
   console.timeEnd('timelapse');
@@ -72,20 +63,21 @@ async function upload() {
   console.timeEnd('githubrender');
 }
 
-async function lapse() {
+async function lapse(count = 20, intervalMS = 2000) {
   //await fs.createDirectory(path);
   logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
   const photosFolder = director.repoTimelapse;
   const outFolder = director.repoTimelapseStitched;
   const output = await director.timelapse('default', {
-    count: 20,
-    intervalMS: 2000,
+    prefix: 'timelapse',
+    count,
+    intervalMS,
   });
   logger.log('Capture finished', outFolder, output);
 
   const images = await fs.dir(photosFolder).list();
   const videos = await fs.dir(outFolder).list();
-  logger.log('Result', images, videos);
+  logger.log('Images:', photosFolder, images, 'Videos:', outFolder, videos);
 }
 
 async function still() {
@@ -100,22 +92,17 @@ async function still() {
   logger.log('Result', jpegs);
 }
 
-switch (process.argv[2]) {
-  case 'upload':
-    upload();
-    break;
-  case 'lapse':
-    lapse();
-    break;
-  case 'still':
-    still();
-    break;
-  default:
-    lapse();
-    break;
-    console.log(
-      'Unknown argument:',
-      process.argv[2],
-      'use "upload", "lapse" or "still" - e.g. "npm test -- still'
-    );
+if (process.argv.includes('upload')) {
+  upload();
+} else if (process.argv.includes('lapse')) {
+  const intervalMS = useNoStub ? 3000 : 200;
+  lapse(10, intervalMS);
+} else if (process.argv.includes('still')) {
+  still();
+} else {
+  console.log(
+    'Unknown argument(s):',
+    process.argv.slice(2),
+    'use "upload", "lapse" or "still" - e.g. "npm test -- still'
+  );
 }

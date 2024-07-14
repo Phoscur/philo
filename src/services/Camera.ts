@@ -1,4 +1,4 @@
-import { inject, injectable } from '@joist/di';
+import { injectable } from '@joist/di';
 import { StillCamera } from '../lib/libcamera-still.js';
 
 import type { StillOptions } from '../lib/libcamera-still.js';
@@ -11,10 +11,6 @@ export class Camera {
     roi: '', // x,y,w,h
     height: 1080,
   };
-
-  constructor() {
-    console.log('Camera created');
-  }
 
   #mutex: Promise<unknown> | false = false;
   get busy() {

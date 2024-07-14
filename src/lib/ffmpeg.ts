@@ -8,12 +8,13 @@ export interface StitchOptions {
   parts?: number;
 }
 
-export default async function stitchImages(
+export async function stitchImages(
   name: string,
   cwd: string,
   options: StitchOptions = {},
   inFolder: string = '.',
-  outFolder: string = '.'
+  outFolder: string = '.',
+  logger = { log: console.log }
 ) {
   const partMatch = !options.parts ? '%d' : '%0' + options.parts.toString().length + 'd'; // e.g. %04d - without zero padding use %d instead
   const optionsWithDefaults = {
@@ -58,7 +59,7 @@ export default async function stitchImages(
     '-an',
     optionsWithDefaults.outFile.toString(),
   ];
-  console.log('ffmpeg', ...args);
+  logger.log('ffmpeg', ...args);
   try {
     // for some reason ffmpeg needs to spit errors even if it produces a good result
     return await spawnPromisePrependStdErr('ffmpeg', args, { cwd });

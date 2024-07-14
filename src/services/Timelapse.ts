@@ -1,11 +1,30 @@
 import { inject, injectable } from '@joist/di';
 import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
-import stitchImages from '../lib/ffmpeg.js';
+import { stitchImages, StitchOptions } from '../lib/ffmpeg.js';
+import { Directory } from './FileSystem.js';
+
+/**
+ * Renders a video from a series of images with ffmpeg
+ */
+export class VideoRenderer {
+  async stitchImages(
+    name: string,
+    cwd: string,
+    options: StitchOptions = {},
+    inFolder: string = '.',
+    outFolder: string = '.',
+    logger = { log: console.log }
+  ) {
+    return stitchImages(name, cwd, options, inFolder, outFolder, logger);
+  }
+}
+
 @injectable
 export class Timelapse {
   #logger = inject(Logger);
   #cam = inject(Camera);
+  #renderer = inject(VideoRenderer);
 
   constructor(public count = 420, public intervalMS = 2000) {
     if (intervalMS < 1500) {
@@ -42,12 +61,10 @@ export class Timelapse {
 
   #intervalId: NodeJS.Timeout | undefined = undefined;
   #stopFlag = false;
-  async shoot(
-    { cwd, inFolder, outFolder }: { cwd: string; inFolder: string; outFolder: string },
-    onFile = (filename: string) => {}
-  ) {
+  async shoot(photoDir: Directory, videoDir: Directory, onFile = (filename: string) => {}) {
     const logger = this.#logger();
     const camera = this.#cam();
+    const renderer = this.#renderer();
 
     // manual interval capture (so libcamera won't crash beyond 370 frames)
     await new Promise<void>((resolve, reject) => {
@@ -68,10 +85,10 @@ export class Timelapse {
                 stop();
                 return resolve();
               }
-              camera.name = this.getFrameName(frame);
+              camera.name = photoDir.join(this.getFrameName(frame));
               logger.timeLog('timelapse', 'frame', frame, 'of', this.count);
               await camera.photo();
-              logger.timeLog('timelapse', 'frame', frame, 'captured');
+              logger.timeLog('timelapse', 'frame', camera.filename, 'captured');
               onFile(camera.filename);
 
               if (frame >= this.count) {
@@ -93,9 +110,17 @@ export class Timelapse {
       );
     });
 
-    await stitchImages(this.namePrefix, cwd, { parts: this.count }, inFolder, outFolder);
+    await renderer.stitchImages(
+      this.namePrefix,
+      videoDir.fs.cwd,
+      { parts: this.count },
+      photoDir.path,
+      videoDir.path,
+      logger
+    );
     return this.output;
   }
+
   stop() {
     this.#stopFlag = true;
     // shoot promise will still resolve (or reject)

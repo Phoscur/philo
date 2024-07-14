@@ -2,7 +2,6 @@ import { inject, injectable } from '@joist/di';
 import { Repository } from './Repository.js';
 import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
-import { CameraStub } from './CameraStub.js';
 import { Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
 import { FileSystem } from './FileSystem.js';
@@ -11,6 +10,8 @@ import { SunMoonTime } from './SunMoonTime.js';
 /**
  * In charge of directing captures and timelapses, and managing the repositories.
  * Holds the mutex to access the camera (TODO? move it to the camera service?).
+ *
+ * The director is busy orchestrating and NOT publishing (Telegram, Discord) or post-producing the content (on Github)
  */
 @injectable
 export class Director {
@@ -113,33 +114,21 @@ export class Director {
     onFile = (filename: string) => {},
     outFolder = this.repoTimelapseStitched
   ) {
-    const camera = this.#camera();
     const fs = this.#fs();
     const timelapse = this.#timelapse();
     const preset = this.#preset();
 
-    if (!(camera instanceof CameraStub)) {
-      console.log('stub', (camera as CameraStub).copyMode);
-      throw Error('stub?');
-    }
-
-    const dir =
+    const photoDir =
       presetName === 'sunset'
         ? await fs.createDirectory(this.repoSunset)
         : await fs.createDirectory(this.repoTimelapse);
+    const videoDir = await fs.createDirectory(outFolder);
 
     preset.setupPreset(presetName);
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
     timelapse.namePrefix = options.prefix || presetName;
-    return timelapse.shoot(
-      {
-        cwd: fs.cwd,
-        inFolder: dir.path,
-        outFolder,
-      },
-      onFile
-    );
+    return timelapse.shoot(photoDir, videoDir, onFile);
   }
 
   cancel() {
