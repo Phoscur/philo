@@ -1,9 +1,9 @@
 import { MiddlewareFn, Scenes, Markup, Telegraf } from 'telegraf';
 import type { Message, InlineKeyboardMarkup, InputMediaPhoto } from 'telegraf/types';
-import { Injector } from '@joist/di';
 import { PhiloContext, setupChatContext, setupContext } from './context.js';
-import { Assets, Director, Hardware, Preset, Producer } from './services/index.js';
+import { Assets, createInjector, Director, Hardware, Preset, Producer } from './services/index.js';
 import fancyCount from './lib/fancyCount.js';
+import { create } from 'domain';
 
 const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
 
@@ -21,7 +21,11 @@ const emojiButtons = [
   // 8 is max in a row, rather 7 for Telegram Desktop
 ];
 
-export function buildStage(bot: Telegraf<PhiloContext>, di: Injector) {
+/**
+ * Setup scene(s), Context with DI: Commands
+ */
+export function buildStage(bot: Telegraf<PhiloContext>) {
+  const di = createInjector();
   // storage and temperature do not have a scenes (yet)
   const scene = new Scenes.BaseScene<PhiloContext>('photo');
   // basic utility commands

@@ -1,4 +1,4 @@
-import { Injector } from '@joist/di';
+import { Provider } from '@joist/di';
 
 export class Logger {
   log(...args: any[]) {}
@@ -7,11 +7,9 @@ export class Logger {
   timeEnd(label?: string) {}
 }
 
-export const consoleInjector = new Injector([
-  {
-    provide: Logger,
-    factory(): Logger {
-      return console;
-    },
+export const consoleProvider: Provider<Logger> = {
+  provide: Logger,
+  factory(): Logger {
+    return console;
   },
-]);
+} as const;

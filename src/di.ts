@@ -22,37 +22,16 @@ class MyServiceStub extends MyService {
   sum() {
     return 1;
   }
-
-  demo = 2;
-}
-@injectable
-class UtilityService {
-  #service = inject(MyService);
-  ergo() {
-    return this.#service().sum();
-  }
-}
-
-@injectable
-class UtilService {
-  #service = inject(MyService);
-  ergo() {
-    return this.#service().sum();
-  }
 }
 
 @injectable
 class MyOtherService {
   #service = inject(MyService);
-  #utility = inject(UtilityService);
-  #util = inject(UtilService);
   constructor() {
     console.log('MyOtherService created');
   }
 
   async sum() {
-    this.#utility().ergo();
-    this.#util().ergo();
     return this.#service().sum();
   }
 }
@@ -62,11 +41,15 @@ const injector = new Injector([]);
 const myService = injector.get(MyOtherService);
 assert((await myService.sum()) === 42, 'unstubbed');
 
-const injectorStub = new Injector([{ provide: MyService, use: MyServiceStub }]);
+const injectorStub = new Injector(
+  [
+    { provide: MyService, use: MyServiceStub },
+    { provide: MyOtherService, use: MyOtherService },
+  ],
+  injector
+);
 
-const myStub = injectorStub.get(MyOtherService);
-const myStud = injectorStub.get(UtilityService);
-const myStudd = injectorStub.get(UtilService);
+const myStub = injectorStub.get(MyService);
+const myStud = injectorStub.get(MyOtherService);
 assert((await myStub.sum()) === 1, 'stubbed');
-assert(myStud.ergo() === 1, 'stubbed');
-assert(myStudd.ergo() === 1, 'stubbed');
+assert((await myStud.sum()) === 1, 'studded');

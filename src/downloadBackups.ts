@@ -1,8 +1,7 @@
-import { Injector } from '@joist/di';
-import { Logger, consoleInjector, Repository, Director } from './services/index.js';
+import { Logger, createInjector, Repository, Director } from './services/index.js';
 
 // defineEnvironment
-const injector = new Injector([], consoleInjector);
+const injector = createInjector();
 const logger = injector.get(Logger);
 const repo = injector.get(Repository);
 

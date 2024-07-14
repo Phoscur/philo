@@ -1,7 +1,7 @@
 import { defineEnvironment, Injector } from '@joist/di';
 import {
   Logger,
-  consoleInjector,
+  consoleProvider,
   Camera,
   CameraStub,
   Git,
@@ -16,15 +16,18 @@ const timelapseFile = 'timelapse.mp4';
 const outFolder = 'timelapse-test-output';
 
 defineEnvironment([]);
-const injector = new Injector(
-  [
-    {
-      provide: Camera,
-      factory: () => new CameraStub(),
+const injector = new Injector([
+  {
+    provide: Camera,
+    factory: () => new CameraStub(),
+  },
+  {
+    provide: Logger,
+    factory(): Logger {
+      return console;
     },
-  ],
-  consoleInjector
-);
+  },
+]);
 const camera = injector.get(Camera);
 (camera as CameraStub).copyMode = true;
 const director = injector.get(Director);

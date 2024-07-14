@@ -1,6 +1,5 @@
 import { Context, Telegraf, session } from 'telegraf';
 import { buildStage } from './photoStage.js';
-import { consoleInjector } from './services/index.js';
 import type { PhiloContext } from './context.js';
 
 const { TELEGRAM_TOKEN, GROUP_CHAT_ID } = process.env;
@@ -20,7 +19,7 @@ async function setupBot() {
     })
   );
 
-  bot.use(buildStage(bot, consoleInjector).middleware());
+  bot.use(buildStage(bot).middleware());
 
   bot.start((ctx) => {
     ctx.reply('Bot is ready!');
