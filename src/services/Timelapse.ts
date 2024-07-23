@@ -61,7 +61,11 @@ export class Timelapse {
 
   #intervalId: NodeJS.Timeout | undefined = undefined;
   #stopFlag = false;
-  async shoot(photoDir: Directory, videoDir: Directory, onFile = (filename: string) => {}) {
+  async shoot(
+    photoDir: Directory,
+    videoDir: Directory,
+    onFile = (filename: string, dir: Directory) => {}
+  ) {
     const logger = this.#logger();
     const camera = this.#cam();
     const renderer = this.#renderer();
@@ -85,11 +89,13 @@ export class Timelapse {
                 stop();
                 return resolve();
               }
-              camera.name = photoDir.join(this.getFrameName(frame));
+              const name = this.getFrameName(frame);
+              camera.name = photoDir.join(name);
               logger.timeLog('timelapse', 'frame', frame, 'of', this.count);
               await camera.photo();
               logger.timeLog('timelapse', 'frame', camera.filename, 'captured');
-              onFile(camera.filename);
+              camera.name = name; // remove folder from name after capture
+              onFile(camera.filename, photoDir);
 
               if (frame >= this.count) {
                 stop();

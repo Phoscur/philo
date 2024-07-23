@@ -4,7 +4,7 @@ import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
 import { Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
-import { FileSystem } from './FileSystem.js';
+import { Directory, FileSystem } from './FileSystem.js';
 import { SunMoonTime } from './SunMoonTime.js';
 
 /**
@@ -103,15 +103,14 @@ export class Director {
 
     return {
       filename,
-      // TODO use path instead?
-      source: dir.readStream(filename) as unknown as NodeJS.ReadableStream,
+      dir,
     };
   }
 
   async timelapse(
     presetName: string,
     options: { count: number; intervalMS: number; prefix?: string },
-    onFile = (filename: string) => {},
+    onFile = (filename: string, dir: Directory) => {},
     outFolder = this.repoTimelapseStitched
   ) {
     const fs = this.#fs();
@@ -128,7 +127,10 @@ export class Director {
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
     timelapse.namePrefix = options.prefix || presetName;
-    return timelapse.shoot(photoDir, videoDir, onFile);
+    return {
+      output: await timelapse.shoot(photoDir, videoDir, onFile),
+      dir: videoDir,
+    };
   }
 
   cancel() {
@@ -146,7 +148,11 @@ export class Director {
   }*/
 
   #sunsetTimeout: NodeJS.Timeout | undefined;
-  async scheduleSunset(onStart = () => {}, onEnd = () => {}) {
+  async scheduleSunset(
+    onStart = () => {},
+    onFile = (filename: string, dir: Directory) => {},
+    onEnd = (filename: string, dir: Directory) => {}
+  ) {
     if (!this.enableSunsetTimelapse) return;
     const logger = this.#logger();
     const sunMoon = this.#sunMoonTime();
@@ -170,24 +176,25 @@ export class Director {
         await this.setupPublicRepo(this.repoSunset);
         onStart();
         await sunMoon.sleep(messageDelayMS);
-        await this.timelapse(
+        const { output, dir } = await this.timelapse(
           'sunset',
           {
             count: this.dailySunsetFrameCount,
             intervalMS: this.dailySunsetTimelapseIntervalMS,
             prefix: 'sunset-timelapse',
           },
-          () => {
+          (filename, dir) => {
+            onFile(filename, dir);
             // TODO upload
           },
           this.repoSunsetStitched
         );
         // await this.enableAndWaitForPages();
+        onEnd(output, dir);
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);
       }
-      onEnd();
       this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS + rescheduleRepeatDelayMS);
     };
     this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS);

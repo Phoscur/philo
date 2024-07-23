@@ -67,17 +67,16 @@ async function lapse(count = 20, intervalMS = 2000) {
   //await fs.createDirectory(path);
   logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
   const photosFolder = director.repoTimelapse;
-  const outFolder = director.repoTimelapseStitched;
-  const output = await director.timelapse('default', {
+  const { output, dir } = await director.timelapse('default', {
     prefix: 'timelapse',
     count,
     intervalMS,
   });
-  logger.log('Capture finished', outFolder, output);
+  logger.log('Capture finished', dir.path, output);
 
   const images = await fs.dir(photosFolder).list();
-  const videos = await fs.dir(outFolder).list();
-  logger.log('Images:', photosFolder, images, 'Videos:', outFolder, videos);
+  const videos = await dir.list();
+  logger.log('Images:', photosFolder, images, 'Videos:', dir, videos);
 }
 
 async function still() {

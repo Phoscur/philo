@@ -1,5 +1,7 @@
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
+import { Input } from 'telegraf';
+import { InputFile } from 'telegraf/types';
 
 const ASSETS_FOLDER = 'assets';
 @injectable
@@ -13,23 +15,12 @@ export class Assets {
     public spinnerImagePath = 'cool-loading-animated-gif-3.gif'
   ) {}
 
-  get spinnerAnimation() {
-    const assets = this.#fs().dir(ASSETS_FOLDER);
-    return {
-      media: {
-        // telegraf also accepts a ReadStream as source
-        source: assets.readStream(this.spinnerImagePath) as unknown as NodeJS.ReadableStream,
-        filename: 'spinner.gif',
-      },
-      type: 'animation',
-    };
+  get randomImage(): InputFile | string {
+    return Input.fromURL(this.randomImageUrl);
   }
-  get randomImage() {
-    return {
-      media: {
-        url: this.randomImageUrl,
-      },
-      type: 'photo',
-    };
+
+  get telegramSpinner() {
+    const assets = this.#fs().dir(ASSETS_FOLDER);
+    return Input.fromLocalFile(assets.joinAbsolute(this.spinnerImagePath));
   }
 }

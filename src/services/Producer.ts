@@ -4,6 +4,7 @@ import { Hardware } from './Hardware.js';
 import { Logger } from './Logger.js';
 import { Assets } from './Assets.js';
 import type { ChatAnimationMessage, ChatMessenger } from '../context.js';
+import { Input } from 'telegraf';
 
 /**
  * Given (Telegram) messenger context, Producer will interact with the Director to stream content production.
@@ -16,21 +17,22 @@ export class Producer {
   #hd = inject(Hardware);
 
   async createAnimation(chat: ChatMessenger, caption?: string): Promise<ChatAnimationMessage> {
-    const assets = this.#assets();
-    const animation = assets.spinnerAnimation.media;
-    const message = await chat.createAnimation(animation, { caption });
+    const spinner = this.#assets().telegramSpinner;
+    const message = await chat.createAnimation(spinner, { caption });
     return message;
   }
 
   async shot(chat: ChatMessenger, presetName?: string) {
     const director = this.#director();
     const message = await this.createAnimation(chat, 'Taking a shot 🥃...');
-    const media = await director.photo(presetName ?? 'default');
-    await message.editMedia({ type: 'photo', media });
+    const { filename, dir } = await director.photo(presetName ?? 'default');
+    await message.editMedia({
+      type: 'photo',
+      media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+    });
     // await message.editCaption(director.prettyNow, markup); - use Markup here?
     return {
       message,
-      media,
       title: director.prettyNow,
     };
   }
@@ -50,17 +52,31 @@ export class Producer {
     const director = this.#director();
     await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
-    await director.timelapse(presetName ?? 'default', { count, intervalMS, prefix }, (filename) => {
-      (async () => {
-        try {
-          await message.editCaption(`Last Timelapse frame created: ${filename}`);
-          await message.editMedia({ type: 'animation', media: { url: filename } });
-        } catch (e) {
-          this.#logger().log('Failed to edit message:', e);
-        }
-      })();
+    const { output, dir } = await director.timelapse(
+      presetName ?? 'default',
+      { count, intervalMS, prefix },
+      (filename, dir) => {
+        (async () => {
+          try {
+            const caption = `Last Timelapse frame created: ${filename}`;
+            await message.editMedia({
+              type: 'photo',
+              caption,
+              media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+            });
+          } catch (e) {
+            this.#logger().log('Failed to edit message:', e);
+          }
+        })();
+      }
+    );
+    const caption = `[${dir.path}] Stitched: ${output}`;
+    this.#logger().log(caption);
+    await message.editMedia({
+      type: 'animation',
+      caption,
+      media: Input.fromLocalFile(dir.joinAbsolute(output)),
     });
-    // TODO post video
   }
 
   cancel() {
@@ -70,14 +86,47 @@ export class Producer {
 
   scheduleDailySunset(chat: ChatMessenger) {
     const director = this.#director();
+    let message: ChatAnimationMessage;
     director.scheduleSunset(
       async () => {
         // TODO? jic: await this.cancel()
         const hdStatus = await this.#hd().getStatus();
         chat.sendMessage(`🌇 Sunset is soon... Starting daily timelapse 🎥\n${hdStatus}`);
       },
-      () => {
-        this.#logger().log('Finished producing the daily timelapse.');
+      (filename, dir) => {
+        (async () => {
+          try {
+            if (!message) {
+              message = await this.createAnimation(chat);
+            }
+            const caption = `Last Timelapse frame created: ${filename}`;
+            await message.editMedia({
+              type: 'photo',
+              caption,
+              media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+            });
+          } catch (e) {
+            this.#logger().log('Failed to edit message:', e);
+          }
+        })();
+      },
+      (output, dir) => {
+        (async () => {
+          try {
+            if (!message) {
+              message = await this.createAnimation(chat);
+            }
+            const caption = `[${dir.path}] Stitched: ${output}`;
+            await message.editMedia({
+              type: 'animation',
+              caption,
+              media: Input.fromLocalFile(dir.joinAbsolute(output)),
+            });
+          } catch (e) {
+            this.#logger().log('Failed to edit message:', e);
+          }
+          this.#logger().log('Finished producing the daily timelapse.');
+        })();
       }
     );
   }

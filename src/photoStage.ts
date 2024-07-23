@@ -1,9 +1,16 @@
-import { MiddlewareFn, Scenes, Markup, Telegraf } from 'telegraf';
+import { MiddlewareFn, Scenes, Markup, Telegraf, Input } from 'telegraf';
 import type { Message, InlineKeyboardMarkup, InputMediaPhoto } from 'telegraf/types';
 import { PhiloContext, setupChatContext, setupContext } from './context.js';
-import { Assets, createInjector, Director, Hardware, Preset, Producer } from './services/index.js';
+import {
+  Assets,
+  createInjector,
+  Director,
+  Hardware,
+  Logger,
+  Preset,
+  Producer,
+} from './services/index.js';
 import fancyCount from './lib/fancyCount.js';
-import { create } from 'domain';
 
 const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
 
@@ -37,17 +44,15 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
   scene.command(['random', 'r'], (ctx) => {
     const assets = ctx.di.get(Assets);
-    ctx.replyWithPhoto(assets.randomImage.media);
+    ctx.replyWithPhoto(assets.randomImage);
   });
-  scene.command(['photo', 'p'], async (ctx) => {
+  scene.command(['preview', 'p'], async (ctx) => {
     const director = ctx.di.get(Director);
-    const photo = await director.photo('default');
-    if (photo) {
-      ctx.replyWithPhoto(photo);
-    }
+    const { filename, dir } = await director.photo('default');
+    ctx.replyWithPhoto(Input.fromLocalFile(dir.joinAbsolute(filename)));
   });
   scene.command(['animation', 'a'], (ctx) => {
-    ctx.replyWithAnimation(ctx.di.get(Assets).spinnerAnimation.media);
+    ctx.replyWithAnimation(ctx.di.get(Assets).telegramSpinner);
   });
 
   scene.command(['photo', 'options'], async function (ctx: PhiloContext) {
@@ -178,7 +183,8 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     }
     await ctx.answerCbQuery(`Selected ${name} 📷, updating...`);
     ctx.presetName = name;
-    const media = await director.photo(name);
+    const { filename, dir } = await director.photo(name);
+    const media = dir.joinAbsolute(filename);
 
     const { text, markup } = renderPresetSelect(ctx);
     await ctx.editMessageMedia({ type: 'photo', media });
@@ -200,16 +206,26 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
         await ctx.answerCbQuery(`Starting Timelapse now!`);
         await producer.timelapse(ctx.group, options);
       } catch (error) {
-        await ctx.answerCbQuery(`Failed timelapse: ${error}`);
+        ctx.di.get(Logger).log('Failed timelapse!', error);
+        await ctx.reply(`Failed timelapse: ${error}`);
       }
     };
   }
 
+  /* TODO? all prefixes
+    'timelapse',
+    'half-timelapse',
+    'third-timelapse',
+    'short-timelapse',
+    'super-short-timelapse'*/
   scene.action('timelapse', timelapseAction({ count: 420, intervalMS: 12000 }));
   scene.action('half-timelapse', timelapseAction({ count: 210, intervalMS: 12000 }));
   scene.action('third-timelapse', timelapseAction({ count: 140, intervalMS: 12000 }));
   scene.action('short-timelapse', timelapseAction({ count: 30, intervalMS: 12000 }));
-  scene.action('super-short-timelapse', timelapseAction({ count: 30, intervalMS: 2000 }));
+  scene.action(
+    'super-short-timelapse',
+    timelapseAction({ count: 14, intervalMS: 2000, prefix: 'super-short-timelapse' })
+  );
 
   // ---------------------------------------------------------------------------------------------------
   // Daily Schedule

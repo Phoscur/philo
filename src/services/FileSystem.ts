@@ -21,6 +21,10 @@ export class Directory {
     return join(this.path, name);
   }
 
+  joinAbsolute(name: string) {
+    return join(this.fs.cwd, this.path, name);
+  }
+
   async exists(name: string) {
     return this.fs.exists(join(this.path, name));
   }
