@@ -52,9 +52,10 @@ export class Producer {
     const director = this.#director();
     await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
+    const datePostfix = '-' + director.nameNow;
     const { output, dir } = await director.timelapse(
       presetName ?? 'default',
-      { count, intervalMS, prefix },
+      { count, intervalMS, prefix: prefix + datePostfix },
       (filename, dir) => {
         (async () => {
           try {

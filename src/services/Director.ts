@@ -40,34 +40,34 @@ export class Director {
     return date.toISOString().slice(0, 10);
   }
 
-  get prettyToday() {
+  get nameToday() {
     return Director.yyyymmdd(this.#time);
   }
 
   /** YYYY-MM slice from ISO */
-  get prettyMonth() {
+  get nameMonth() {
     return this.#time.toISOString().slice(0, 7);
   }
 
   /** YYYY-MM-DD--HH-mm date string */
-  get prettyNow() {
-    return `${this.prettyToday}--${this.#time.toISOString().slice(11, 16).replace(':', '-')}`;
+  get nameNow() {
+    return `${this.nameToday}--${this.#time.toISOString().slice(11, 16).replace(':', '-')}`;
   }
 
   get repoPhoto() {
     return `${this.repoPhotoPrefix}`;
   }
   get repoTimelapse() {
-    return `${this.repoTimelapsePrefix}-${this.prettyToday}`;
+    return `${this.repoTimelapsePrefix}-${this.nameToday}`;
   }
   get repoTimelapseStitched() {
-    return `${this.repoTimelapsePrefix}-${this.prettyMonth}`;
+    return `${this.repoTimelapsePrefix}-${this.nameMonth}`;
   }
   get repoSunset() {
-    return `${this.repoSunsetPrefix}-${this.prettyToday}`;
+    return `${this.repoSunsetPrefix}-${this.nameToday}`;
   }
   get repoSunsetStitched() {
-    return `${this.repoSunsetPrefix}-${this.prettyMonth}`;
+    return `${this.repoSunsetPrefix}-${this.nameMonth}`;
   }
 
   resetTime() {
@@ -96,7 +96,7 @@ export class Director {
     const dir = await fs.createDirectory(this.repoPhoto);
 
     preset.setupPreset(presetName);
-    camera.name = this.prettyNow;
+    camera.name = this.nameNow;
     const { filename } = camera;
     const co = await camera.photo(dir.join(filename));
     logger.log('Photo captured, libcamera output:\n- - -', co, '\n- - -');
@@ -126,7 +126,7 @@ export class Director {
     preset.setupPreset(presetName);
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
-    timelapse.namePrefix = options.prefix || presetName;
+    timelapse.namePrefix = options.prefix || presetName + this.nameNow;
     return {
       output: await timelapse.shoot(photoDir, videoDir, onFile),
       dir: videoDir,
@@ -181,7 +181,7 @@ export class Director {
           {
             count: this.dailySunsetFrameCount,
             intervalMS: this.dailySunsetTimelapseIntervalMS,
-            prefix: 'sunset-timelapse',
+            prefix: 'sunset-timelapse-' + this.nameNow,
           },
           (filename, dir) => {
             onFile(filename, dir);
