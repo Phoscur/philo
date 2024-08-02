@@ -1,3 +1,4 @@
+export * from './I18n.js';
 export * from './FileSystem.js';
 export * from './Git.js';
 export * from './Logger.js';

@@ -59,11 +59,9 @@ export class Preset {
   }
 
   printPreset(preset: StillOptions) {
-    const roi = preset.roi ? `Region of interest: ${preset.roi}` : '';
+    const roi = preset.roi ? `ROI: ${preset.roi}` : '';
     const widthAndHeight =
-      preset.width || preset.height
-        ? `Width: ${preset.width || '*'}, height: ${preset.height || '*'}`
-        : '';
+      preset.width || preset.height ? `${preset.width || '*'}x${preset.height || '*'}` : '';
     return `${roi}\n${widthAndHeight}`;
   }
 

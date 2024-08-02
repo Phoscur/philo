@@ -56,34 +56,14 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
 
   scene.command(['photo', 'options'], async function (ctx: PhiloContext) {
-    const presets = ctx.di.get(Preset);
     const producer = ctx.di.get(Producer);
-    const { message, title } = await producer.shot(ctx.group, ctx.presetName);
-    const text = `${title}\nSelected options: ${ctx.presetName} 📷\n${presets.printPreset(
-      presets.get(ctx.presetName)
-    )}`;
-    const markup = Markup.inlineKeyboard([
-      [Markup.button.callback('Single Shot 🥃', 'shot')],
-      [
-        Markup.button.callback('Timelapse now 🎥', 'timelapse'),
-        Markup.button.callback('Half 🎥', 'half-timelapse'),
-        Markup.button.callback('Third 🎥', 'third-timelapse'),
-      ],
-      [
-        Markup.button.callback('Short 🎥', 'short-timelapse'),
-        Markup.button.callback('Super Short 🎥', 'super-short-timelapse'),
-        //Markup.button.callback('Short delay 🎥', 'short-delayed-timelapse'),
-      ],
-      [Markup.button.callback('Switch Preset 📷', 'preset')],
-      // Markup.button.callback('Done', 'done'), TODO? delete preview message?
-    ]);
-    await message.editCaption(text, markup);
+    await producer.options(ctx.group, ctx.presetName);
   });
 
   scene.action('shot', async (ctx) => {
     await ctx.answerCbQuery('Taking image now...');
     const producer = ctx.di.get(Producer);
-    const { message, title } = await producer.shot(ctx.group, ctx.presetName);
+    const { message, name: title } = await producer.shot(ctx.group, ctx.presetName);
     // add share button (repost in CHANNEL_CHAT_ID with different caption)
     const markup = Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]);
     await message.editCaption(title, markup);
@@ -92,7 +72,6 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   scene.action('share', async (ctx, next) => {
     const { message } = ctx.callbackQuery;
     await ctx.answerCbQuery('Sharing to channel!');
-    console.log('Message', ctx.callbackQuery);
     if (!message) return next();
     if ('text' in message) return next();
     //if (!('photo' in message)) return next()
@@ -140,11 +119,11 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
       if (!~ADMINS.indexOf(user)) {
         return ctx.answerCbQuery(`Only Admins can cancel`);
       }
+      await ctx.answerCbQuery(`Cancelling!`);
       const canceling = ctx.di.get(Producer).cancel();
       if (canceling) {
         await canceling;
       }
-      await ctx.answerCbQuery(`Cancelled!`);
       await ctx.deleteMessage(message.message_id);
     } catch (error) {
       console.error('Failed to cancel', error);
@@ -168,7 +147,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     const producer = ctx.di.get(Producer);
 
     const { text, markup } = renderPresetSelect(ctx);
-    const { message, title } = await producer.shot(ctx.group, ctx.presetName);
+    const { message, name: title } = await producer.shot(ctx.group, ctx.presetName);
     await message.editCaption(`${title}\n${text}`, markup);
   });
 
