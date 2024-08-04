@@ -125,6 +125,9 @@ export class Producer {
             this.#logger().log('Failed to edit message:', e);
           }
         })();
+      },
+      (frame: string, fps: string) => {
+        this.#logger().log('Notify Frame:', frame, 'FPS:', fps);
       }
     );
     const caption = `[${dir.path}] Stitched: ${output}`;
@@ -142,15 +145,17 @@ export class Producer {
   }
 
   scheduleDailySunset(chat: ChatMessenger) {
+    const { t } = this.#i18n();
+    const logger = this.#logger();
     const director = this.#director();
-    let message: ChatAnimationMessage;
-    let title: string;
+    let message: ChatAnimationMessage | null = null;
+    let date: Date;
     director.scheduleSunset(
       async () => {
         // TODO? jic: await this.cancel()
         const hdStatus = await this.#hd().getStatus();
-        chat.sendMessage(`🌇 Sunset is soon... Starting daily timelapse 🎥\n${hdStatus}`);
-        title = this.getTitleNow();
+        chat.sendMessage(t('sunset.start', hdStatus));
+        date = new Date();
       },
       (filename, dir) => {
         (async () => {
@@ -158,35 +163,48 @@ export class Producer {
             if (!message) {
               message = await this.createAnimation(chat);
             }
-            const caption = `Last Timelapse frame created: ${filename}`;
-            await message.editMedia({
-              type: 'photo',
-              caption,
-              media: Input.fromLocalFile(dir.joinAbsolute(filename)),
-            });
-            await message.editCaption(caption, this.markupCancel);
+            const caption = t('timelapse.frameTaken', filename);
+            await message.editMedia(
+              {
+                type: 'photo',
+                caption,
+                media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+              },
+              this.markupCancel
+            );
           } catch (e) {
-            this.#logger().log('Failed to edit message:', e);
+            logger.log('Failed to edit message:', e);
+          }
+        })();
+      },
+      (frame, fps) => {
+        (async () => {
+          try {
+            const caption = t('timelapse.frameRendered', frame, fps);
+            await message?.editCaption(caption);
+          } catch (e) {
+            logger.log('Failed to edit message:', e);
           }
         })();
       },
       (output, dir) => {
         (async () => {
           try {
-            if (!message) {
-              message = await this.createAnimation(chat);
-            }
-            const caption = `[${dir.path}] Stitched: ${output}`;
-            await message.editMedia({
-              type: 'animation',
-              caption,
-              media: Input.fromLocalFile(dir.joinAbsolute(output)),
-            });
-            await message.editCaption(title, this.markupShare);
+            logger.log(`[${dir.path}] Stitched: ${output}`);
+            const caption = t('sunset.title', date);
+            await message?.editMedia(
+              {
+                type: 'animation',
+                caption,
+                media: Input.fromLocalFile(dir.joinAbsolute(output)),
+              },
+              this.markupShare
+            );
           } catch (e) {
-            this.#logger().log('Failed to edit message:', e);
+            logger.log('Failed to edit message:', e);
           }
-          this.#logger().log('Finished producing the daily timelapse.');
+          logger.log('Finished producing the daily timelapse.');
+          message = null;
         })();
       }
     );

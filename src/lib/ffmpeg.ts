@@ -14,6 +14,7 @@ export async function stitchImages(
   options: StitchOptions = {},
   inFolder: string = '.',
   outFolder: string = '.',
+  onStatus = (frame: string, fps: string) => {},
   logger = { log: console.log }
 ) {
   const partMatch = !options.parts ? '%d' : '%0' + options.parts.toString().length + 'd'; // e.g. %04d - without zero padding use %d instead
@@ -62,11 +63,29 @@ export async function stitchImages(
   logger.log('ffmpeg', ...args);
   try {
     // for some reason ffmpeg needs to spit errors even if it produces a good result
-    return await spawnPromisePrependStdErr('ffmpeg', args, { cwd });
+    return await spawnPromisePrependStdErr('ffmpeg', args, { cwd }, onStatus);
   } catch (err: any) {
     if (err && err.code === 'ENOENT') {
       throw new Error(`Could not stitch images [${name}*.jpg] with ffmpeg, is it installed?`);
     }
     throw err;
   }
+}
+
+// TODO refactor spawn promise - fix this test?
+if (import.meta.url.endsWith(process.argv[1])) {
+  // ffmpeg -framerate 18 -i sunset-2024-08-04/sunset-timelapse-2024-08-04--14-21-%02d.jpg -vf crop=iw-216:ih-628,scale=1920:1200 -c:v libx264 -crf 28 -an sunset-2024-08/sunset-timelapse-2024-08-04--14-21.mp4
+  stitchImages(
+    'sunset-timelapse-2024-08-04--14-21',
+    process.cwd(),
+    {
+      parts: 40,
+    },
+    'sunset-2024-08-04'
+  )
+    .then((message) => {
+      console.log(message);
+    })
+    // reports [Error: failed to read sensor] when the sensor is not connected
+    .catch(console.error);
 }

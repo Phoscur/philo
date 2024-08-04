@@ -111,6 +111,7 @@ export class Director {
     presetName: string,
     options: { count: number; intervalMS: number; prefix?: string },
     onFile = (filename: string, dir: Directory) => {},
+    onData = (frame: string, fps: string) => {},
     outFolder = this.repoTimelapseStitched
   ) {
     const fs = this.#fs();
@@ -128,7 +129,7 @@ export class Director {
     timelapse.intervalMS = options.intervalMS;
     timelapse.namePrefix = options.prefix || presetName + this.nameNow;
     return {
-      output: await timelapse.shoot(photoDir, videoDir, onFile),
+      output: await timelapse.shoot(photoDir, videoDir, onFile, onData),
       dir: videoDir,
     };
   }
@@ -151,6 +152,7 @@ export class Director {
   async scheduleSunset(
     onStart = () => {},
     onFile = (filename: string, dir: Directory) => {},
+    onData = (frame: string, fps: string) => {},
     onEnd = (filename: string, dir: Directory) => {}
   ) {
     if (!this.enableSunsetTimelapse) return;
@@ -187,6 +189,7 @@ export class Director {
             onFile(filename, dir);
             // TODO upload
           },
+          onData,
           this.repoSunsetStitched
         );
         // await this.enableAndWaitForPages();

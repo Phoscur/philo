@@ -14,9 +14,10 @@ export class VideoRenderer {
     options: StitchOptions = {},
     inFolder: string = '.',
     outFolder: string = '.',
+    onData = (frame: string, fps: string) => {},
     logger = { log: console.log }
   ) {
-    return stitchImages(name, cwd, options, inFolder, outFolder, logger);
+    return stitchImages(name, cwd, options, inFolder, outFolder, onData, logger);
   }
 }
 
@@ -64,7 +65,8 @@ export class Timelapse {
   async shoot(
     photoDir: Directory,
     videoDir: Directory,
-    onFile = (filename: string, dir: Directory) => {}
+    onFile = (filename: string, dir: Directory) => {},
+    onData = (frameProcessed: string, fps: string) => {}
   ) {
     const logger = this.#logger();
     const camera = this.#cam();
@@ -122,6 +124,7 @@ export class Timelapse {
       { parts: this.count },
       photoDir.path,
       videoDir.path,
+      onData,
       logger
     );
     return this.output;

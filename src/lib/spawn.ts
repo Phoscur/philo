@@ -46,7 +46,8 @@ export const spawnPromise = (command: string, args?: Array<string>, options?: Sp
 export const spawnPromisePrependStdErr = (
   command: string,
   args?: Array<string>,
-  options?: SpawnOptions
+  options?: SpawnOptions,
+  onData = (frame: string, fps: string) => {}
 ) =>
   new Promise<Buffer>((resolve, reject) => {
     const childProcess = spawn(command, args ?? [], options ?? {});
@@ -66,7 +67,7 @@ export const spawnPromisePrependStdErr = (
 
     childProcess.stdout.on('data', (data: Buffer) => {
       stdoutData = Buffer.concat([stdoutData, data]);
-      console.log('[ffmpeg]', stdoutData.toString());
+      console.log('[ffmpeg]', data.toString());
     });
     childProcess.once('error', (err: Error) => {
       console.error('CMD failed', command, err);
@@ -74,7 +75,14 @@ export const spawnPromisePrependStdErr = (
     });
     childProcess.stderr.on('data', (data: Buffer) => {
       stderrData = Buffer.concat([stderrData, data]);
-      console.warn(stderrData.toString());
+      const str = data.toString();
+      console.log('[ffmpeg err]', str);
+      const pattern = /frame=[ ]*([0-9]+) fps=(([0-9]*[.])?[0-9]+)/g;
+      const match = pattern.exec(str);
+      if (match) {
+        const [_, frame, fps] = match;
+        onData(frame, fps);
+      }
     });
     childProcess.stderr.once('error', (err: Error) => {
       console.log(

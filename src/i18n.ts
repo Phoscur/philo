@@ -36,20 +36,40 @@ type BasicIndex = (typeof base)[typeof defaultLang];
 type BasicEntry = keyof BasicIndex;
 export type SlottedTranslate = (index: BasicIndex, ...args: BasicEntry[]) => string;
 
+function dateFormat(d: Date) {
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
+}
+
 const composite = {
   // requires the BasicIndex to be fully translated to compose!
   en: {
     greet: (t: BasicIndex, name: string) => `Hey ${name}`,
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nSelected options: ${presetName} 📷\n${presetText}`,
-    titleDate: (t: BasicIndex, d = new Date()) =>
-      `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`,
+    'storage.status': (t: BasicIndex, size: string, percent: string) =>
+      `Storage (${size}): ${percent}`,
+    'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
+      `Last Timelapse frame created: ${filename}`,
+    'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
+      `Rendered Frames ${frame} (${fps} FPS)`,
+    'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
+      `🌇 Sunset is soon...\n🎥 Starting daily timelapse\n💾 ${hardwareStatus}`,
+    'sunset.title': (t: BasicIndex, d = new Date()) => '🌇 ' + dateFormat(d),
+    'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
   de: {
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nKamera Voreinstellung: ${presetName} 📷\n${presetText}`,
-    titleDate: (t: BasicIndex, d = new Date()) =>
-      `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`,
+    'storage.status': (t: BasicIndex, size: string, percent: string) =>
+      `Speicherplatz (${size}): ${percent}`,
+    'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
+      `Letztes aufgenommenes Bild: ${filename}`,
+    'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
+      `Gerenderte Videobilder ${frame} (${fps} FPS)`,
+    'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
+      `🌇 Sonnenuntergang ist schon bald...\n🎥 Starte den täglichen Zeitraffer \n💾 ${hardwareStatus}`,
+    'sunset.title': (t: BasicIndex, d = new Date()) => `🌇 ${dateFormat(d)}\n`,
+    'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
 } as const;
 
