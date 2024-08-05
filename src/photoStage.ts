@@ -191,20 +191,15 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     };
   }
 
-  /* TODO? all prefixes
-    'timelapse',
-    'half-timelapse',
-    'third-timelapse',
-    'short-timelapse',
-    'super-short-timelapse'*/
-  scene.action('timelapse', timelapseAction({ count: 420, intervalMS: 12000 }));
-  scene.action('half-timelapse', timelapseAction({ count: 210, intervalMS: 12000 }));
-  scene.action('third-timelapse', timelapseAction({ count: 140, intervalMS: 12000 }));
-  scene.action('short-timelapse', timelapseAction({ count: 30, intervalMS: 12000 }));
-  scene.action(
-    'super-short-timelapse',
-    timelapseAction({ count: 14, intervalMS: 2000, prefix: 'super-short-timelapse' })
-  );
+  for (const setting of [
+    { count: 420, intervalMS: 12000, prefix: 'timelapse' },
+    { count: 210, intervalMS: 12000, prefix: 'timelapse-half' },
+    { count: 140, intervalMS: 12000, prefix: 'timelapse-third' },
+    { count: 30, intervalMS: 2000, prefix: 'timelapse-short' },
+    { count: 14, intervalMS: 2000, prefix: 'timelapse-super-short' },
+  ]) {
+    scene.action(setting.prefix, timelapseAction(setting));
+  }
 
   // ---------------------------------------------------------------------------------------------------
   // Daily Schedule

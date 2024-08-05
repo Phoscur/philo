@@ -14,12 +14,10 @@ Photo & Timelapse Telegram Bot
 
 ### TODO
 
+- compress (zip?) before glacier upload
+
 Fix regressions, lost features:
 
-- Likes
-- Preview while running
-- Misc commands: Cancel?!
-- Local FFMpeg when Github disabled
 - Glacier Backup
 - Check/Retry Github Upload
 - Destructive Rotation

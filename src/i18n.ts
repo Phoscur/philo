@@ -15,7 +15,7 @@ const base = {
     'action.timelapse-short': 'Short 🎥',
     'action.timelapse-super-short': 'Super Short 🎥',
     'action.shareToChannel': 'Share via Channel 📢',
-    'action.cancel': 'Cancel',
+    'action.cancel': 'Cancel ❌',
     'animation.takingShot': 'Taking a shot 🥃...',
   },
   de: {
@@ -27,7 +27,7 @@ const base = {
     'action.timelapse-short': 'Kurz 🎥',
     'action.timelapse-super-short': 'Super Kurz 🎥',
     'action.shareToChannel': 'Teilen via Channel 📢',
-    'action.cancel': 'Abbrechen',
+    'action.cancel': 'Abbrechen ❌',
     'animation.takingShot': 'Ein Schuss 🥃...',
   },
 } as const;
@@ -47,28 +47,30 @@ const composite = {
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nSelected options: ${presetName} 📷\n${presetText}`,
     'storage.status': (t: BasicIndex, size: string, percent: string) =>
-      `Storage (${size}): ${percent}`,
+      `💾 Storage (${size}): ${percent}`,
     'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
-      `Last Timelapse frame created: ${filename}`,
+      `📷 Last Timelapse frame created:\n${filename}`,
     'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
-      `Rendered Frames ${frame} (${fps} FPS)`,
+      `🎞️ Rendered Frames ${frame} (${fps} FPS)`,
     'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
-      `🌇 Sunset is soon...\n🎥 Starting daily timelapse\n💾 ${hardwareStatus}`,
-    'sunset.title': (t: BasicIndex, d = new Date()) => '🌇 ' + dateFormat(d),
+      `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\n${hardwareStatus}`,
+    'sunset.title': (t: BasicIndex, d = new Date()) => `🌇 ${dateFormat(d)}\n`,
+    'timelapse.title': (t: BasicIndex, d = new Date()) => `🎥 ${dateFormat(d)}\n`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
   de: {
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nKamera Voreinstellung: ${presetName} 📷\n${presetText}`,
     'storage.status': (t: BasicIndex, size: string, percent: string) =>
-      `Speicherplatz (${size}): ${percent}`,
+      `💾 Speicherplatz (${size}): ${percent}`,
     'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
-      `Letztes aufgenommenes Bild: ${filename}`,
+      `📷 Letztes aufgenommenes Bild:\n${filename}`,
     'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
-      `Gerenderte Videobilder ${frame} (${fps} FPS)`,
+      `🎞️ Gerenderte Videobilder ${frame} (${fps} FPS)`,
     'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
-      `🌇 Sonnenuntergang ist schon bald...\n🎥 Starte den täglichen Zeitraffer \n💾 ${hardwareStatus}`,
+      `🌇 Sonnenuntergang ist schon bald...\n⤵️ Starte den täglichen Zeitraffer 🎥\n${hardwareStatus}`,
     'sunset.title': (t: BasicIndex, d = new Date()) => `🌇 ${dateFormat(d)}\n`,
+    'timelapse.title': (t: BasicIndex, d = new Date()) => `🎥 ${dateFormat(d)}\n`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
 } as const;

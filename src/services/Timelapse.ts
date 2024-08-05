@@ -72,23 +72,20 @@ export class Timelapse {
     const camera = this.#cam();
     const renderer = this.#renderer();
 
+    this.#stopFlag = false;
+
     // manual interval capture (so libcamera won't crash beyond 370 frames)
     await new Promise<void>((resolve, reject) => {
       logger.time('timelapse');
       logger.timeLog('timelapse', 'Start with options:\n', this.prettyOptions);
       let frame = 1;
       let errors = 0;
-      const stop = () => {
-        logger.timeEnd('timelapse');
-        clearInterval(this.#intervalId);
-        this.#stopFlag = false;
-      };
       this.#intervalId = setInterval(
         () =>
           (async () => {
             try {
               if (this.#stopFlag) {
-                stop();
+                clearInterval(this.#intervalId);
                 return resolve();
               }
               const name = this.getFrameName(frame);
@@ -97,10 +94,14 @@ export class Timelapse {
               await camera.photo();
               logger.timeLog('timelapse', 'frame', camera.filename, 'captured');
               camera.name = name; // remove folder from name after capture
+              if (this.#stopFlag) {
+                clearInterval(this.#intervalId);
+                return resolve();
+              }
               onFile(camera.filename, photoDir);
 
               if (frame >= this.count) {
-                stop();
+                clearInterval(this.#intervalId);
                 return resolve();
               }
               frame++;
@@ -109,7 +110,7 @@ export class Timelapse {
               logger.log(`Frame [${frame}] Error: ${error?.message}`);
               if (errors > 3) {
                 logger.log('Too many errors, stopped timelapse!');
-                stop();
+                clearInterval(this.#intervalId);
                 reject(error);
               }
             }
@@ -117,6 +118,11 @@ export class Timelapse {
         this.intervalMS
       );
     });
+
+    if (this.#stopFlag) {
+      logger.timeEnd('timelapse');
+      return 'CANCELED';
+    }
 
     await renderer.stitchImages(
       this.namePrefix,

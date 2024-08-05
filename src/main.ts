@@ -33,6 +33,7 @@ async function setupBot() {
     console.error('Bot ERROR', error);
   }); //*/
 
+  await bot.telegram.getMe();
   bot.launch();
 
   // Enable graceful stop

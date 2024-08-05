@@ -41,7 +41,7 @@ export async function readTemperatureSensor(): Promise<SensorResults> {
 
 export async function getTemperatureHumidityMessage() {
   const { temperature, humidity } = await readTemperatureSensor();
-  return `Current temperature: ${temperature}°C, humidity: ${humidity}%`;
+  return `🌡️ ${temperature}°C, 💦 ${humidity}%`;
 }
 
 if (import.meta.url.endsWith(process.argv[1])) {

@@ -32,12 +32,12 @@ export class Producer {
       [Markup.button.callback(t('action.shotSingle'), 'shot')],
       [
         Markup.button.callback(t('action.timelapse'), 'timelapse'),
-        Markup.button.callback(t('action.timelapse-half'), 'half-timelapse'),
-        Markup.button.callback(t('action.timelapse-third'), 'third-timelapse'),
+        Markup.button.callback(t('action.timelapse-half'), 'timelapse-half'),
+        Markup.button.callback(t('action.timelapse-third'), 'timelapse-third'),
       ],
       [
-        Markup.button.callback(t('action.timelapse-short'), 'short-timelapse'),
-        Markup.button.callback(t('action.timelapse-super-short'), 'super-short-timelapse'),
+        Markup.button.callback(t('action.timelapse-short'), 'timelapse-short'),
+        Markup.button.callback(t('action.timelapse-super-short'), 'timelapse-super-short'),
       ],
       [Markup.button.callback(t('action.presetSwitch'), 'preset')],
     ]);
@@ -105,9 +105,12 @@ export class Producer {
       intervalMS: 2000,
     }
   ) {
+    const { t } = this.#i18n();
+    const logger = this.#logger();
     const director = this.#director();
     await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
+    const date = new Date();
     const datePostfix = '-' + director.nameNow;
     const { output, dir } = await director.timelapse(
       presetName ?? 'default',
@@ -115,23 +118,36 @@ export class Producer {
       (filename, dir) => {
         (async () => {
           try {
-            const caption = `Last Timelapse frame created: ${filename}`;
-            await message.editMedia({
-              type: 'photo',
-              caption,
-              media: Input.fromLocalFile(dir.joinAbsolute(filename)),
-            });
+            const caption = t('timelapse.frameTaken', filename);
+            await message.editMedia(
+              {
+                type: 'photo',
+                caption,
+                media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+              },
+              this.markupCancel
+            );
           } catch (e) {
-            this.#logger().log('Failed to edit message:', e);
+            logger.log('Failed to edit message:', e);
           }
         })();
       },
       (frame: string, fps: string) => {
-        this.#logger().log('Notify Frame:', frame, 'FPS:', fps);
+        (async () => {
+          try {
+            const caption = t('timelapse.frameRendered', frame, fps);
+            await message.editCaption(caption);
+          } catch (e) {
+            logger.log('Failed to edit message:', e);
+          }
+        })();
       }
     );
-    const caption = `[${dir.path}] Stitched: ${output}`;
-    this.#logger().log(caption);
+    if (output === 'CANCELED') {
+      return;
+    }
+    const caption = t('timelapse.title', date);
+    logger.log(`[${dir.path}] Stitched: ${output}`);
     await message.editMedia({
       type: 'animation',
       caption,
@@ -189,6 +205,10 @@ export class Producer {
       },
       (output, dir) => {
         (async () => {
+          if (output === 'CANCELED') {
+            message = null;
+            return;
+          }
           try {
             logger.log(`[${dir.path}] Stitched: ${output}`);
             const caption = t('sunset.title', date);
