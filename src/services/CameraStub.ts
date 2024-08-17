@@ -59,9 +59,10 @@ export class CameraStub extends Camera {
   async photo(output = this.filename) {
     if (this.copyMode) {
       await this.dir.copyFile(exampleStream.next().value, output);
-      return;
+      return output;
     }
     await this.dir.save(output, jpegSignature);
+    return output;
   }
 
   /*getTimelapseName() {

@@ -37,15 +37,19 @@ I've failed to use this to make captures with more than 370 frames on my Raspber
 
 ## Dependencies
 
-Install nodejs and ffmpeg
+On Debian (Bullseye),
+install nodejs (with Node Version Manager) and ffmpeg
+
+Test `libcamera-still` commands, if necessary edit the `dtoverlay` setting, e.g.
+
+> sudo nano /boot/firmware/config.txt
 
 ```sh
 sudo apt-get update
 sudo apt-get install ffmpeg -y
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
-nvm install 16
-nvm use 16
-npm i -g pm2
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+nvm install --lts
+npm i -g pm2 tsx
 ```
 
 I don't know if there is a copyright on it, I just liked the [loading animation](https://smashinghub.com/10-cool-loading-animated-gif.htm) a lot.

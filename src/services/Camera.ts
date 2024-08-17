@@ -32,5 +32,6 @@ export class Camera {
     this.#mutex = camera.takeImage();
     await this.#mutex;
     this.#mutex = false;
+    return output;
   }
 }
