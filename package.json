@@ -38,6 +38,7 @@
     "@aws-sdk/client-glacier": "^3.637.0",
     "@joist/di": "^3.9.1",
     "@octokit/rest": "^21.0.2",
+    "archiver": "^7.0.1",
     "axios": "^1.7.5",
     "discord.js": "^14.15.3",
     "isomorphic-git": "^1.27.1",
@@ -49,6 +50,7 @@
     "node-dht-sensor": "^0.4.3"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.2",
     "@types/libsodium-wrappers": "^0.7.14",
     "@types/node": "^22.5.1",
     "@types/node-dht-sensor": "^0.4.2",

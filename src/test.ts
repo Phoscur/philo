@@ -1,5 +1,6 @@
 import {
   Logger,
+  Archiver,
   createInjector,
   Camera,
   CameraStub,
@@ -26,6 +27,7 @@ const git = injector.get(Git);
 const logger = injector.get(Logger);
 const fs = injector.get(FileSystem);
 const repo = injector.get(Repository);
+const archiver = injector.get(Archiver);
 
 async function upload() {
   /*const isNew = await fs.setupPath(repoName)
@@ -63,6 +65,24 @@ async function upload() {
   console.timeEnd('githubrender');
 }
 
+async function backup() {
+  const directory = await fs.createDirectory(repoName);
+  const targetDirectory = await fs.createDirectory('data-archive');
+  const date = new Date().toISOString().split('T')[0];
+  const outputFilePath = targetDirectory.join(`images.tar.gz`);
+
+  try {
+    console.log('Compressing', directory.path);
+    await archiver.compressFolder(directory.path, outputFilePath);
+    console.log('Folder compressed successfully.');
+
+    //const vaultName = 'your-glacier-vault';
+    //await uploadToGlacier(vaultName, outputFilePath);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
 async function lapse(count = 20, intervalMS = 2000) {
   //await fs.createDirectory(path);
   logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
@@ -93,6 +113,8 @@ async function still() {
 
 if (process.argv.includes('upload')) {
   upload();
+} else if (process.argv.includes('backup')) {
+  backup();
 } else if (process.argv.includes('lapse')) {
   const intervalMS = useNoStub ? 3000 : 200;
   lapse(10, intervalMS);
