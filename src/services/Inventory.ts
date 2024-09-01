@@ -2,33 +2,33 @@ import { inject, injectable } from '@joist/di';
 import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
 
-interface Entry {
-  vault?: string;
-  files: string[];
-}
-
+const INVENTORY_SCHEMA_VERSION = 1;
 interface InventoryIndex {
-  [folder: string]: Entry;
+  [folder: string]: string[];
+  /* refs previous version (0):
+  [folder: string]: { vault?: string, files: string[] };
+  */
 }
 
 interface MediaIndex {
   name: string;
+  version: number;
+  vault?: string;
   media: InventoryIndex;
   raw: InventoryIndex;
 }
 
-function newMediaIndex(name: string): MediaIndex {
+function newMediaIndex(
+  name: string,
+  vault?: string,
+  version = INVENTORY_SCHEMA_VERSION
+): MediaIndex {
   return {
     name,
+    version,
+    vault,
     media: {},
     raw: {},
-  };
-}
-
-function newEntry(vault?: string): Entry {
-  return {
-    vault,
-    files: [],
   };
 }
 
@@ -39,6 +39,7 @@ class Inventory {
      */
     readonly directory: Directory,
     readonly logger: Logger,
+    readonly fileName: string,
     private mediaIndex: MediaIndex = newMediaIndex('initial')
   ) {}
 
@@ -46,49 +47,53 @@ class Inventory {
     const { raw } = this.mediaIndex;
     const output: Record<string, number> = {};
     for (const folder in raw) {
-      output[folder] = raw[folder].files.length;
+      output[folder] = raw[folder].length;
     }
     return JSON.stringify(output, null, 2);
   }
 
-  async addRaw(folder: string, name: string, vault?: string) {
+  async addRaw(folder: string, name: string) {
     if (!this.mediaIndex.raw[folder]) {
-      this.mediaIndex.raw[folder] = newEntry(vault);
+      this.mediaIndex.raw[folder] = [];
     }
-    this.mediaIndex.raw[folder].files.push(name);
+    this.mediaIndex.raw[folder].push(name);
     await this.writeIndex();
   }
 
-  async addMedia(folder: string, name: string, vault?: string) {
+  async addMedia(folder: string, name: string) {
     if (!this.mediaIndex.media[folder]) {
-      this.mediaIndex.media[folder] = newEntry(vault);
+      this.mediaIndex.media[folder] = [];
     }
-    this.mediaIndex.media[folder].files.push(name);
+    this.mediaIndex.media[folder].push(name);
     await this.writeIndex();
   }
 
   private async writeIndex() {
-    const fileName = InventoryStorage.INVENTORY_JSON_FILE;
     await this.directory.save(
-      fileName,
+      this.fileName,
       Buffer.from(JSON.stringify(this.mediaIndex, null, 2), 'utf8')
     );
   }
 
   async readIndex(): Promise<MediaIndex> {
-    const { logger, directory } = this;
-    const fileName = InventoryStorage.INVENTORY_JSON_FILE;
+    const { logger, directory, fileName } = this;
     try {
       const inv = await directory.read(fileName);
       logger.log(`[Inventory: ${fileName}] Loaded!`);
-      return (this.mediaIndex = JSON.parse(inv.toString()) as MediaIndex);
+      this.mediaIndex = JSON.parse(inv.toString()) as MediaIndex;
     } catch (error: any) {
-      if ('ENOENT' === error.code) {
-        logger.log(`[Inventory: ${fileName}}] Non-existend, creating new inventory.`);
-        return (this.mediaIndex = newMediaIndex(fileName));
+      if ('ENOENT' !== error.code) {
+        throw error;
       }
-      throw error;
+      logger.log(`[Inventory: ${fileName}}] Non-existend, creating new inventory.`);
+      this.mediaIndex = newMediaIndex(fileName);
     }
+    if (INVENTORY_SCHEMA_VERSION !== this.mediaIndex.version) {
+      throw new Error(
+        `Parsing inventory schema version [${this.mediaIndex.version}] is not supported - current version [${INVENTORY_SCHEMA_VERSION}]`
+      );
+    }
+    return this.mediaIndex;
   }
 }
 
@@ -97,18 +102,18 @@ class Inventory {
  */
 @injectable
 export class InventoryStorage {
-  static INVENTORY_JSON_FILE = 'inventory.json';
   #fs = inject(FileSystem);
   #logger = inject(Logger);
 
   constructor(readonly folderName = `${process.env.FOLDER_INVENTORY}`) {}
 
-  async loadOrCreate(path: string) {
+  async loadOrCreate(fileName = 'inventory.json') {
     const fs = this.#fs();
     const logger = this.#logger();
 
+    const path = this.folderName;
     const directory = await fs.createDirectory(path);
-    const inventory = new Inventory(directory, logger);
+    const inventory = new Inventory(directory, logger, fileName);
     const mediaIndex = await inventory.readIndex();
     logger.log(
       `[Inventory: ${path}] Inventory loaded with ${Object.keys(mediaIndex.media).length} entries`
