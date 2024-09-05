@@ -73,7 +73,7 @@ export class Timelapse {
 
   #intervalId: NodeJS.Timeout | undefined = undefined;
   #intervalAbortController: AbortController | undefined = undefined;
-  shoot(photoDir: Directory, videoDir: Directory, sleepMS = 0) {
+  shoot(photoDir: Directory, videoDir: Directory, sleepMS = 0, stitch = true) {
     const logger = this.#logger();
     const camera = this.#cam();
     const renderer = this.#renderer();
@@ -126,6 +126,10 @@ export class Timelapse {
       events.emit('started');
       this.#intervalId = setInterval(intervalCapture, this.intervalMS);
     }, sleepMS);
+
+    if (!stitch) {
+      return events;
+    }
 
     events.once('captured', async () => {
       try {

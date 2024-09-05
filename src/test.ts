@@ -51,18 +51,20 @@ async function upload() {
 
   timelapse.count = 3 * 18; // 3-5 times framerate
   timelapse.intervalMS = 2000;
-  await timelapse.shoot(photoDir, videoDir, (filename: string) => {
+  const events = timelapse.shoot(photoDir, videoDir, 0, false);
+  events.on('file', (filename: string) => {
     console.log('captured frame', filename);
   });
-  console.timeEnd('timelapse');
-  console.time('githubrender');
-  await r.makeTimelapsePage();
-  console.timeLog('githubrender', 'actions added');
-  logger.log('Added GH Timelapse Action! Waiting 10s ...');
-  await new Promise((r) => setTimeout(r, 10000));
+  events.on('captured', async () => {
+    console.time('githubrender');
+    await r.makeTimelapsePage();
+    console.timeLog('githubrender', 'actions added');
+    logger.log('Added GH Timelapse Action! Waiting 10s ...');
+    await new Promise((r) => setTimeout(r, 10000));
 
-  await r.enablePages(60);
-  console.timeEnd('githubrender');
+    await r.enablePages(60);
+    console.timeEnd('githubrender');
+  });
 }
 
 async function backup() {
@@ -87,16 +89,18 @@ async function lapse(count = 20, intervalMS = 2000) {
   //await fs.createDirectory(path);
   logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
   const photosFolder = director.repoTimelapse;
-  const { output, dir } = await director.timelapse('default', {
+  const events = await director.timelapse('default', {
     prefix: 'timelapse',
     count,
     intervalMS,
   });
-  logger.log('Capture finished', dir.path, output);
+  events.once('rendered', async (output, dir) => {
+    logger.log('Capture finished', dir.path, output);
 
-  const images = await fs.dir(photosFolder).list();
-  const videos = await dir.list();
-  logger.log('Images:', photosFolder, images, 'Videos:', dir, videos);
+    const images = await fs.dir(photosFolder).list();
+    const videos = await dir.list();
+    logger.log('Images:', photosFolder, images, 'Videos:', dir, videos);
+  });
 }
 
 async function still() {
