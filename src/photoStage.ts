@@ -17,13 +17,13 @@ const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
 const DAILY = process.env.ENABLE_DAILY_TIMELAPSE_SUNSET === 'true';
 
 const emojiButtons = [
-  Markup.button.callback('❤️', 'like-❤️'), // like
-  Markup.button.callback('💙', 'like-💙'), // uncloudy
+  Markup.button.callback('❤️', 'like-❤️'), // like ⭐🌟❤️‍🔥
+  Markup.button.callback('💙', 'like-💙'), // uncloudy ☀️🌞🌝🌙🌚🌛🌜🌃 🌑🌒🌓🌔🌕🌖🌗🌘
   Markup.button.callback('💚', 'like-💚'), // ?
   Markup.button.callback('💜', 'like-💜'), // colorful
   Markup.button.callback('💖', 'like-💖'), // brilliant
   Markup.button.callback('💗', 'like-💗'), // nice
-  Markup.button.callback('🤍', 'like-🤍'), // cloud study
+  Markup.button.callback('🤍', 'like-🤍'), // cloud study ☁️🌧️⛅🌦️⛈️🌩️🌨️🌬️
   Markup.button.callback('🖤', 'like-🖤'), // dark clouds/no sunset
   // 8 is max in a row, rather 7 for Telegram Desktop
 ];
