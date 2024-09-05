@@ -1,8 +1,9 @@
 import { inject, injectable } from '@joist/di';
+import { EventEmitter } from 'node:events';
 import { Repository } from './Repository.js';
 import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
-import { Timelapse } from './Timelapse.js';
+import { TimelapseEventMap, Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
 import { Directory, FileSystem } from './FileSystem.js';
 import { SunMoonTime } from './SunMoonTime.js';
@@ -110,9 +111,8 @@ export class Director {
   async timelapse(
     presetName: string,
     options: { count: number; intervalMS: number; prefix?: string },
-    onFile = (filename: string, dir: Directory) => {},
-    onData = (frame: string, fps: string) => {},
-    outFolder = this.repoTimelapseStitched
+    outFolder = this.repoTimelapseStitched,
+    sleepMS = 0
   ) {
     const fs = this.#fs();
     const timelapse = this.#timelapse();
@@ -128,10 +128,7 @@ export class Director {
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
     timelapse.namePrefix = options.prefix || presetName + this.nameNow;
-    return {
-      output: await timelapse.shoot(photoDir, videoDir, onFile, onData),
-      dir: videoDir,
-    };
+    return timelapse.shoot(photoDir, videoDir, sleepMS);
   }
 
   cancel() {
@@ -149,13 +146,8 @@ export class Director {
   }*/
 
   #sunsetTimeout: NodeJS.Timeout | undefined;
-  async scheduleSunset(
-    onStart = () => {},
-    onFile = (filename: string, dir: Directory) => {},
-    onData = (frame: string, fps: string) => {},
-    onEnd = (filename: string, dir: Directory) => {}
-  ) {
-    if (!this.enableSunsetTimelapse) return;
+  scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>) => void) {
+    //if (!this.enableSunsetTimelapse) return;
     const logger = this.#logger();
     const sunMoon = this.#sunMoonTime();
 
@@ -164,7 +156,6 @@ export class Director {
     const rescheduleDelayMS = 15000;
     const rescheduleRepeatDelayMS = 60000 * 60 * 14; // 14h (< 24h)
     const goldenHourTimingMS = -60000 * 60 * 1.2; // 1.2 hours before
-
     const sundownTimer = async () => {
       try {
         this.resetTime();
@@ -176,24 +167,17 @@ export class Director {
         logger.log('Sunset timelapse scheduled in', (diff / 60 / 60000).toFixed(2), 'hours');
         await sunMoon.sleep(diff - messageDelayMS);
         await this.setupPublicRepo(this.repoSunset);
-        onStart();
-        await sunMoon.sleep(messageDelayMS);
-        const { output, dir } = await this.timelapse(
+        const events = await this.timelapse(
           'sunset',
           {
             count: this.dailySunsetFrameCount,
             intervalMS: this.dailySunsetTimelapseIntervalMS,
             prefix: 'sunset-timelapse-' + this.nameNow,
           },
-          (filename, dir) => {
-            onFile(filename, dir);
-            // TODO upload
-          },
-          onData,
-          this.repoSunsetStitched
+          this.repoSunsetStitched,
+          messageDelayMS
         );
-        // await this.enableAndWaitForPages();
-        onEnd(output, dir);
+        onStart(events);
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);
@@ -202,7 +186,9 @@ export class Director {
     };
     this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS);
   }
+
   cancelSunset() {
     clearTimeout(this.#sunsetTimeout);
+    return this.#timelapse().stop();
   }
 }

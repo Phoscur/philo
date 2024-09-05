@@ -17,6 +17,7 @@ const base = {
     'action.shareToChannel': 'Share via Channel 📢',
     'action.cancel': 'Cancel ❌',
     'animation.takingShot': 'Taking a shot 🥃...',
+    'timelapse.tooManyErrors': '❌ Too many errors while creating the timelapse',
   },
   de: {
     'action.presetSwitch': 'Einstellung wechseln 📷',
@@ -29,6 +30,7 @@ const base = {
     'action.shareToChannel': 'Teilen via Channel 📢',
     'action.cancel': 'Abbrechen ❌',
     'animation.takingShot': 'Ein Schuss 🥃...',
+    'timelapse.tooManyErrors': '❌ Zu viele Fehler beim Erstellen des Zeitraffers',
   },
 } as const;
 

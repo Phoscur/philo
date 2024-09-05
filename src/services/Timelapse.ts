@@ -3,6 +3,17 @@ import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
 import { stitchImages, StitchOptions } from '../lib/ffmpeg.js';
 import { Directory } from './FileSystem.js';
+import EventEmitter from 'node:events';
+
+export interface TimelapseEventMap {
+  started: [];
+  file: [photoFileName: string, photoDir: Directory];
+  captured: [];
+  frame: [frame: string, fps: string];
+  rendered: [videoFileName: string, videoDir: Directory];
+  stopped: [photoDir: Directory];
+  error: [any];
+}
 
 /**
  * Renders a video from a series of images with ffmpeg
@@ -61,83 +72,86 @@ export class Timelapse {
   }
 
   #intervalId: NodeJS.Timeout | undefined = undefined;
-  #stopFlag = false;
-  async shoot(
-    photoDir: Directory,
-    videoDir: Directory,
-    onFile = (filename: string, dir: Directory) => {},
-    onData = (frameProcessed: string, fps: string) => {}
-  ) {
+  #intervalAbortController: AbortController | undefined = undefined;
+  shoot(photoDir: Directory, videoDir: Directory, sleepMS = 0) {
     const logger = this.#logger();
     const camera = this.#cam();
     const renderer = this.#renderer();
 
-    this.#stopFlag = false;
-
     // manual interval capture (so libcamera won't crash beyond 370 frames)
-    await new Promise<void>((resolve, reject) => {
-      logger.time('timelapse');
-      logger.timeLog('timelapse', 'Start with options:\n', this.prettyOptions);
-      let frame = 1;
-      let errors = 0;
-      this.#intervalId = setInterval(
-        () =>
-          (async () => {
-            try {
-              if (this.#stopFlag) {
-                clearInterval(this.#intervalId);
-                return resolve();
-              }
-              const name = this.getFrameName(frame);
-              camera.name = photoDir.join(name);
-              logger.timeLog('timelapse', 'frame', frame, 'of', this.count);
-              await camera.photo();
-              logger.timeLog('timelapse', 'frame', camera.filename, 'captured');
-              camera.name = name; // remove folder from name after capture
-              if (this.#stopFlag) {
-                clearInterval(this.#intervalId);
-                return resolve();
-              }
-              onFile(camera.filename, photoDir);
+    logger.time('timelapse');
+    const events = new EventEmitter<TimelapseEventMap>();
 
-              if (frame >= this.count) {
-                clearInterval(this.#intervalId);
-                return resolve();
-              }
-              frame++;
-            } catch (error: any) {
-              errors++;
-              logger.log(`Frame [${frame}] Error: ${error?.message}`);
-              if (errors > 3) {
-                logger.log('Too many errors, stopped timelapse!');
-                clearInterval(this.#intervalId);
-                reject(error);
-              }
-            }
-          })(),
-        this.intervalMS
-      );
+    this.#intervalAbortController = new AbortController();
+    const { signal } = this.#intervalAbortController;
+    const abort = () => {
+      clearInterval(this.#intervalId);
+      signal.removeEventListener('abort', abort);
+      return events.emit('stopped', photoDir);
+    };
+    signal.addEventListener('abort', abort);
+
+    let frame = 1;
+    let errors = 0;
+    const intervalCapture = async () => {
+      try {
+        const name = this.getFrameName(frame);
+        camera.name = photoDir.join(name);
+        logger.timeLog('timelapse', 'frame', frame, 'of', this.count);
+        await camera.photo();
+        logger.timeLog('timelapse', 'frame', camera.filename, 'captured');
+        camera.name = name; // remove folder from name after capture
+
+        if (signal.aborted) {
+          return abort();
+        }
+        events.emit('file', camera.filename, photoDir);
+
+        if (frame >= this.count) {
+          clearInterval(this.#intervalId);
+          return events.emit('captured');
+        }
+        frame++;
+      } catch (error: any) {
+        logger.log(`Frame [${frame}] Error: ${error?.message}`);
+        errors++;
+        if (errors > 3) {
+          events.emit('error', error);
+          abort();
+        }
+      }
+    };
+    setTimeout(() => {
+      logger.timeLog('timelapse', 'Start with options:\n', this.prettyOptions);
+      events.emit('started');
+      this.#intervalId = setInterval(intervalCapture, this.intervalMS);
+    }, sleepMS);
+
+    events.once('captured', async () => {
+      try {
+        await renderer.stitchImages(
+          this.namePrefix,
+          videoDir.fs.cwd,
+          { parts: this.count },
+          photoDir.path,
+          videoDir.path,
+          (frameProcessed: string, fps: string) => {
+            events.emit('frame', frameProcessed, fps);
+          },
+          logger
+        );
+        events.emit('rendered', this.output, videoDir);
+      } catch (error) {
+        events.emit('error', error);
+      }
+      signal.removeEventListener('abort', abort);
     });
 
-    if (this.#stopFlag) {
-      logger.timeEnd('timelapse');
-      return 'CANCELED';
-    }
-
-    await renderer.stitchImages(
-      this.namePrefix,
-      videoDir.fs.cwd,
-      { parts: this.count },
-      photoDir.path,
-      videoDir.path,
-      onData,
-      logger
-    );
-    return this.output;
+    return events;
   }
 
   stop() {
-    this.#stopFlag = true;
+    this.#intervalAbortController?.abort();
     // shoot promise will still resolve (or reject)
     return this.#cam().busy;
   }

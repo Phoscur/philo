@@ -7,6 +7,9 @@ import type { ChatAnimationMessage, ChatMessenger } from '../context.js';
 import { Input, Markup } from 'telegraf';
 import { I18nService } from './I18n.js';
 import { Preset } from './Preset.js';
+import { Directory } from './FileSystem.js';
+import type { TimelapseEventMap } from './Timelapse.js';
+import type EventEmitter from 'node:events';
 
 /**
  * Given (Telegram) messenger context, Producer will interact with the Director to stream content production.
@@ -89,8 +92,7 @@ export class Producer {
   async photograph(chat: ChatMessenger, presetName?: string) {
     const { message, name: title } = await this.shot(chat, presetName);
     // add share button (repost in CHANNEL_CHAT_ID with different caption)
-    const markup = Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]);
-    await message.editCaption(title, markup);
+    await message.editCaption(title, this.markupShare);
   }
 
   async timelapse(
@@ -105,54 +107,18 @@ export class Producer {
       intervalMS: 2000,
     }
   ) {
-    const { t } = this.#i18n();
-    const logger = this.#logger();
     const director = this.#director();
     await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
-    const date = new Date();
     const datePostfix = '-' + director.nameNow;
-    const { output, dir } = await director.timelapse(
-      presetName ?? 'default',
-      { count, intervalMS, prefix: prefix + datePostfix },
-      (filename, dir) => {
-        (async () => {
-          try {
-            const caption = t('timelapse.frameTaken', filename);
-            await message.editMedia(
-              {
-                type: 'photo',
-                caption,
-                media: Input.fromLocalFile(dir.joinAbsolute(filename)),
-              },
-              this.markupCancel
-            );
-          } catch (e) {
-            logger.log('Failed to edit message:', e);
-          }
-        })();
-      },
-      (frame: string, fps: string) => {
-        (async () => {
-          try {
-            const caption = t('timelapse.frameRendered', frame, fps);
-            await message.editCaption(caption);
-          } catch (e) {
-            logger.log('Failed to edit message:', e);
-          }
-        })();
-      }
-    );
-    if (output === 'CANCELED') {
-      return;
-    }
-    const caption = t('timelapse.title', date);
-    logger.log(`[${dir.path}] Stitched: ${output}`);
-    await message.editMedia({
-      type: 'animation',
-      caption,
-      media: Input.fromLocalFile(dir.joinAbsolute(output)),
+    const events = await director.timelapse(presetName ?? 'default', {
+      count,
+      intervalMS,
+      prefix: prefix + datePostfix,
     });
+
+    // skipping the `started` event here (sleepMS=0)
+    this.addEventListeners(events, message);
   }
 
   cancel() {
@@ -164,69 +130,118 @@ export class Producer {
     const { t } = this.#i18n();
     const logger = this.#logger();
     const director = this.#director();
-    let message: ChatAnimationMessage | null = null;
-    let date: Date;
-    director.scheduleSunset(
-      async () => {
-        // TODO? jic: await this.cancel()
+
+    director.scheduleSunset((events) => {
+      logger.log('Scheduled the daily sunset timelapse.');
+      events.once('started', async () => {
         const hdStatus = await this.#hd().getStatus();
         chat.sendMessage(t('sunset.start', hdStatus));
-        date = new Date();
-      },
-      (filename, dir) => {
-        (async () => {
-          try {
-            if (!message) {
-              message = await this.createAnimation(chat);
-            }
-            const caption = t('timelapse.frameTaken', filename);
-            await message.editMedia(
-              {
-                type: 'photo',
-                caption,
-                media: Input.fromLocalFile(dir.joinAbsolute(filename)),
-              },
-              this.markupCancel
-            );
-          } catch (e) {
-            logger.log('Failed to edit message:', e);
-          }
-        })();
-      },
-      (frame, fps) => {
-        (async () => {
-          try {
-            const caption = t('timelapse.frameRendered', frame, fps);
-            await message?.editCaption(caption);
-          } catch (e) {
-            logger.log('Failed to edit message:', e);
-          }
-        })();
-      },
-      (output, dir) => {
-        (async () => {
-          if (output === 'CANCELED') {
-            message = null;
-            return;
-          }
-          try {
-            logger.log(`[${dir.path}] Stitched: ${output}`);
-            const caption = t('sunset.title', date);
-            await message?.editMedia(
-              {
-                type: 'animation',
-                caption,
-                media: Input.fromLocalFile(dir.joinAbsolute(output)),
-              },
-              this.markupShare
-            );
-          } catch (e) {
-            logger.log('Failed to edit message:', e);
-          }
-          logger.log('Finished producing the daily timelapse.');
-          message = null;
-        })();
+
+        const message = await this.createAnimation(chat);
+        this.addEventListeners(events, message);
+      });
+    });
+  }
+
+  private addEventListeners(
+    events: EventEmitter<TimelapseEventMap>,
+    message: ChatAnimationMessage,
+    date = new Date()
+  ) {
+    const logger = this.#logger();
+
+    const onFile = this.editMessageOnPhotoFile(message);
+    const onVideoFrame = this.editMessageOnVideoFrame(message);
+    const onVideoRendered = this.editMessageOnVideoFile(message, date);
+    const finishHandler = async (fileName: string, dir: Directory) => {
+      await onVideoRendered(fileName, dir);
+      removeEventListeners();
+      logger.log('Finished producing the timelapse.');
+    };
+    const errorMessage = this.editMessageOnError(message);
+    const errorHandler = async (error: unknown) => {
+      await errorMessage();
+      removeEventListeners();
+      logger.log('Canceled the timelapse with errors', error);
+    };
+
+    const removeEventListeners = () => {
+      events.off('error', errorHandler);
+      events.off('file', onFile);
+      events.off('frame', onVideoFrame);
+      events.off('rendered', finishHandler);
+    };
+
+    events.on('error', errorHandler);
+    events.on('file', onFile);
+    events.on('frame', onVideoFrame);
+    events.once('rendered', finishHandler);
+  }
+
+  editMessageOnPhotoFile(message: ChatAnimationMessage) {
+    const logger = this.#logger();
+    const { t } = this.#i18n();
+    return async (filename: string, dir: Directory) => {
+      try {
+        const caption = t('timelapse.frameTaken', filename);
+        await message.editMedia(
+          {
+            type: 'photo',
+            caption,
+            media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+          },
+          this.markupCancel
+        );
+      } catch (e) {
+        logger.log('Failed to edit message:', e);
       }
-    );
+    };
+  }
+
+  editMessageOnVideoFile(message: ChatAnimationMessage, date: Date) {
+    const logger = this.#logger();
+    const { t } = this.#i18n();
+    return async (fileName: string, dir: Directory) => {
+      try {
+        logger.log(`[${dir.path}] Stitched: ${fileName}`);
+        const caption = t('sunset.title', date);
+        await message.editMedia(
+          {
+            type: 'animation',
+            caption,
+            media: Input.fromLocalFile(dir.joinAbsolute(fileName)),
+          },
+          this.markupShare
+        );
+      } catch (e) {
+        logger.log('Failed to edit message:', e);
+      }
+    };
+  }
+
+  editMessageOnVideoFrame(message: ChatAnimationMessage) {
+    const logger = this.#logger();
+    const { t } = this.#i18n();
+    return async (frame: string, fps: string) => {
+      try {
+        const caption = t('timelapse.frameRendered', frame, fps);
+        await message.editCaption(caption);
+      } catch (e) {
+        logger.log('Failed to edit message:', e);
+      }
+    };
+  }
+
+  editMessageOnError(message: ChatAnimationMessage) {
+    const logger = this.#logger();
+    const { t } = this.#i18n();
+    return async () => {
+      try {
+        const caption = t('timelapse.tooManyErrors');
+        await message?.editCaption(caption);
+      } catch (e) {
+        logger.log('Failed to edit message:', e);
+      }
+    };
   }
 }
