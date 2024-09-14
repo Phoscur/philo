@@ -2,23 +2,25 @@ import { inject, injectable } from '@joist/di';
 import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
 
-const INVENTORY_SCHEMA_VERSION = 1;
-interface InventoryIndex {
+const INVENTORY_SCHEMA_VERSION = 'Inventory-1';
+export interface InventoryIndex {
   [folder: string]: string[];
   /* refs previous version (0):
   [folder: string]: { vault?: string, files: string[] };
   */
 }
 
-interface MediaIndex {
+export interface MediaIndex {
   name: string;
-  version: number;
+  version: string;
   vault?: string;
+  /** list of videos */
   media: InventoryIndex;
+  /** list of photos */
   raw: InventoryIndex;
 }
 
-function newMediaIndex(
+function emptyMediaIndex(
   name: string,
   vault?: string,
   version = INVENTORY_SCHEMA_VERSION
@@ -32,7 +34,7 @@ function newMediaIndex(
   };
 }
 
-class Inventory {
+export class Inventory {
   constructor(
     /**
      * path from env: FOLDER_INVENTORY
@@ -40,7 +42,7 @@ class Inventory {
     readonly directory: Directory,
     readonly logger: Logger,
     readonly fileName: string,
-    private mediaIndex: MediaIndex = newMediaIndex('initial')
+    private mediaIndex: MediaIndex = emptyMediaIndex(fileName)
   ) {}
 
   get prettyIndex() {
@@ -86,7 +88,7 @@ class Inventory {
         throw error;
       }
       logger.log(`[Inventory: ${fileName}}] Non-existend, creating new inventory.`);
-      this.mediaIndex = newMediaIndex(fileName);
+      this.mediaIndex = emptyMediaIndex(fileName);
     }
     if (INVENTORY_SCHEMA_VERSION !== this.mediaIndex.version) {
       throw new Error(
@@ -98,7 +100,7 @@ class Inventory {
 }
 
 /**
- * Provide Inventory in JSON format (infos.json) for media and references to raw files
+ * Provide Inventory in JSON format (inventory.json) for generated video media and references to raw photo files
  */
 @injectable
 export class InventoryStorage {
