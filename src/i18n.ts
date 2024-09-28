@@ -15,6 +15,7 @@ const base = {
     'action.timelapse-short': 'Short 🎥',
     'action.timelapse-super-short': 'Super Short 🎥',
     'action.shareToChannel': 'Share via Channel 📢',
+    'action.publish': 'Publish via Github 🚡', // 🚀
     'action.cancel': 'Cancel ❌',
     'animation.takingShot': 'Taking a shot 🥃...',
     'message.takingPhotograph': 'Taking image now...',
@@ -33,6 +34,7 @@ const base = {
     'action.timelapse-short': 'Kurz 🎥',
     'action.timelapse-super-short': 'Super Kurz 🎥',
     'action.shareToChannel': 'Teilen via Channel 📢',
+    'action.publish': 'Veröffentlichen via Github 🚡', // 🚀
     'action.cancel': 'Abbrechen ❌',
     'animation.takingShot': 'Ein Schuss 🥃...',
     'message.takingPhotograph': 'Schieße jetzt...',

@@ -1,7 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
-import { Markup } from 'telegraf';
 
 const APPRAISAL_SCHEMA_VERSION = 'Appraisals-1';
 
@@ -14,13 +13,14 @@ export const CLOUD = {
   SNOW: '🌨️',
   THUNDER: '🌩️',
   THUNDERAR: '⛈️',
+  // 8 is max in a row, rather 7 for Telegram Desktop
 } as const;
 // more emojis: 🌞🌝🌙🌚🌛🌜🌃 🌑🌒🌓🌔🌕🌖🌗🌘 // TODO moon infos
 export type CloudStudySymbol = (typeof CLOUD)[keyof typeof CLOUD];
 
 export const LIKE = {
   MINUS: '🖤', //     -1
-  NONE: '', //         0
+  NONE: '💟', //       0
   HEART: '❤️', //     +1
   GROWING: '💗', //   +2
   BRILLIANT: '💖', // >3
@@ -28,10 +28,10 @@ export const LIKE = {
   STAR: '⭐', //      >7
   FAVORITE: '🌟', //  >9
 } as const;
-// more emojis: 💙💚💜🤍
+// more emojis: 💙💚💜🤍💟
 export type LikeSymbol = (typeof LIKE)[keyof typeof LIKE];
 
-export function likeToRating(l: LikeSymbol) {
+export function likeToRating(l: LikeSymbol | string) {
   switch (l) {
     case LIKE.MINUS:
       return -1;
@@ -122,6 +122,15 @@ export class Appraisement {
     await this.writeIndex();
   }
 
+  async getRatingSum(name: string) {
+    return this.index.appraisals[name].reduce((sum, { rating }) => sum + rating, 0);
+  }
+
+  async setCloudStudy(cloud: CloudStudySymbol) {
+    this.index.cloudStudy = cloud;
+    await this.writeIndex();
+  }
+
   private async writeIndex() {
     await this.directory.save(
       this.fileName,
@@ -156,38 +165,32 @@ export class Appraisement {
  */
 @injectable
 export class Appraiser {
+  static LIKE_CHOICES = [LIKE.HEART, LIKE.GROWING, LIKE.MINUS] as const;
+
   #fs = inject(FileSystem);
   #logger = inject(Logger);
 
+  likeToRating = likeToRating;
+  ratingToLike = ratingToLike;
+
   constructor(readonly folderName = `${process.env.FOLDER_INVENTORY}`) {}
 
-  get markupRowLike() {
-    return [
-      Markup.button.callback(`${LIKE.HEART} (+1)`, `like-${LIKE.HEART}`),
-      Markup.button.callback(`${LIKE.GROWING} (+2)`, `like-${LIKE.GROWING}`),
-      Markup.button.callback(`${LIKE.MINUS} (-1)`, `like-${LIKE.GROWING}`),
-    ];
+  likeText(like: LikeSymbol) {
+    return likeToRating(like) < 0 ? likeToRating(like) : '+' + likeToRating(like);
   }
 
-  get markupRowCloudStudy() {
-    return [
-      Markup.button.callback(CLOUD.LESS, `study-${CLOUD.LESS}`),
-      Markup.button.callback(CLOUD.Y, `study-${CLOUD.Y}`),
-      Markup.button.callback(CLOUD.ONLY, `study-${CLOUD.ONLY}`),
-      Markup.button.callback(CLOUD.RAINY, `study-${CLOUD.RAINY}`),
-      Markup.button.callback(CLOUD.RAIN, `study-${CLOUD.RAIN}`),
-      Markup.button.callback(CLOUD.THUNDER, `study-${CLOUD.THUNDER}`),
-      Markup.button.callback(CLOUD.THUNDERAR, `study-${CLOUD.THUNDERAR}`),
-      // 8 is max in a row, rather 7 for Telegram Desktop
-    ];
+  get likesWithRatings() {
+    return Appraiser.LIKE_CHOICES.map((like) => ({
+      text: `${like} (${this.likeText(like)})`,
+      data: `like-${like}`,
+    }));
   }
 
-  get markup() {
-    return Markup.inlineKeyboard([
-      this.markupRowLike,
-      this.markupRowCloudStudy,
-      // [Markup.button.callback('❌', ``)],
-    ]);
+  get cloudStudies() {
+    return Object.keys(CLOUD).map((cloud) => ({
+      text: cloud,
+      data: `study-${cloud}`,
+    }));
   }
 
   async loadOrCreate(fileName = 'appraisals.json') {

@@ -5,7 +5,7 @@ import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
 import { TimelapseEventMap, Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
-import { Directory, FileSystem } from './FileSystem.js';
+import { FileSystem } from './FileSystem.js';
 import { SunMoonTime } from './SunMoonTime.js';
 
 /**
@@ -125,23 +125,13 @@ export class Director {
     preset.setupPreset(presetName);
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
-    timelapse.namePrefix = options.prefix || presetName + this.nameNow;
+    timelapse.namePrefix = options.prefix ?? presetName + this.nameNow;
     return timelapse.shoot(photoDir, videoDir, sleepMS);
   }
 
   cancel() {
     return this.#timelapse().stop();
   }
-
-  /*async enableAndWaitForPages(r) {
-    const repo = this.#repo().checkout(r);
-    await repo.makeTimelapsePage();
-    const waitMS = 10000;
-    await this.#sunMoonTime().sleep(waitMS);
-    const checkIterations = 60;
-    const delayMS = 5000;
-    await repo.enablePages(checkIterations, 'index.html', delayMS);
-  }*/
 
   #sunsetTimeout: NodeJS.Timeout | undefined;
   scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>) => void) {

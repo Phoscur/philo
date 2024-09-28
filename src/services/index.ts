@@ -18,6 +18,7 @@ export * from './Assets.js';
 export * from './Preset.js';
 export * from './Director.js';
 export * from './Producer.js';
+export * from './Publisher.js';
 
 export * from '@joist/di';
 import { Injector, Provider } from '@joist/di';

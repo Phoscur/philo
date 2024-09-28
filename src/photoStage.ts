@@ -51,6 +51,10 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
       ctx.reply(await hd.getStatus());
     });
   });
+
+  // ---------------------------------------------------------------------------------------------------
+  // Photos
+
   scene.command([COMMAND.RANDOM, 'r'], (ctx) => {
     const assets = ctx.di.get(Assets);
     ctx.replyWithPhoto(assets.randomImage);
@@ -73,45 +77,34 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     await producer.photograph(ctx.group, ctx.presetName);
   });
 
+  // ---------------------------------------------------------------------------------------------------
+  // Sharing / Publishing: Collecting Appraisals
+
   scene.action(Producer.ACTION.SHARE, async (ctx, next) => {
-    const producer = ctx.di.get(Producer);
+    const publisher = ctx.di.get(Publisher);
     const { message } = ctx.callbackQuery;
-    await ctx.answerCbQuery(producer.callbackMessageShare);
+
+    await ctx.answerCbQuery(publisher.callbackMessageShare);
+
     if (!message) return next();
-    if ('text' in message) return next();
-    //if (!('photo' in message)) return next()
-    //if ('video' in message) return next()
-    console.log(
-      'Message Photo',
-      (message as Message.PhotoMessage).photo,
-      (message as Message.AnimationMessage).animation
-    );
-    const markup = Markup.inlineKeyboard([emojiButtons]);
-    await ctx.group.sendMessageCopy(message.message_id, markup);
+    if (isTextMessage(message)) return next();
+    await ctx.group.sendMessageCopy(message.message_id, publisher.markupPublished);
     //await ctx.deleteMessage(message.message_id);
-    //if (!('video' in ctx.message)) return next()
-    //if (ctx.message.video) {}
   });
 
-  scene.action(/like-.+/, async (ctx, next) => {
-    const match = ctx.match[0]?.split('-');
-    const emoji = match[1] || '💖';
-    console.log('Match', ctx.match, match);
+  scene.action(Publisher.ACTION.LIKE, async (ctx, next) => {
+    const publisher = ctx.di.get(Publisher);
+    const data = ctx.match[0] || '';
+
     const { message } = ctx.callbackQuery;
-    if (!message) return next();
-    if ('text' in message) return next();
-    if (!('photo' in message || 'animation' in message || 'video' in message)) return next();
-    try {
-      const markup = Markup.inlineKeyboard([emojiButtons]);
-      const caption = message.caption + emoji;
-      const emojis = fancyCount(caption);
-      await ctx.editMessageCaption(emojis.count < 13 ? caption : emojis.unfancy + ' ❤️‍🔥', markup);
-      await ctx.answerCbQuery('💖');
-    } catch (error) {
-      console.error(error);
-      await ctx.answerCbQuery('Failed :(');
-    }
-    // removes discussion await ctx.editMessageCaption ReplyMarkup({      inline_keyboard: [emojiButtons],    })
+    const user = ctx.from?.username || 'Anonymous';
+    if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
+
+    const liked = await publisher.like(message.message_id, user, data);
+    const markup = Markup.inlineKeyboard([publisher.markupRowLikes]);
+    const caption = message.caption + liked;
+    await ctx.editMessageCaption(caption, markup);
+    await ctx.answerCbQuery(liked);
   });
 
   // ---------------------------------------------------------------------------------------------------
@@ -235,4 +228,14 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   return {
     middleware: () => contextMiddleware,
   };
+}
+
+function isTextMessage(message: any): message is Message.TextMessage {
+  return 'text' in message;
+}
+function isVideoMessage(message: any): message is Message.VideoMessage {
+  return 'video' in message;
+}
+function isPhotoMessage(message: any): message is Message.PhotoMessage {
+  return 'video' in message;
 }

@@ -4,6 +4,8 @@ import { Logger } from './Logger.js';
 
 const SCHEMA_VERSION = 'Publication-1';
 export interface PublicationMessage {
+  id: number;
+  name: string;
   created: number;
   shared?: boolean;
   channelId?: number;
