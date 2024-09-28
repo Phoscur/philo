@@ -16,18 +16,29 @@ import type EventEmitter from 'node:events';
  */
 @injectable
 export class Producer {
+  static ACTION = {
+    SHOT: 'shot',
+    PRESET: 'preset',
+    TIMELAPSE: 'timelapse',
+    CANCEL: 'cancelRunning',
+    LIKE: 'like',
+    SHARE: 'share',
+  } as const;
+
+  static TIMELAPSES = [
+    { count: 420, intervalMS: 12000, prefix: 'timelapse' },
+    { count: 210, intervalMS: 12000, prefix: 'timelapse-half' },
+    { count: 140, intervalMS: 12000, prefix: 'timelapse-third' },
+    { count: 30, intervalMS: 2000, prefix: 'timelapse-short' },
+    { count: 14, intervalMS: 2000, prefix: 'timelapse-super-short' },
+  ] as const;
+
   #logger = inject(Logger);
   #director = inject(Director);
   #presets = inject(Preset);
   #assets = inject(Assets);
   #hd = inject(Hardware);
   #i18n = inject(I18nService);
-
-  getTitleNow(d = new Date()) {
-    return `${d.getDate()}.${
-      d.getMonth() + 1
-    }.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
-  }
 
   get callbackMessagePhotograph() {
     const { t } = this.#i18n();
@@ -53,9 +64,11 @@ export class Producer {
   get markupOptions() {
     const { t } = this.#i18n();
     return Markup.inlineKeyboard([
-      [Markup.button.callback(t('action.shotSingle'), 'shot')],
+      [Markup.button.callback(t('action.shotSingle'), Producer.ACTION.SHOT)],
+      // i18n is unhappy and this would be unflexible:
+      // Producer.TIMELAPSES.map(({ prefix }) => Markup.button.callback(t<'action.timelapse'>(('action.' + prefix) as 'action.timelapse'), prefix)),
       [
-        Markup.button.callback(t('action.timelapse'), 'timelapse'),
+        Markup.button.callback(t('action.timelapse'), Producer.ACTION.TIMELAPSE),
         Markup.button.callback(t('action.timelapse-half'), 'timelapse-half'),
         Markup.button.callback(t('action.timelapse-third'), 'timelapse-third'),
       ],
@@ -63,16 +76,20 @@ export class Producer {
         Markup.button.callback(t('action.timelapse-short'), 'timelapse-short'),
         Markup.button.callback(t('action.timelapse-super-short'), 'timelapse-super-short'),
       ],
-      [Markup.button.callback(t('action.presetSwitch'), 'preset')],
+      [Markup.button.callback(t('action.presetSwitch'), Producer.ACTION.PRESET)],
     ]);
   }
   get markupShare() {
     const { t } = this.#i18n();
-    return Markup.inlineKeyboard([[Markup.button.callback(t('action.shareToChannel'), 'share')]]);
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(t('action.shareToChannel'), Producer.ACTION.SHARE)],
+    ]);
   }
   get markupCancel() {
     const { t } = this.#i18n();
-    return Markup.inlineKeyboard([[Markup.button.callback(t('action.cancel'), 'cancelRunning')]]);
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(t('action.cancel'), Producer.ACTION.CANCEL)],
+    ]);
   }
 
   async createAnimation(chat: ChatMessenger, caption?: string): Promise<ChatAnimationMessage> {

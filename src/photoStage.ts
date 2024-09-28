@@ -13,6 +13,14 @@ import {
 } from './services/index.js';
 import fancyCount from './lib/fancyCount.js';
 
+export const COMMAND = {
+  STATUS: 'status',
+  RANDOM: 'random',
+  PREVIEW: 'preview',
+  PHOTO: 'photo',
+  PRESET: 'preset',
+} as const;
+
 const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
 
 const DAILY = process.env.ENABLE_DAILY_TIMELAPSE_SUNSET === 'true';
@@ -37,37 +45,35 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // storage and temperature do not have a scenes (yet)
   const scene = new Scenes.BaseScene<PhiloContext>('photo');
   // basic utility commands
-  scene.command(['status', 's'], (ctx) => {
+  scene.command([COMMAND.STATUS, 's'], (ctx) => {
     const hd = ctx.di.get(Hardware);
     setImmediate(async () => {
       ctx.reply(await hd.getStatus());
     });
   });
-  scene.command(['random', 'r'], (ctx) => {
+  scene.command([COMMAND.RANDOM, 'r'], (ctx) => {
     const assets = ctx.di.get(Assets);
     ctx.replyWithPhoto(assets.randomImage);
+    // or ctx.replyWithAnimation(ctx.di.get(Assets).telegramSpinner);
   });
-  scene.command(['preview', 'p'], async (ctx) => {
+  scene.command([COMMAND.PREVIEW, 'p'], async (ctx) => {
     const director = ctx.di.get(Director);
     const { filename, dir } = await director.photo('default');
     ctx.replyWithPhoto(Input.fromLocalFile(dir.joinAbsolute(filename)));
   });
-  scene.command(['animation', 'a'], (ctx) => {
-    ctx.replyWithAnimation(ctx.di.get(Assets).telegramSpinner);
-  });
 
-  scene.command(['photo', 'options'], async function (ctx: PhiloContext) {
+  scene.command([COMMAND.PHOTO, 'options'], async function (ctx: PhiloContext) {
     const producer = ctx.di.get(Producer);
     await producer.options(ctx.group, ctx.presetName);
   });
 
-  scene.action('shot', async (ctx) => {
+  scene.action(Producer.ACTION.SHOT, async (ctx) => {
     const producer = ctx.di.get(Producer);
     await ctx.answerCbQuery(producer.callbackMessagePhotograph);
     await producer.photograph(ctx.group, ctx.presetName);
   });
 
-  scene.action('share', async (ctx, next) => {
+  scene.action(Producer.ACTION.SHARE, async (ctx, next) => {
     const producer = ctx.di.get(Producer);
     const { message } = ctx.callbackQuery;
     await ctx.answerCbQuery(producer.callbackMessageShare);
@@ -128,7 +134,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     };
   }
 
-  scene.command(['presets', 'preset'], async (ctx) => {
+  scene.command([COMMAND.PRESET, 'presets'], async (ctx) => {
     const producer = ctx.di.get(Producer);
 
     const { text, markup } = renderPresetSelect(ctx);
@@ -159,7 +165,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // ---------------------------------------------------------------------------------------------------
   // Timelapses
 
-  scene.action('cancelRunning', async (ctx) => {
+  scene.action(Producer.ACTION.CANCEL, async (ctx) => {
     try {
       const producer = ctx.di.get(Producer);
       const { message } = ctx.callbackQuery;
@@ -199,13 +205,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     };
   }
 
-  for (const setting of [
-    { count: 420, intervalMS: 12000, prefix: 'timelapse' },
-    { count: 210, intervalMS: 12000, prefix: 'timelapse-half' },
-    { count: 140, intervalMS: 12000, prefix: 'timelapse-third' },
-    { count: 30, intervalMS: 2000, prefix: 'timelapse-short' },
-    { count: 14, intervalMS: 2000, prefix: 'timelapse-super-short' },
-  ]) {
+  for (const setting of Producer.TIMELAPSES) {
     scene.action(setting.prefix, timelapseAction(setting));
   }
 
