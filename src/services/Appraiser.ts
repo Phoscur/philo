@@ -1,13 +1,78 @@
 import { inject, injectable } from '@joist/di';
 import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
+import { Markup } from 'telegraf';
 
 const APPRAISAL_SCHEMA_VERSION = 'Appraisals-1';
+
+export const CLOUD = {
+  LESS: '☀️',
+  Y: '⛅',
+  ONLY: '☁️',
+  RAINY: '🌦️',
+  RAIN: '🌧️',
+  SNOW: '🌨️',
+  THUNDER: '🌩️',
+  THUNDERAR: '⛈️',
+} as const;
+// more emojis: 🌞🌝🌙🌚🌛🌜🌃 🌑🌒🌓🌔🌕🌖🌗🌘 // TODO moon infos
+export type CloudStudySymbol = (typeof CLOUD)[keyof typeof CLOUD];
+
+export const LIKE = {
+  MINUS: '🖤', //     -1
+  NONE: '', //         0
+  HEART: '❤️', //     +1
+  GROWING: '💗', //   +2
+  BRILLIANT: '💖', // >3
+  FIRE: '❤️‍🔥', //      >5
+  STAR: '⭐', //      >7
+  FAVORITE: '🌟', //  >9
+} as const;
+// more emojis: 💙💚💜🤍
+export type LikeSymbol = (typeof LIKE)[keyof typeof LIKE];
+
+export function likeToRating(l: LikeSymbol) {
+  switch (l) {
+    case LIKE.MINUS:
+      return -1;
+    case LIKE.HEART:
+      return 1;
+    case LIKE.GROWING:
+      return 2;
+    default:
+      return 0;
+  }
+}
+
+export function ratingToLike(rating: number): LikeSymbol {
+  if (rating > 9) {
+    return LIKE.FAVORITE;
+  }
+  if (rating > 7) {
+    return LIKE.STAR;
+  }
+  if (rating > 5) {
+    return LIKE.FIRE;
+  }
+  if (rating > 3) {
+    return LIKE.BRILLIANT;
+  }
+  if (rating > 1) {
+    return LIKE.GROWING;
+  }
+  if (rating > 0) {
+    return LIKE.HEART;
+  }
+  if (rating < 0) {
+    return LIKE.MINUS;
+  }
+  return LIKE.NONE;
+}
 
 export interface Appraisal {
   author: string;
   rating: number;
-  assessment: string;
+  like: LikeSymbol;
 }
 
 export interface AppraisalList {
@@ -17,6 +82,7 @@ export interface AppraisalList {
 export interface AppraisalIndex {
   name: string;
   version: string;
+  cloudStudy?: CloudStudySymbol;
   appraisals: AppraisalList;
 }
 
@@ -94,6 +160,35 @@ export class Appraiser {
   #logger = inject(Logger);
 
   constructor(readonly folderName = `${process.env.FOLDER_INVENTORY}`) {}
+
+  get markupRowLike() {
+    return [
+      Markup.button.callback(`${LIKE.HEART} (+1)`, `like-${LIKE.HEART}`),
+      Markup.button.callback(`${LIKE.GROWING} (+2)`, `like-${LIKE.GROWING}`),
+      Markup.button.callback(`${LIKE.MINUS} (-1)`, `like-${LIKE.GROWING}`),
+    ];
+  }
+
+  get markupRowCloudStudy() {
+    return [
+      Markup.button.callback(CLOUD.LESS, `study-${CLOUD.LESS}`),
+      Markup.button.callback(CLOUD.Y, `study-${CLOUD.Y}`),
+      Markup.button.callback(CLOUD.ONLY, `study-${CLOUD.ONLY}`),
+      Markup.button.callback(CLOUD.RAINY, `study-${CLOUD.RAINY}`),
+      Markup.button.callback(CLOUD.RAIN, `study-${CLOUD.RAIN}`),
+      Markup.button.callback(CLOUD.THUNDER, `study-${CLOUD.THUNDER}`),
+      Markup.button.callback(CLOUD.THUNDERAR, `study-${CLOUD.THUNDERAR}`),
+      // 8 is max in a row, rather 7 for Telegram Desktop
+    ];
+  }
+
+  get markup() {
+    return Markup.inlineKeyboard([
+      this.markupRowLike,
+      this.markupRowCloudStudy,
+      // [Markup.button.callback('❌', ``)],
+    ]);
+  }
 
   async loadOrCreate(fileName = 'appraisals.json') {
     const fs = this.#fs();
