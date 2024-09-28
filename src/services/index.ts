@@ -5,6 +5,7 @@ export * from './ArchiveCompressor.js';
 export * from './Backup.js';
 export * from './Inventory.js';
 export * from './Appraiser.js';
+export * from './PublicationInventory.js';
 export * from './Logger.js';
 export * from './Repository.js';
 export * from './Camera.js';
