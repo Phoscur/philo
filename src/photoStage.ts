@@ -6,6 +6,7 @@ import {
   createInjector,
   Director,
   Hardware,
+  I18nService,
   Logger,
   Preset,
   Producer,
@@ -61,17 +62,15 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
 
   scene.action('shot', async (ctx) => {
-    await ctx.answerCbQuery('Taking image now...');
     const producer = ctx.di.get(Producer);
-    const { message, name: title } = await producer.shot(ctx.group, ctx.presetName);
-    // add share button (repost in CHANNEL_CHAT_ID with different caption)
-    const markup = Markup.inlineKeyboard([[Markup.button.callback('Share 📢', 'share')]]);
-    await message.editCaption(title, markup);
+    await ctx.answerCbQuery(producer.callbackMessagePhotograph);
+    await producer.photograph(ctx.group, ctx.presetName);
   });
 
   scene.action('share', async (ctx, next) => {
+    const producer = ctx.di.get(Producer);
     const { message } = ctx.callbackQuery;
-    await ctx.answerCbQuery('Sharing to channel!');
+    await ctx.answerCbQuery(producer.callbackMessageShare);
     if (!message) return next();
     if ('text' in message) return next();
     //if (!('photo' in message)) return next()
@@ -109,29 +108,12 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     // removes discussion await ctx.editMessageCaption ReplyMarkup({      inline_keyboard: [emojiButtons],    })
   });
 
-  scene.action('cancelRunning', async (ctx) => {
-    try {
-      const { message } = ctx.callbackQuery;
-      if (!message?.message_id) return;
-      const user = ctx.from?.username || '';
-      // TODO use list from channel, doesn't work in private channel though! await ctx.getChatAdministrators(),
-      console.log('Admin Check', user, ADMINS, ctx.from, message.message_id);
-      if (!~ADMINS.indexOf(user)) {
-        return ctx.answerCbQuery(`Only Admins can cancel`);
-      }
-      await ctx.answerCbQuery(`Cancelling!`);
-      const canceling = ctx.di.get(Producer).cancel();
-      if (canceling) {
-        await canceling;
-      }
-      await ctx.deleteMessage(message.message_id);
-    } catch (error) {
-      console.error('Failed to cancel', error);
-    }
-  });
+  // ---------------------------------------------------------------------------------------------------
+  // Presets: Test different e.g. region of interest settings for the images taken
 
   function renderPresetSelect(ctx: PhiloContext) {
     const presets = ctx.di.get(Preset);
+    const { t } = ctx.di.get(I18nService);
     const presetNames = Object.keys(presets.presets).filter((name) => name !== ctx.presetName);
     const buttons = presetNames.map((presetName) =>
       // TODO? buttons split into multiple rows
@@ -139,7 +121,10 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     );
     return {
       text: `Current: ${ctx.presetName} 📷\n${presets.printPreset(presets.get(ctx.presetName))}`,
-      markup: Markup.inlineKeyboard([buttons, [Markup.button.callback('Take a Shot 🥃', 'shot')]]),
+      markup: Markup.inlineKeyboard([
+        buttons,
+        [Markup.button.callback(t('action.shotSingle'), 'shot')],
+      ]),
     };
   }
 
@@ -154,13 +139,14 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   scene.action(/presetSelect-.+/, async (ctx, next) => {
     const presets = ctx.di.get(Preset);
     const director = ctx.di.get(Director);
+    const { t } = ctx.di.get(I18nService);
 
     const name = ctx.match[0].replace('presetSelect-', '');
     const preset = presets.get(name);
     if (!preset) {
       return next();
     }
-    await ctx.answerCbQuery(`Selected ${name} 📷, updating...`);
+    await ctx.answerCbQuery(t('message.preset', name));
     ctx.presetName = name;
     const { filename, dir } = await director.photo(name);
     const media = dir.joinAbsolute(filename);
@@ -173,6 +159,28 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // ---------------------------------------------------------------------------------------------------
   // Timelapses
 
+  scene.action('cancelRunning', async (ctx) => {
+    try {
+      const producer = ctx.di.get(Producer);
+      const { message } = ctx.callbackQuery;
+      if (!message?.message_id) return;
+      const user = ctx.from?.username || '';
+      // TODO use list from channel, doesn't work in private channel though! await ctx.getChatAdministrators(),
+      console.log('Admin Check', user, ADMINS, ctx.from, message.message_id);
+      if (!~ADMINS.indexOf(user)) {
+        return ctx.answerCbQuery(producer.callbackMessageCancelGuarded);
+      }
+      await ctx.answerCbQuery(producer.callbackMessageCancel);
+      const canceling = producer.cancel();
+      if (canceling) {
+        await canceling;
+      }
+      await ctx.deleteMessage(message.message_id);
+    } catch (error) {
+      console.error('Failed to cancel', error);
+    }
+  });
+
   function timelapseAction(options: {
     count: number;
     intervalMS: number;
@@ -182,7 +190,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     return async (ctx: PhiloContext) => {
       try {
         const producer = ctx.di.get(Producer);
-        await ctx.answerCbQuery(`Starting Timelapse now!`);
+        await ctx.answerCbQuery(producer.callbackMessageTimelapse);
         await producer.timelapse(ctx.group, options);
       } catch (error) {
         ctx.di.get(Logger).log('Failed timelapse!', error);

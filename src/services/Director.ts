@@ -10,8 +10,6 @@ import { SunMoonTime } from './SunMoonTime.js';
 
 /**
  * In charge of directing captures and timelapses, and managing the repositories.
- * Holds the mutex to access the camera (TODO? move it to the camera service?).
- *
  * The director is busy orchestrating and NOT publishing (Telegram, Discord) or post-producing the content (on Github)
  */
 @injectable

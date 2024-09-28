@@ -29,6 +29,27 @@ export class Producer {
     }.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
   }
 
+  get callbackMessagePhotograph() {
+    const { t } = this.#i18n();
+    return t('message.takingPhotograph');
+  }
+  get callbackMessageTimelapse() {
+    const { t } = this.#i18n();
+    return t('message.takingPhotograph');
+  }
+  get callbackMessageShare() {
+    const { t } = this.#i18n();
+    return t('message.sharingToChannel');
+  }
+  get callbackMessageCancel() {
+    const { t } = this.#i18n();
+    return t('message.canceling');
+  }
+  get callbackMessageCancelGuarded() {
+    const { t } = this.#i18n();
+    return t('message.cancelNotAllowed');
+  }
+
   get markupOptions() {
     const { t } = this.#i18n();
     return Markup.inlineKeyboard([

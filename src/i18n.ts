@@ -17,6 +17,11 @@ const base = {
     'action.shareToChannel': 'Share via Channel 📢',
     'action.cancel': 'Cancel ❌',
     'animation.takingShot': 'Taking a shot 🥃...',
+    'message.takingPhotograph': 'Taking image now...',
+    'message.takingTimelapse': 'Starting timelapse now!',
+    'message.sharingToChannel': 'Sharing to Channel!',
+    'message.canceling': 'Canceling!',
+    'message.cancelNotAllowed': 'Only Admins can cancel.',
     'timelapse.tooManyErrors': '❌ Too many errors while creating the timelapse',
   },
   de: {
@@ -30,6 +35,11 @@ const base = {
     'action.shareToChannel': 'Teilen via Channel 📢',
     'action.cancel': 'Abbrechen ❌',
     'animation.takingShot': 'Ein Schuss 🥃...',
+    'message.takingPhotograph': 'Schieße jetzt...',
+    'message.takingTimelapse': 'Starte die Zeitrafferaufnahme!',
+    'message.sharingToChannel': 'Teile im Channel!',
+    'message.canceling': 'Breche ab!',
+    'message.cancelNotAllowed': 'Nur Administratoren können abbrechen.',
     'timelapse.tooManyErrors': '❌ Zu viele Fehler beim Erstellen des Zeitraffers',
   },
 } as const;
@@ -45,7 +55,7 @@ function dateFormat(d: Date) {
 const composite = {
   // requires the BasicIndex to be fully translated to compose!
   en: {
-    greet: (t: BasicIndex, name: string) => `Hey ${name}`,
+    'message.preset': (t: BasicIndex, name: string) => `Selected ${name} 📷, updating...`,
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nSelected options: ${presetName} 📷\n${presetText}`,
     'storage.status': (t: BasicIndex, size: string, percent: string) =>
@@ -61,6 +71,8 @@ const composite = {
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
   de: {
+    'message.preset': (t: BasicIndex, name: string) =>
+      `Preset ${name} 📷 ausgewählt, aktualisiere...`,
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nKamera Voreinstellung: ${presetName} 📷\n${presetText}`,
     'storage.status': (t: BasicIndex, size: string, percent: string) =>
