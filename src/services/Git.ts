@@ -2,7 +2,7 @@ import axios from 'axios';
 import sodium from 'libsodium-wrappers';
 import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/node/index.js';
-import { promises } from 'fs';
+import { promises } from 'node:fs';
 import { Octokit } from '@octokit/rest';
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';

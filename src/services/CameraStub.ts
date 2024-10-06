@@ -1,6 +1,7 @@
 import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
-import { Camera, StillOptions } from './index.js';
+import { Camera } from './Camera.js';
+import { StillOptions } from './index.js';
 
 export const cameraStubProvider = {
   provide: Camera,

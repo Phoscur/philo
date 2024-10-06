@@ -1,6 +1,6 @@
-import { join } from 'path';
-import { stat, mkdir, readdir, readFile, writeFile, unlink, rm, copyFile } from 'fs/promises';
-import { createReadStream } from 'fs';
+import { join } from 'node:path';
+import { stat, mkdir, readdir, readFile, writeFile, unlink, rm, copyFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { inject, injectable } from '@joist/di';
 import { Logger } from './Logger.js';
 
