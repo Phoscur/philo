@@ -18,6 +18,7 @@ import type { Message, Convenience, Opts, InputMedia, MessageId } from 'telegraf
   }; */
 
 export interface ChatAnimationMessage {
+  id: number;
   editCaption(caption: string, extra?: Convenience.ExtraEditMessageCaption): Promise<void>;
   editMedia(
     media: Convenience.WrapCaption<InputMedia>,
@@ -59,6 +60,7 @@ export function createTelegramMessengerChat(
     ): Promise<ChatAnimationMessage> => {
       const message = await bot.telegram.sendAnimation(chatId, animation, extra);
       return {
+        id: message.message_id,
         editCaption: async (caption, extra) => {
           try {
             await bot.telegram.editMessageCaption(
