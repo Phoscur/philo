@@ -4,18 +4,29 @@ import { Appraisement, Appraiser, CloudStudySymbol, LikeSymbol } from './Apprais
 import { I18nService } from './I18n.js';
 import { Markup } from 'telegraf';
 import { PublicationInventory, PublicationInventoryStorage } from './PublicationInventory.js';
+import { ChatMessenger } from '../context.js';
 
 @injectable
 export class Publisher {
   static ACTION = {
     PUBLISH: 'publish',
     LIKE: /like-.+/,
+    STUDY: /study-.+/,
   } as const;
+
+  /** YYYY slice from ISO */
+  static year(date = new Date()) {
+    return date.toISOString().slice(0, 4);
+  }
 
   #logger = inject(Logger);
   #publications = inject(PublicationInventoryStorage);
   #appraiser = inject(Appraiser);
   #i18n = inject(I18nService);
+
+  get publicationsFile() {
+    return `publications-${Publisher.year()}.json`;
+  }
 
   get callbackMessageShare() {
     const { t } = this.#i18n();
@@ -42,6 +53,15 @@ export class Publisher {
     ]);
   }
 
+  async publish(group: ChatMessenger, messageId: number) {
+    const publications = this.#publications();
+    const channelMessage = await group.sendMessageCopy(messageId, this.markupPublished);
+    const pubs = await publications.loadOrCreate(this.publicationsFile);
+    await pubs.setPublication(channelMessage.message_id, messageId);
+
+    return channelMessage.message_id;
+  }
+
   async like(messageId: number, author: string, data: string) {
     const appraiser = this.#appraiser();
     const like = data.split('-')[1] as LikeSymbol; // split: like-$1
@@ -50,7 +70,7 @@ export class Publisher {
     return appraiser.ratingToLike(newRating);
   }
 
-  async setCloudStudy(messageId: number, data: string) {
+  async saveCloudStudy(messageId: number, data: string) {
     const appraiser = this.#appraiser();
     const publications = this.#publications();
 
@@ -59,11 +79,12 @@ export class Publisher {
     const inventory = await publications.loadOrCreate();
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
-      return;
+      return `Message Inventory [${messageId}] not found`;
     }
 
     const appraisement = await appraiser.loadOrCreate();
-    return appraisement.setCloudStudy(cloud);
+    await appraisement.setCloudStudy(cloud);
+    return cloud;
   }
 
   async readRating(

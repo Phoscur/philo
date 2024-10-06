@@ -76,8 +76,8 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
     if (!message) return next();
     if (isTextMessage(message)) return next();
-    await ctx.group.sendMessageCopy(message.message_id, publisher.markupPublished);
-    //await ctx.deleteMessage(message.message_id);
+    await publisher.publish(ctx.group, message.message_id);
+    // delete? await ctx.deleteMessage(message.message_id);
   });
 
   scene.action(Publisher.ACTION.LIKE, async (ctx, next) => {
@@ -90,9 +90,34 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
     const liked = await publisher.like(message.message_id, user, data);
     const markup = Markup.inlineKeyboard([publisher.markupRowLikes]);
+    // TODO proper caption
     const caption = message.caption + liked;
-    await ctx.editMessageCaption(caption, markup);
     await ctx.answerCbQuery(liked);
+    await ctx.editMessageCaption(caption, markup);
+  });
+
+  scene.action(Publisher.ACTION.STUDY, async (ctx, next) => {
+    try {
+      const producer = ctx.di.get(Producer); // reusing guard message texts
+      const publisher = ctx.di.get(Publisher);
+      const data = ctx.match[0] || '';
+
+      const { message } = ctx.callbackQuery;
+      const user = ctx.from?.username || '';
+      if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
+
+      if (!~ADMINS.indexOf(user)) {
+        return ctx.answerCbQuery(producer.callbackMessageAdminOnlyGuarded);
+      }
+      const cloud = await publisher.saveCloudStudy(message.message_id, data);
+      // TODO proper caption
+      const caption = message.caption + cloud;
+
+      await ctx.answerCbQuery(producer.callbackMessageCancel);
+      await ctx.editMessageCaption(caption, publisher.markupPublished);
+    } catch (error) {
+      console.error('Failed to study', error);
+    }
   });
 
   // ---------------------------------------------------------------------------------------------------
@@ -155,7 +180,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
       // TODO use list from channel, doesn't work in private channel though! await ctx.getChatAdministrators(),
       console.log('Admin Check', user, ADMINS, ctx.from, message.message_id);
       if (!~ADMINS.indexOf(user)) {
-        return ctx.answerCbQuery(producer.callbackMessageCancelGuarded);
+        return ctx.answerCbQuery(producer.callbackMessageAdminOnlyGuarded);
       }
       await ctx.answerCbQuery(producer.callbackMessageCancel);
       const canceling = producer.cancel();
