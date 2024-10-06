@@ -14,6 +14,9 @@ Photo & Timelapse Telegram Bot
 
 ### TODO
 
+- update @joist/di to v4
+- indent 4 spaces, default to double quotes?
+
 - compress (zip?) before glacier upload
 
 Fix regressions, lost features:

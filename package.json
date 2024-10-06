@@ -11,7 +11,8 @@
     "build": "tsc -b",
     "clean-build": "tsc -b --clean",
     "watch": "tsx watch --env-file=.env src/main.ts",
-    "test": "tsx --env-file=.env src/test.ts",
+    "test": "vitest",
+    "testm": "tsx --env-file=.env src/test.ts",
     "test-sunmoon": "tsx --env-file=.env src/services/SunMoonTime.ts",
     "test-df": "tsx watch src/lib/df.ts",
     "download-backup": "tsx --env-file=.env src/downloadBackups.ts"
@@ -56,6 +57,7 @@
     "@types/node-dht-sensor": "^0.4.2",
     "@types/suncalc": "^1.9.2",
     "tsx": "^4.19.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.2"
   }
 }
