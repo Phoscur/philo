@@ -71,23 +71,16 @@ export class Inventory {
   }
 
   private async writeIndex() {
-    await this.directory.save(
-      this.fileName,
-      Buffer.from(JSON.stringify(this.mediaIndex, null, 2), 'utf8')
-    );
+    await this.directory.saveJSON(this.fileName, this.mediaIndex);
   }
 
   async readIndex(): Promise<MediaIndex> {
     const { logger, directory, fileName } = this;
-    try {
-      const inv = await directory.read(fileName);
-      logger.log(`[Inventory: ${fileName}] Loaded!`);
-      this.mediaIndex = JSON.parse(inv.toString()) as MediaIndex;
-    } catch (error: any) {
-      if ('ENOENT' !== error.code) {
-        throw error;
-      }
-      logger.log(`[Inventory: ${fileName}}] Non-existend, creating new inventory.`);
+    this.mediaIndex = (await directory.readJSON(fileName)) as MediaIndex;
+    if (null === this.mediaIndex) {
+      logger.log(
+        `[${this.directory.path}/${fileName}}] Found non-existend, creating new inventory.`
+      );
       this.mediaIndex = emptyMediaIndex(fileName);
     }
     if (INVENTORY_SCHEMA_VERSION !== this.mediaIndex.version) {

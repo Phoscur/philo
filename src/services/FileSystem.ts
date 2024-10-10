@@ -41,6 +41,19 @@ export class Directory {
     this.logger.log(`[Storage: ${p}] Folder created`);
   }
 
+  async readJSON(name: string): Promise<any | null> {
+    try {
+      const data = await this.read(name);
+      this.logger.log(`[${this.path}/${name}] Loaded!`);
+      return JSON.parse(data.toString());
+    } catch (error: any) {
+      if ('ENOENT' !== error.code) {
+        throw error;
+      }
+      return null;
+    }
+  }
+
   async read(name: string) {
     return readFile(join(this.path, name));
   }
@@ -48,6 +61,10 @@ export class Directory {
   readStream(name: string) {
     const file = join(this.path, name);
     return createReadStream(file);
+  }
+
+  async saveJSON(name: string, data: any) {
+    await this.save(name, Buffer.from(JSON.stringify(data, null, 2), 'utf8'));
   }
 
   async save(name: string, source: Buffer) {

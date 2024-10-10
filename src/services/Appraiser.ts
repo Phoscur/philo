@@ -140,15 +140,9 @@ export class Appraisement {
 
   async readIndex(): Promise<AppraisalIndex> {
     const { logger, directory, fileName } = this;
-    try {
-      const inv = await directory.read(fileName);
-      logger.log(`[Inventory: ${fileName}] Loaded!`);
-      this.index = JSON.parse(inv.toString()) as AppraisalIndex;
-    } catch (error: any) {
-      if ('ENOENT' !== error.code) {
-        throw error;
-      }
-      logger.log(`[Inventory: ${fileName}}] Non-existend, creating new index.`);
+    this.index = (await directory.readJSON(fileName)) as AppraisalIndex;
+    if (null === this.index) {
+      logger.log(`[${this.directory.path}/${fileName}] Found non-existend, creating new index!`);
       this.index = emptyAppraisals(fileName);
     }
     if (APPRAISAL_SCHEMA_VERSION !== this.index.version) {
@@ -202,7 +196,7 @@ export class Appraiser {
     const inventory = new Appraisement(directory, logger, fileName);
     const index = await inventory.readIndex();
     logger.log(
-      `[Inventory: ${path}] Appraisals loaded with ${
+      `[Inventory: ${path}/${fileName}] Loaded with ${
         Object.keys(index.appraisals).length
       } file entries`
     );

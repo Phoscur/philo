@@ -37,7 +37,7 @@
   "homepage": "https://github.com/Phoscur/philo#readme",
   "dependencies": {
     "@aws-sdk/client-glacier": "^3.637.0",
-    "@joist/di": "^3.9.1",
+    "@joist/di": "^3.9.2",
     "@octokit/rest": "^21.0.2",
     "archiver": "^7.0.1",
     "axios": "^1.7.5",

@@ -27,6 +27,9 @@ export class Publisher {
   get publicationsFile() {
     return `publications-${Publisher.year()}.json`;
   }
+  get appraisalsFile() {
+    return `appraisals-${Publisher.year()}.json`;
+  }
 
   get callbackMessageShare() {
     const { t } = this.#i18n();
@@ -94,14 +97,16 @@ export class Publisher {
   ): Promise<number> {
     const appraiser = this.#appraiser();
 
-    const inventory = openInventory ?? (await this.#publications().loadOrCreate());
+    const inventory =
+      openInventory ?? (await this.#publications().loadOrCreate(this.publicationsFile));
 
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
+      console.log('Failed to find publication', messageId, openInventory);
       return 0;
     }
 
-    const appraisement = openAppraisement ?? (await appraiser.loadOrCreate());
+    const appraisement = openAppraisement ?? (await appraiser.loadOrCreate(this.appraisalsFile));
     return appraisement.getRatingSum(pub.name);
   }
 
@@ -109,11 +114,12 @@ export class Publisher {
     const appraiser = this.#appraiser();
     const publications = this.#publications();
 
-    const inventory = await publications.loadOrCreate();
-    const appraisement = await appraiser.loadOrCreate();
+    const inventory = await publications.loadOrCreate(this.publicationsFile);
+    const appraisement = await appraiser.loadOrCreate(this.appraisalsFile);
 
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
+      console.log('Failed to find publication', messageId);
       return 0;
     }
 

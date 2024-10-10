@@ -79,23 +79,16 @@ export class PublicationInventory {
   }
 
   private async writeIndex() {
-    await this.directory.save(
-      this.fileName,
-      Buffer.from(JSON.stringify(this.index, null, 2), 'utf8')
-    );
+    await this.directory.saveJSON(this.fileName, this.index);
   }
 
   async readIndex(): Promise<PublicationIndex> {
     const { logger, directory, fileName } = this;
-    try {
-      const inv = await directory.read(fileName);
-      logger.log(`[Inventory: ${fileName}] Loaded!`);
-      this.index = JSON.parse(inv.toString()) as PublicationIndex;
-    } catch (error: any) {
-      if ('ENOENT' !== error.code) {
-        throw error;
-      }
-      logger.log(`[Inventory: ${fileName}}] Non-existend, creating new inventory.`);
+    this.index = (await directory.readJSON(fileName)) as PublicationIndex;
+    if (null === this.index) {
+      logger.log(
+        `[${this.directory.path}/${fileName}] Found non-existend, creating new inventory.`
+      );
       this.index = emptyPublications(fileName);
     }
     if (SCHEMA_VERSION !== this.index.version) {
@@ -127,7 +120,7 @@ export class PublicationInventoryStorage {
     const inventory = new PublicationInventory(directory, logger, fileName);
     const index = await inventory.readIndex();
     logger.log(
-      `[Inventory: ${path}] Inventory loaded with ${Object.keys(index.messages).length} entries`
+      `[Inventory: ${path}/${fileName}] Loaded with ${Object.keys(index.messages).length} entries`
     );
     return inventory;
   }
