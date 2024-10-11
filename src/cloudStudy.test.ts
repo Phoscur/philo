@@ -85,7 +85,7 @@ describe('Publisher', () => {
     const like = LIKE.HEART;
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
     await pubs.setMessage(messageId, {
-      id: messageId,
+      messageId,
       name,
       created,
     });
@@ -96,7 +96,7 @@ describe('Publisher', () => {
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
       messages: {
         '-111': {
-          id: messageId,
+          messageId,
           name,
           created,
         },
@@ -122,7 +122,7 @@ describe('Publisher', () => {
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
     const publisher = injector.get(Publisher);
-    //const publications = injector.get(PublicationInventoryStorage);
+    const publications = injector.get(PublicationInventoryStorage);
     const chat = {
       sendMessageCopy: vi.fn(async () => {
         return {
@@ -132,19 +132,49 @@ describe('Publisher', () => {
     } as unknown as ChatMessenger;
     const messageId = -111;
     const channelMessageId = -222;
+    const name = 'timelapse-publication-test';
+    const created = Date.now();
+    const pubs = await publications.loadOrCreate(publisher.publicationsFile);
+    await pubs.setMessage(messageId, {
+      messageId,
+      name,
+      created,
+    });
+    expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
+      messages: {
+        '-111': {
+          messageId,
+          name,
+          created,
+        },
+      },
+      name: 'publications-2024.json',
+      publications: {},
+      version: 'Publication-1',
+    });
 
     expect(publisher.callbackMessageShare).toBeDefined();
     const cid = await publisher.publish(chat, messageId);
     expect(chat.sendMessageCopy).toHaveBeenCalledOnce();
     expect(cid).toEqual(channelMessageId);
-    //expect(spies[publisher.publicationsFile]).toHaveBeenCalledOnce();
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
-      messages: {},
+      messages: {
+        '-111': {
+          messageId,
+          name,
+          created,
+          channelMessageId,
+        },
+      },
       name: 'publications-2024.json',
       publications: {
         '-222': -111,
       },
       version: 'Publication-1',
     });
+    expect(pubs.prettyIndex).toBe(`{
+  "-111": "shared",
+  "-222": "shared (-111)"
+}`);
   });
 });

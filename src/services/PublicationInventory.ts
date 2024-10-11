@@ -4,11 +4,10 @@ import { Logger } from './Logger.js';
 
 const PUBLICATION_SCHEMA_VERSION = 'Publication-1';
 export interface PublicationMessage {
-  id: number;
+  messageId: number;
   name: string;
   created: number;
-  shared?: boolean;
-  channelId?: number;
+  channelMessageId?: number;
 }
 
 export interface MessageCollection {
@@ -49,12 +48,12 @@ export class PublicationInventory {
     const { messages, publications } = this.index;
     const output: Record<string, string> = {};
     for (const messageId in messages) {
-      output[messageId] = `${messages[messageId].shared ? 'shared' : ''}`;
+      output[messageId] = `${messages[messageId].channelMessageId ? 'shared' : ''}`;
     }
     for (const messageId in publications) {
-      output[messageId] = `${messages[publications[messageId]].shared ? 'shared' : '??!'} (${
-        publications[messageId]
-      })`;
+      output[messageId] = `${
+        messages[publications[messageId]].channelMessageId ? 'shared' : '??!'
+      } (${publications[messageId]})`;
     }
     return JSON.stringify(output, null, 2);
   }
@@ -76,6 +75,7 @@ export class PublicationInventory {
 
   async setPublication(channelMessageId: number, messageId: number) {
     await this.readIndex();
+    this.index.messages[messageId].channelMessageId = channelMessageId;
     this.index.publications[channelMessageId] = messageId;
     await this.writeIndex();
   }
