@@ -55,6 +55,7 @@ export class Inventory {
   }
 
   async addRaw(folder: string, name: string) {
+    await this.readIndex();
     if (!this.mediaIndex.raw[folder]) {
       this.mediaIndex.raw[folder] = [];
     }
@@ -63,6 +64,7 @@ export class Inventory {
   }
 
   async addMedia(folder: string, name: string) {
+    await this.readIndex();
     if (!this.mediaIndex.media[folder]) {
       this.mediaIndex.media[folder] = [];
     }
@@ -79,7 +81,7 @@ export class Inventory {
     this.mediaIndex = (await directory.readJSON(fileName)) as MediaIndex;
     if (null === this.mediaIndex) {
       logger.log(
-        `[${this.directory.path}/${fileName}}] Found non-existend, creating new inventory.`
+        `[${this.directory.path}/${fileName}}] Found non-existend, creating new inventory!`
       );
       this.mediaIndex = emptyMediaIndex(fileName);
     }
@@ -102,17 +104,19 @@ export class InventoryStorage {
 
   constructor(readonly folderName = `${process.env.FOLDER_INVENTORY}`) {}
 
-  async loadOrCreate(fileName = 'inventory.json') {
+  async loadOrCreate(fileName = 'inventory.json', readIndex = false) {
     const fs = this.#fs();
     const logger = this.#logger();
 
     const path = this.folderName;
     const directory = await fs.createDirectory(path);
     const inventory = new Inventory(directory, logger, fileName);
-    const mediaIndex = await inventory.readIndex();
-    logger.log(
-      `[Inventory: ${path}] Inventory loaded with ${Object.keys(mediaIndex.media).length} entries`
-    );
+    if (readIndex) {
+      const mediaIndex = await inventory.readIndex();
+      logger.log(
+        `[Inventory: ${path}] Inventory loaded with ${Object.keys(mediaIndex.media).length} entries`
+      );
+    }
     return inventory;
   }
 }

@@ -2,7 +2,7 @@ import { inject, injectable } from '@joist/di';
 import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
 
-const SCHEMA_VERSION = 'Publication-1';
+const PUBLICATION_SCHEMA_VERSION = 'Publication-1';
 export interface PublicationMessage {
   id: number;
   name: string;
@@ -25,7 +25,7 @@ export interface PublicationIndex {
   publications: PublicationCollection;
 }
 
-function emptyPublications(name: string, version = SCHEMA_VERSION): PublicationIndex {
+function emptyPublications(name: string, version = PUBLICATION_SCHEMA_VERSION): PublicationIndex {
   return {
     name,
     version,
@@ -60,6 +60,7 @@ export class PublicationInventory {
   }
 
   async setMessage(messageId: number, publicationStatus: PublicationMessage) {
+    await this.readIndex();
     this.index.messages[messageId] = publicationStatus;
     await this.writeIndex();
   }
@@ -74,6 +75,7 @@ export class PublicationInventory {
   }
 
   async setPublication(channelMessageId: number, messageId: number) {
+    await this.readIndex();
     this.index.publications[channelMessageId] = messageId;
     await this.writeIndex();
   }
@@ -86,14 +88,12 @@ export class PublicationInventory {
     const { logger, directory, fileName } = this;
     this.index = (await directory.readJSON(fileName)) as PublicationIndex;
     if (null === this.index) {
-      logger.log(
-        `[${this.directory.path}/${fileName}] Found non-existend, creating new inventory.`
-      );
+      logger.log(`[${this.directory.path}/${fileName}] Found non-existend, creating new indexes!`);
       this.index = emptyPublications(fileName);
     }
-    if (SCHEMA_VERSION !== this.index.version) {
+    if (PUBLICATION_SCHEMA_VERSION !== this.index.version) {
       throw new Error(
-        `Parsing inventory schema version [${this.index.version}] is not supported - current version [${SCHEMA_VERSION}]`
+        `Parsing inventory schema version [${this.index.version}] is not supported - current version [${PUBLICATION_SCHEMA_VERSION}]`
       );
     }
     return this.index;
@@ -111,17 +111,17 @@ export class PublicationInventoryStorage {
 
   constructor(readonly folderName = `${process.env.FOLDER_INVENTORY}`) {}
 
-  async loadOrCreate(fileName = 'publications.json') {
+  async loadOrCreate(fileName = 'publications.json', readIndex = false) {
     const fs = this.#fs();
     const logger = this.#logger();
 
     const path = this.folderName;
     const directory = await fs.createDirectory(path);
     const inventory = new PublicationInventory(directory, logger, fileName);
-    const index = await inventory.readIndex();
-    logger.log(
-      `[Inventory: ${path}/${fileName}] Loaded with ${Object.keys(index.messages).length} entries`
-    );
+    if (readIndex) {
+      const index = await inventory.readIndex();
+      logger.log(`[${path}/${fileName}] Loaded with ${Object.keys(index.messages).length} entries`);
+    }
     return inventory;
   }
 }

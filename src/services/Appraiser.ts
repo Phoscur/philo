@@ -115,6 +115,7 @@ export class Appraisement {
   }
 
   async addAppraisal(name: string, data: Appraisal) {
+    await this.readIndex();
     if (!this.index.appraisals[name]) {
       this.index.appraisals[name] = [];
     }
@@ -122,20 +123,18 @@ export class Appraisement {
     await this.writeIndex();
   }
 
-  async getRatingSum(name: string) {
+  getRatingSum(name: string) {
     return this.index.appraisals[name].reduce((sum, { rating }) => sum + rating, 0);
   }
 
   async setCloudStudy(cloud: CloudStudySymbol) {
+    await this.readIndex();
     this.index.cloudStudy = cloud;
     await this.writeIndex();
   }
 
   private async writeIndex() {
-    await this.directory.save(
-      this.fileName,
-      Buffer.from(JSON.stringify(this.index, null, 2), 'utf8')
-    );
+    await this.directory.saveJSON(this.fileName, this.index);
   }
 
   async readIndex(): Promise<AppraisalIndex> {
@@ -187,19 +186,19 @@ export class Appraiser {
     }));
   }
 
-  async loadOrCreate(fileName = 'appraisals.json') {
+  async loadOrCreate(fileName = 'appraisals.json', readIndex = false) {
     const fs = this.#fs();
     const logger = this.#logger();
 
     const path = this.folderName;
     const directory = await fs.createDirectory(path);
     const inventory = new Appraisement(directory, logger, fileName);
-    const index = await inventory.readIndex();
-    logger.log(
-      `[Inventory: ${path}/${fileName}] Loaded with ${
-        Object.keys(index.appraisals).length
-      } file entries`
-    );
+    if (readIndex) {
+      const index = await inventory.readIndex();
+      logger.log(
+        `[${path}/${fileName}] Loaded with ${Object.keys(index.appraisals).length} file entries`
+      );
+    }
     return inventory;
   }
 }

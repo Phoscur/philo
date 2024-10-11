@@ -98,7 +98,7 @@ export class Publisher {
     const appraiser = this.#appraiser();
 
     const inventory =
-      openInventory ?? (await this.#publications().loadOrCreate(this.publicationsFile));
+      openInventory ?? (await this.#publications().loadOrCreate(this.publicationsFile, true));
 
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
@@ -114,7 +114,7 @@ export class Publisher {
     const appraiser = this.#appraiser();
     const publications = this.#publications();
 
-    const inventory = await publications.loadOrCreate(this.publicationsFile);
+    const inventory = await publications.loadOrCreate(this.publicationsFile, true);
     const appraisement = await appraiser.loadOrCreate(this.appraisalsFile);
 
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);

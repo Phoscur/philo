@@ -1,6 +1,5 @@
 import { describe, expect, it, MockInstance, vi } from 'vitest';
 import {
-  Appraisement,
   Appraiser,
   createInjectorWithStubbedDependencies,
   Directory,
@@ -8,7 +7,6 @@ import {
   Injector,
   LIKE,
   Logger,
-  PublicationInventory,
   PublicationInventoryStorage,
   Publisher,
 } from './services/index.js';
@@ -28,18 +26,15 @@ function createInjectorSpies() {
           if (directories[path]) {
             return directories[path];
           }
-          //console.log('CREATE DIR', path);
           // skip actual folder creation
           const dir = Object.create(new Directory(injector.get(Logger), fs, path));
           // cache file contents
-          let dataCache: any = null;
+          const dataCache: Record<string, any> = {};
           dir.saveJSON = vi.fn((fileName: string, data: any) => {
-            //console.log('save', fileName, data);
-            dataCache = data;
+            dataCache[fileName] = data;
           });
           dir.readJSON = vi.fn((fileName: string) => {
-            //console.log('read', fileName, dataCache);
-            return dataCache;
+            return dataCache[fileName] ?? null;
           });
           spies[path] = dir.saveJSON;
           directories[path] = dir;
@@ -52,35 +47,13 @@ function createInjectorSpies() {
     {
       provide: Appraiser,
       factory(injector) {
-        const decorated = new Appraiser(DIR);
-        //return decorated;
-        const appraiser = Object.create(decorated);
-
-        appraiser.loadOrCreate = async (fileName: string) => {
-          const dir = await injector.get(FileSystem).createDirectory(DIR);
-          //const inventory = await decorated.loadOrCreate(fileName);
-          const inventory = new Appraisement(dir, injector.get(Logger), fileName);
-          spies[fileName] = vi.spyOn(inventory, 'addAppraisal');
-          return inventory;
-        };
-        return appraiser;
+        return new Appraiser(DIR);
       },
     },
     {
       provide: PublicationInventoryStorage,
       factory(injector) {
-        const decorated = new PublicationInventoryStorage(DIR);
-        return decorated;
-        const storage = Object.create(decorated);
-
-        storage.loadOrCreate = async (fileName: string) => {
-          //const dir = await injector.get(FileSystem).createDirectory(DIR);
-          const inventory = await decorated.loadOrCreate(fileName);
-          //new PublicationInventory(dir, injector.get(Logger), fileName);
-          spies[fileName] = vi.spyOn(inventory, 'readIndex');
-          return inventory;
-        };
-        return storage;
+        return new PublicationInventoryStorage(DIR);
       },
     },
   ]);
@@ -108,18 +81,43 @@ describe('Publisher', () => {
     const author = 'Phoscur';
     const name = 'timelapse-test';
     const messageId = -111;
+    const created = Date.now();
     const like = LIKE.HEART;
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
     await pubs.setMessage(messageId, {
       id: messageId,
       name,
-      created: Date.now(),
+      created,
     });
 
     expect(publisher.callbackMessageShare).toBeDefined();
     const liking = await publisher.like(messageId, author, `like-${like}`);
-    expect(spies[publisher.appraisalsFile]).toHaveBeenCalledWith(name, { author, like, rating: 1 });
     expect(liking).toEqual(like);
+    expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
+      messages: {
+        '-111': {
+          id: messageId,
+          name,
+          created,
+        },
+      },
+      name: 'publications-2024.json',
+      publications: {},
+      version: 'Publication-1',
+    });
+    expect(spies[DIR]).toHaveBeenCalledWith(publisher.appraisalsFile, {
+      name: 'appraisals-2024.json',
+      appraisals: {
+        'timelapse-test': [
+          {
+            author: 'Phoscur',
+            like: '❤️',
+            rating: 1,
+          },
+        ],
+      },
+      version: 'Appraisals-1',
+    });
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
