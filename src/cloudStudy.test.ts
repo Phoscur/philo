@@ -118,6 +118,9 @@ describe('Publisher', () => {
       },
       version: 'Appraisals-1',
     });
+    expect(pubs.prettyIndex).toBe(`{\n  "-111": "not shared"\n}`);
+    const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
+    expect(appraisals.prettyIndex).toBe(`{\n  "${name}": 1\n}`);
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
@@ -172,9 +175,8 @@ describe('Publisher', () => {
       },
       version: 'Publication-1',
     });
-    expect(pubs.prettyIndex).toBe(`{
-  "-111": "shared",
-  "-222": "shared (-111)"
-}`);
+    expect(pubs.prettyIndex).toBe(
+      `{\n  "-111": "shared as -222",\n  "-222": "shared from -111"\n}`
+    );
   });
 });

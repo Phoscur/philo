@@ -48,12 +48,12 @@ export class PublicationInventory {
     const { messages, publications } = this.index;
     const output: Record<string, string> = {};
     for (const messageId in messages) {
-      output[messageId] = `${messages[messageId].channelMessageId ? 'shared' : ''}`;
+      const id = messages[messageId].channelMessageId;
+      output[messageId] = id ? `shared as ${id}` : 'not shared';
     }
     for (const messageId in publications) {
-      output[messageId] = `${
-        messages[publications[messageId]].channelMessageId ? 'shared' : '??!'
-      } (${publications[messageId]})`;
+      const id = messages[publications[messageId]].channelMessageId;
+      output[messageId] = `shared from ${publications[messageId]}`;
     }
     return JSON.stringify(output, null, 2);
   }
