@@ -76,13 +76,15 @@ export interface Appraisal {
 }
 
 export interface AppraisalList {
-  [name: string]: Appraisal[];
+  [name: string]: {
+    votes: Appraisal[];
+    cloudStudy?: CloudStudySymbol;
+  };
 }
 
 export interface AppraisalIndex {
   name: string;
   version: string;
-  cloudStudy?: CloudStudySymbol;
   appraisals: AppraisalList;
 }
 
@@ -107,9 +109,11 @@ export class Appraisement {
 
   get prettyIndex() {
     const { appraisals } = this.index;
-    const output: Record<string, number> = {};
+    const output: Record<string, number | string | undefined> = {};
     for (const folder in appraisals) {
-      output[folder] = appraisals[folder].length;
+      const voteCount = appraisals[folder].votes.length;
+      const cloudStudy = appraisals[folder].cloudStudy ?? '';
+      output[folder] = `${cloudStudy}#${voteCount}`;
     }
     return JSON.stringify(output, null, 2);
   }
@@ -117,19 +121,22 @@ export class Appraisement {
   async addAppraisal(name: string, data: Appraisal) {
     await this.readIndex();
     if (!this.index.appraisals[name]) {
-      this.index.appraisals[name] = [];
+      this.index.appraisals[name] = { votes: [] };
     }
-    this.index.appraisals[name].push(data);
+    this.index.appraisals[name].votes.push(data);
     await this.writeIndex();
   }
 
   getRatingSum(name: string) {
-    return this.index.appraisals[name].reduce((sum, { rating }) => sum + rating, 0);
+    return this.index.appraisals[name].votes.reduce((sum, { rating }) => sum + rating, 0);
   }
 
-  async setCloudStudy(cloud: CloudStudySymbol) {
+  async setCloudStudy(name: string, cloud: CloudStudySymbol) {
     await this.readIndex();
-    this.index.cloudStudy = cloud;
+    if (!this.index.appraisals[name]) {
+      this.index.appraisals[name] = { votes: [] };
+    }
+    this.index.appraisals[name].cloudStudy = cloud;
     await this.writeIndex();
   }
 
@@ -196,7 +203,7 @@ export class Appraiser {
     if (readIndex) {
       const index = await inventory.readIndex();
       logger.log(
-        `[${path}/${fileName}] Loaded with ${Object.keys(index.appraisals).length} file entries`
+        `[${path}/${fileName}] Loaded with ${Object.keys(index.appraisals).length} entries`
       );
     }
     return inventory;

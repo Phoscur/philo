@@ -79,14 +79,14 @@ export class Publisher {
 
     const cloud = data.split('-')[1] as CloudStudySymbol; // split: cloud-$1
 
-    const inventory = await publications.loadOrCreate();
+    const inventory = await publications.loadOrCreate(this.publicationsFile, true);
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
       return `Message Inventory [${messageId}] not found`;
     }
 
-    const appraisement = await appraiser.loadOrCreate();
-    await appraisement.setCloudStudy(cloud);
+    const appraisement = await appraiser.loadOrCreate(this.appraisalsFile);
+    await appraisement.setCloudStudy(pub.name, cloud);
     return cloud;
   }
 

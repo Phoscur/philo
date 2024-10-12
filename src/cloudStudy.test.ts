@@ -1,6 +1,7 @@
 import { describe, expect, it, MockInstance, vi } from 'vitest';
 import {
   Appraiser,
+  CLOUD,
   createInjectorWithStubbedDependencies,
   Directory,
   FileSystem,
@@ -66,10 +67,32 @@ function createInjectorSpies() {
 
 describe('CloudStudy', () => {
   it('is saved by the Publisher', async () => {
-    const publisher = createInjectorSpies().injector.get(Publisher);
+    const { injector } = createInjectorSpies();
+    const publisher = injector.get(Publisher);
 
     const cloud = await publisher.saveCloudStudy(-111, 'c');
     expect(cloud).toEqual('Message Inventory [-111] not found');
+  });
+  it('is saved by the Publisher when found', async () => {
+    const { injector } = createInjectorSpies();
+    const publisher = injector.get(Publisher);
+    const publications = injector.get(PublicationInventoryStorage);
+    const name = 'timelapse-test';
+    const messageId = -111;
+    const created = Date.now();
+    const cloud = CLOUD.Y;
+
+    const pubs = await publications.loadOrCreate(publisher.publicationsFile);
+    await pubs.setMessage(messageId, {
+      messageId,
+      name,
+      created,
+    });
+
+    const cloudStudy = await publisher.saveCloudStudy(-111, `cloud-${cloud}`);
+    expect(cloudStudy).toEqual(cloud);
+    const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
+    expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#0"\n}`);
   });
 });
 
@@ -108,19 +131,21 @@ describe('Publisher', () => {
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.appraisalsFile, {
       name: 'appraisals-2024.json',
       appraisals: {
-        'timelapse-test': [
-          {
-            author: 'Phoscur',
-            like: '❤️',
-            rating: 1,
-          },
-        ],
+        'timelapse-test': {
+          votes: [
+            {
+              author: 'Phoscur',
+              like: '❤️',
+              rating: 1,
+            },
+          ],
+        },
       },
       version: 'Appraisals-1',
     });
     expect(pubs.prettyIndex).toBe(`{\n  "-111": "not shared"\n}`);
     const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
-    expect(appraisals.prettyIndex).toBe(`{\n  "${name}": 1\n}`);
+    expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "#1"\n}`);
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
