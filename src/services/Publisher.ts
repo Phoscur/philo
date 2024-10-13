@@ -56,16 +56,56 @@ export class Publisher {
     ]);
   }
 
+  #openInventory: PublicationInventory | null = null;
+  async getInventory(skipReadIndex = false) {
+    if (this.#openInventory) {
+      return this.#openInventory;
+    }
+    this.#openInventory = await this.#publications().loadOrCreate(
+      this.publicationsFile,
+      !skipReadIndex
+    );
+    return this.#openInventory;
+  }
+  #openAppraisment: Appraisement | null = null;
+  async getAppraisement(skipReadIndex = false) {
+    if (this.#openAppraisment) {
+      return this.#openAppraisment;
+    }
+    this.#openAppraisment = await this.#appraiser().loadOrCreate(
+      this.appraisalsFile,
+      !skipReadIndex
+    );
+    return this.#openAppraisment;
+  }
+
+  async getCaption(
+    messageId: number,
+    langKey: 'timelapse.title' | 'sunset.title' = 'timelapse.title'
+  ) {
+    const inventory = await this.getInventory();
+    const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
+    if (!pub) {
+      this.#logger().log(`Failed to find publication [${messageId}]`, inventory.prettyIndex);
+      return `Error: Message [${messageId}] not found`;
+    }
+
+    const appraisement = await this.getAppraisement();
+    const like = await appraisement.getLike(pub.name);
+    const cloudStudy = appraisement.getCloudStudy(pub.name);
+    const rated = `${cloudStudy} ${[like]}`;
+    return this.#i18n().t(langKey, new Date(pub.created), rated);
+  }
+
   async publish(group: ChatMessenger, messageId: number) {
-    const publications = this.#publications();
     const channelMessage = await group.sendMessageCopy(messageId, this.markupPublished);
-    const pubs = await publications.loadOrCreate(this.publicationsFile);
+    const pubs = await this.getInventory();
     await pubs.setPublication(channelMessage.message_id, messageId);
 
     return channelMessage.message_id;
   }
 
-  async like(messageId: number, author: string, data: string) {
+  async saveLike(messageId: number, author: string, data: string) {
     const appraiser = this.#appraiser();
     const like = data.split('-')[1] as LikeSymbol; // split: like-$1
     const rating = appraiser.likeToRating(like);
@@ -74,55 +114,40 @@ export class Publisher {
   }
 
   async saveCloudStudy(messageId: number, data: string) {
-    const appraiser = this.#appraiser();
-    const publications = this.#publications();
-
     const cloud = data.split('-')[1] as CloudStudySymbol; // split: cloud-$1
 
-    const inventory = await publications.loadOrCreate(this.publicationsFile, true);
+    const inventory = await this.getInventory();
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
-      return `Message Inventory [${messageId}] not found`;
+      return `Error: Message [${messageId}] not found`;
     }
 
-    const appraisement = await appraiser.loadOrCreate(this.appraisalsFile);
+    const appraisement = await this.getAppraisement(true);
     await appraisement.setCloudStudy(pub.name, cloud);
     return cloud;
   }
 
-  async readRating(
-    messageId: number,
-    openInventory?: PublicationInventory,
-    openAppraisement?: Appraisement
-  ): Promise<number> {
-    const appraiser = this.#appraiser();
-
-    const inventory =
-      openInventory ?? (await this.#publications().loadOrCreate(this.publicationsFile, true));
-
+  async readRating(messageId: number): Promise<number> {
+    const inventory = await this.getInventory();
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
-      console.log('Failed to find publication', messageId, openInventory);
+      this.#logger().log(`Error: Failed to find publication [${messageId}]`, inventory.prettyIndex);
       return 0;
     }
 
-    const appraisement = openAppraisement ?? (await appraiser.loadOrCreate(this.appraisalsFile));
+    const appraisement = await this.getAppraisement();
     return appraisement.getRatingSum(pub.name);
   }
 
   async saveRating(messageId: number, author: string, rating: number, like: LikeSymbol) {
-    const appraiser = this.#appraiser();
-    const publications = this.#publications();
-
-    const inventory = await publications.loadOrCreate(this.publicationsFile, true);
-    const appraisement = await appraiser.loadOrCreate(this.appraisalsFile);
-
+    const inventory = await this.getInventory();
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
-      console.log('Failed to find publication', messageId);
+      this.#logger().log(`Error: Failed to find publication [${messageId}]`, inventory.prettyIndex);
       return 0;
     }
 
+    const appraisement = await this.getAppraisement(true);
     await appraisement.addAppraisal(pub.name, {
       author,
       rating,

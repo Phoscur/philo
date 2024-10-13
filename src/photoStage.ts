@@ -88,7 +88,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     const user = ctx.from?.username || 'Anonymous';
     if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
 
-    const liked = await publisher.like(message.message_id, user, data);
+    const liked = await publisher.saveLike(message.message_id, user, data);
     const markup = Markup.inlineKeyboard([publisher.markupRowLikes]);
     // TODO proper caption
     const caption = message.caption + liked;

@@ -71,15 +71,16 @@ describe('CloudStudy', () => {
     const publisher = injector.get(Publisher);
 
     const cloud = await publisher.saveCloudStudy(-111, 'c');
-    expect(cloud).toEqual('Message Inventory [-111] not found');
+    expect(cloud).toEqual('Error: Message [-111] not found');
   });
   it('is saved by the Publisher when found', async () => {
     const { injector } = createInjectorSpies();
     const publisher = injector.get(Publisher);
+    const appraiser = injector.get(Appraiser);
     const publications = injector.get(PublicationInventoryStorage);
     const name = 'timelapse-test';
     const messageId = -111;
-    const created = Date.now();
+    const created = Number(new Date(2024, 9, 13, 18, 45));
     const cloud = CLOUD.Y;
 
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
@@ -91,8 +92,9 @@ describe('CloudStudy', () => {
 
     const cloudStudy = await publisher.saveCloudStudy(-111, `cloud-${cloud}`);
     expect(cloudStudy).toEqual(cloud);
-    const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
+    const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#0"\n}`);
+    expect(await publisher.getCaption(messageId)).toBe(`🎥${cloud}  13.10.2024 18:45\n`);
   });
 });
 
@@ -104,7 +106,7 @@ describe('Publisher', () => {
     const author = 'Phoscur';
     const name = 'timelapse-test';
     const messageId = -111;
-    const created = Date.now();
+    const created = Number(new Date(2024, 9, 13, 18, 45));
     const like = LIKE.HEART;
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
     await pubs.setMessage(messageId, {
@@ -114,7 +116,7 @@ describe('Publisher', () => {
     });
 
     expect(publisher.callbackMessageShare).toBeDefined();
-    const liking = await publisher.like(messageId, author, `like-${like}`);
+    const liking = await publisher.saveLike(messageId, author, `like-${like}`);
     expect(liking).toEqual(like);
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
       messages: {
@@ -146,6 +148,7 @@ describe('Publisher', () => {
     expect(pubs.prettyIndex).toBe(`{\n  "-111": "not shared"\n}`);
     const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "#1"\n}`);
+    expect(await publisher.getCaption(messageId)).toBe(`🎥 ${like} 13.10.2024 18:45\n`);
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();

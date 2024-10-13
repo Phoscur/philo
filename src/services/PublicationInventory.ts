@@ -68,6 +68,10 @@ export class PublicationInventory {
     return this.index.messages[messageId];
   }
 
+  getCaptionDate(messageId: number) {
+    const message = this.getMessage(messageId);
+  }
+
   getPublicationMessage(channelMessageId: number): PublicationMessage | undefined {
     const messageId = this.index.publications[channelMessageId];
     return this.getMessage(messageId);

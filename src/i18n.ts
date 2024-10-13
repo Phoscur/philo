@@ -68,8 +68,9 @@ const composite = {
       `🎞️ Rendered Frames ${frame} (${fps} FPS)`,
     'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
       `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\n${hardwareStatus}`,
-    'sunset.title': (t: BasicIndex, d = new Date()) => `🌇 ${dateFormat(d)}\n`,
-    'timelapse.title': (t: BasicIndex, d = new Date()) => `🎥 ${dateFormat(d)}\n`,
+    'sunset.title': (t: BasicIndex, d = new Date(), rated = '') => `🌇${rated} ${dateFormat(d)}\n`,
+    'timelapse.title': (t: BasicIndex, d = new Date(), rated = '') =>
+      `🎥${rated} ${dateFormat(d)}\n`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
   de: {
@@ -85,8 +86,9 @@ const composite = {
       `🎞️ Gerenderte Videobilder ${frame} (${fps} FPS)`,
     'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
       `🌇 Sonnenuntergang ist schon bald...\n⤵️ Starte den täglichen Zeitraffer 🎥\n${hardwareStatus}`,
-    'sunset.title': (t: BasicIndex, d = new Date()) => `🌇 ${dateFormat(d)}\n`,
-    'timelapse.title': (t: BasicIndex, d = new Date()) => `🎥 ${dateFormat(d)}\n`,
+    'sunset.title': (t: BasicIndex, d = new Date(), rated = '') => `🌇${rated} ${dateFormat(d)}\n`,
+    'timelapse.title': (t: BasicIndex, d = new Date(), rated = '') =>
+      `🎥${rated} ${dateFormat(d)}\n`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
   },
 } as const;
