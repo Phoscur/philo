@@ -68,7 +68,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // ---------------------------------------------------------------------------------------------------
   // Sharing / Publishing: Collecting Appraisals
 
-  scene.action(Producer.ACTION.SHARE, async (ctx, next) => {
+  scene.action(Publisher.ACTION.SHARE, async (ctx, next) => {
     const publisher = ctx.di.get(Publisher);
     const { message } = ctx.callbackQuery;
 
@@ -89,35 +89,30 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
 
     const liked = await publisher.saveLike(message.message_id, user, data);
-    const markup = Markup.inlineKeyboard([publisher.markupRowLikes]);
-    // TODO proper caption
-    const caption = message.caption + liked;
     await ctx.answerCbQuery(liked);
+
+    const caption = await publisher.getCaption(message.message_id);
+    const markup = Markup.inlineKeyboard([publisher.markupRowLikes]);
     await ctx.editMessageCaption(caption, markup);
   });
 
   scene.action(Publisher.ACTION.STUDY, async (ctx, next) => {
-    try {
-      const producer = ctx.di.get(Producer); // reusing guard message texts
-      const publisher = ctx.di.get(Publisher);
-      const data = ctx.match[0] || '';
+    const producer = ctx.di.get(Producer); // reusing guard message texts
+    const publisher = ctx.di.get(Publisher);
+    const data = ctx.match[0] || '';
 
-      const { message } = ctx.callbackQuery;
-      const user = ctx.from?.username || '';
-      if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
+    const { message } = ctx.callbackQuery;
+    const user = ctx.from?.username || '';
+    if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
 
-      if (!~ADMINS.indexOf(user)) {
-        return ctx.answerCbQuery(producer.callbackMessageAdminOnlyGuarded);
-      }
-      const cloud = await publisher.saveCloudStudy(message.message_id, data);
-      // TODO proper caption
-      const caption = message.caption + cloud;
-
-      await ctx.answerCbQuery(producer.callbackMessageCancel);
-      await ctx.editMessageCaption(caption, publisher.markupPublished);
-    } catch (error) {
-      console.error('Failed to study', error);
+    if (!~ADMINS.indexOf(user)) {
+      return ctx.answerCbQuery(producer.callbackMessageAdminOnlyGuarded);
     }
+    const cloud = await publisher.saveCloudStudy(message.message_id, data);
+    await ctx.answerCbQuery(cloud);
+
+    const caption = await publisher.getCaption(message.message_id);
+    await ctx.editMessageCaption(caption, publisher.markupPublished);
   });
 
   // ---------------------------------------------------------------------------------------------------

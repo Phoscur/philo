@@ -10,6 +10,14 @@ import { Preset } from './Preset.js';
 import { Directory } from './FileSystem.js';
 import type { TimelapseEventMap } from './Timelapse.js';
 import type EventEmitter from 'node:events';
+import { Publisher } from './Publisher.js';
+
+export const MEDIA = {
+  SHOT: 'shot',
+  TIMELAPSE: 'timelapse',
+  SUNSET: 'sunset',
+} as const;
+export type MediaType = (typeof MEDIA)[keyof typeof MEDIA];
 
 /**
  * Given (Telegram) messenger context, Producer will interact with the Director to stream content production.
@@ -21,8 +29,6 @@ export class Producer {
     PRESET: 'preset',
     TIMELAPSE: 'timelapse',
     CANCEL: 'cancelRunning',
-    LIKE: 'like',
-    SHARE: 'share',
   } as const;
 
   static TIMELAPSES = [
@@ -35,6 +41,7 @@ export class Producer {
 
   #logger = inject(Logger);
   #director = inject(Director);
+  #publisher = inject(Publisher);
   #presets = inject(Preset);
   #assets = inject(Assets);
   #hd = inject(Hardware);
@@ -79,12 +86,7 @@ export class Producer {
       [Markup.button.callback(t('action.presetSwitch'), Producer.ACTION.PRESET)],
     ]);
   }
-  get markupShare() {
-    const { t } = this.#i18n();
-    return Markup.inlineKeyboard([
-      [Markup.button.callback(t('action.shareToChannel'), Producer.ACTION.SHARE)],
-    ]);
-  }
+
   get markupCancel() {
     const { t } = this.#i18n();
     return Markup.inlineKeyboard([
@@ -128,9 +130,9 @@ export class Producer {
   }
 
   async photograph(chat: ChatMessenger, presetName?: string) {
-    const { message, name: title } = await this.shot(chat, presetName);
-    // add share button (repost in CHANNEL_CHAT_ID with different caption)
-    await message.editCaption(title, this.markupShare);
+    const publisher = this.#publisher();
+    const { message, name } = await this.shot(chat, presetName);
+    await publisher.prepare(message, MEDIA.SHOT, name);
   }
 
   async timelapse(
@@ -156,7 +158,7 @@ export class Producer {
     });
 
     // skipping the `started` event here (sleepMS=0)
-    this.addEventListeners(events, message);
+    this.addEventListeners(events, message, MEDIA.TIMELAPSE, director.nameNow);
   }
 
   cancel() {
@@ -176,7 +178,7 @@ export class Producer {
         chat.sendMessage(t('sunset.start', hdStatus));
 
         const message = await this.createAnimation(chat);
-        this.addEventListeners(events, message);
+        this.addEventListeners(events, message, MEDIA.SUNSET, director.nameNow);
       });
     });
   }
@@ -184,13 +186,15 @@ export class Producer {
   private addEventListeners(
     events: EventEmitter<TimelapseEventMap>,
     message: ChatAnimationMessage,
+    type: 'timelapse' | 'sunset',
+    name: string,
     date = new Date()
   ) {
     const logger = this.#logger();
 
     const onFile = this.editMessageOnPhotoFile(message);
     const onVideoFrame = this.editMessageOnVideoFrame(message);
-    const onVideoRendered = this.editMessageOnVideoFile(message, date);
+    const onVideoRendered = this.editMessageOnVideoFile(message, type, name, date);
     const finishHandler = async (fileName: string, dir: Directory) => {
       await onVideoRendered(fileName, dir);
       removeEventListeners();
@@ -236,21 +240,25 @@ export class Producer {
     };
   }
 
-  editMessageOnVideoFile(message: ChatAnimationMessage, date: Date) {
+  editMessageOnVideoFile(
+    message: ChatAnimationMessage,
+    type: 'sunset' | 'timelapse',
+    name: string,
+    date: Date
+  ) {
     const logger = this.#logger();
     const { t } = this.#i18n();
+    const publisher = this.#publisher();
     return async (fileName: string, dir: Directory) => {
       try {
         logger.log(`[${dir.path}] Stitched: ${fileName}`);
-        const caption = t('sunset.title', date);
-        await message.editMedia(
-          {
-            type: 'animation',
-            caption,
-            media: Input.fromLocalFile(dir.joinAbsolute(fileName)),
-          },
-          this.markupShare
-        );
+        const caption = t('timelapse.title', date);
+        await message.editMedia({
+          type: 'animation',
+          caption,
+          media: Input.fromLocalFile(dir.joinAbsolute(fileName)),
+        });
+        await publisher.prepare(message, type, name);
       } catch (e) {
         logger.log('Failed to edit message:', e);
       }

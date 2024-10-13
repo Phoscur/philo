@@ -1,11 +1,13 @@
 import { inject, injectable } from '@joist/di';
 import { Directory, FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
+import { MediaType } from './Producer.js';
 
 const PUBLICATION_SCHEMA_VERSION = 'Publication-1';
 export interface PublicationMessage {
   messageId: number;
   name: string;
+  type: MediaType;
   created: number;
   channelMessageId?: number;
 }

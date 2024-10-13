@@ -87,6 +87,7 @@ describe('CloudStudy', () => {
     await pubs.setMessage(messageId, {
       messageId,
       name,
+      type: 'timelapse',
       created,
     });
 
@@ -94,7 +95,7 @@ describe('CloudStudy', () => {
     expect(cloudStudy).toEqual(cloud);
     const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#0"\n}`);
-    expect(await publisher.getCaption(messageId)).toBe(`🎥${cloud}  13.10.2024 18:45\n`);
+    expect(await publisher.getCaption(messageId)).toBe(`🎥${cloud}  13.10.2024 18:45`);
   });
 });
 
@@ -112,6 +113,7 @@ describe('Publisher', () => {
     await pubs.setMessage(messageId, {
       messageId,
       name,
+      type: 'timelapse',
       created,
     });
 
@@ -123,6 +125,7 @@ describe('Publisher', () => {
         '-111': {
           messageId,
           name,
+          type: 'timelapse',
           created,
         },
       },
@@ -148,7 +151,7 @@ describe('Publisher', () => {
     expect(pubs.prettyIndex).toBe(`{\n  "-111": "not shared"\n}`);
     const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "#1"\n}`);
-    expect(await publisher.getCaption(messageId)).toBe(`🎥 ${like} 13.10.2024 18:45\n`);
+    expect(await publisher.getCaption(messageId)).toBe(`🎥 ${like} 13.10.2024 18:45`);
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
@@ -169,6 +172,7 @@ describe('Publisher', () => {
     await pubs.setMessage(messageId, {
       messageId,
       name,
+      type: 'timelapse',
       created,
     });
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
@@ -176,6 +180,7 @@ describe('Publisher', () => {
         '-111': {
           messageId,
           name,
+          type: 'timelapse',
           created,
         },
       },
@@ -193,6 +198,7 @@ describe('Publisher', () => {
         '-111': {
           messageId,
           name,
+          type: 'timelapse',
           created,
           channelMessageId,
         },

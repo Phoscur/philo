@@ -4,11 +4,13 @@ import { Appraisement, Appraiser, CloudStudySymbol, LikeSymbol } from './Apprais
 import { I18nService } from './I18n.js';
 import { Markup } from 'telegraf';
 import { PublicationInventory, PublicationInventoryStorage } from './PublicationInventory.js';
-import { ChatMessenger } from '../context.js';
+import { ChatAnimationMessage, ChatMessenger } from '../context.js';
+import { MediaType } from './Producer.js';
 
 @injectable
 export class Publisher {
   static ACTION = {
+    SHARE: 'share',
     PUBLISH: 'publish',
     LIKE: /like-.+/,
     STUDY: /study-.+/,
@@ -44,6 +46,13 @@ export class Publisher {
   get markupRowCloudStudy() {
     const appraiser = this.#appraiser();
     return appraiser.cloudStudies.map(({ text, data }) => Markup.button.callback(text, data));
+  }
+
+  get markupShare() {
+    const { t } = this.#i18n();
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(t('action.shareToChannel'), Publisher.ACTION.SHARE)],
+    ]);
   }
 
   get markupPublished() {
@@ -83,6 +92,8 @@ export class Publisher {
     messageId: number,
     langKey: 'timelapse.title' | 'sunset.title' = 'timelapse.title'
   ) {
+    const { t } = this.#i18n();
+
     const inventory = await this.getInventory();
     const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
     if (!pub) {
@@ -93,8 +104,19 @@ export class Publisher {
     const appraisement = await this.getAppraisement();
     const like = await appraisement.getLike(pub.name);
     const cloudStudy = appraisement.getCloudStudy(pub.name);
-    const rated = `${cloudStudy} ${[like]}`;
-    return this.#i18n().t(langKey, new Date(pub.created), rated);
+    return t(langKey, new Date(pub.created), cloudStudy, like);
+  }
+
+  async prepare(message: ChatAnimationMessage, type: MediaType, name: string) {
+    const inventory = await this.getInventory();
+    await inventory.setMessage(message.id, {
+      messageId: message.id,
+      name,
+      type,
+      created: Date.now(),
+    });
+    const caption = await this.getCaption(message.id);
+    await message.editCaption(caption, this.markupShare);
   }
 
   async publish(group: ChatMessenger, messageId: number) {
