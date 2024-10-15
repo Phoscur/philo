@@ -50,7 +50,7 @@ type BasicIndex = (typeof base)[typeof defaultLang];
 type BasicEntry = keyof BasicIndex;
 export type SlottedTranslate = (index: BasicIndex, ...args: BasicEntry[]) => string;
 
-function dateFormat(d: Date) {
+export function dateFormat(d = new Date()) {
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
 }
 

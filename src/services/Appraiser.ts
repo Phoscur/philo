@@ -132,9 +132,8 @@ export class Appraisement {
   }
 
   getLike(name: string) {
-    const hasVotes = this.index.appraisals[name].votes.length > 0;
-    const like = ratingToLike(this.getRatingSum(name));
-    return hasVotes ? like : '';
+    const hasVotes = this.index.appraisals[name]?.votes.length > 0;
+    return hasVotes ? ratingToLike(this.getRatingSum(name)) : '';
   }
 
   async setCloudStudy(name: string, cloud: CloudStudySymbol) {
@@ -147,7 +146,7 @@ export class Appraisement {
   }
 
   getCloudStudy(name: string) {
-    return this.index.appraisals[name].cloudStudy ?? '';
+    return this.index.appraisals[name]?.cloudStudy ?? '';
   }
 
   private async writeIndex() {

@@ -175,7 +175,7 @@ export class Producer {
       logger.log('Scheduled the daily sunset timelapse.');
       events.once('started', async () => {
         const hdStatus = await this.#hd().getStatus();
-        chat.sendMessage(t('sunset.start', hdStatus));
+        await chat.sendMessage(t('sunset.start', hdStatus));
 
         const message = await this.createAnimation(chat);
         this.addEventListeners(events, message, MEDIA.SUNSET, director.nameNow);
@@ -256,7 +256,7 @@ export class Producer {
         await message.editMedia({
           type: 'animation',
           caption,
-          media: Input.fromLocalFile(dir.joinAbsolute(fileName)),
+          media: Input.fromLocalFile(dir.joinAbsolute(fileName), fileName),
         });
         await publisher.prepare(message, type, name);
       } catch (e) {

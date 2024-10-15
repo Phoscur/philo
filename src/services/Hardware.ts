@@ -13,9 +13,21 @@ export class Hardware {
     readonly temperatureSensorEnabled = process.env.ENABLE_TEMPERATURE_SENSOR === 'true'
   ) {}
 
+  async getStorageStatus(): Promise<{ size: string; percent: string }> {
+    try {
+      return await getStorageStatus();
+    } catch (error) {
+      this.#logger().log('Failed to read storage status', error);
+      return {
+        size: '-1',
+        percent: '-1',
+      };
+    }
+  }
+
   async getStatus() {
     const { t } = this.#i18n();
-    const status = await getStorageStatus();
+    const status = await this.getStorageStatus();
     const storageMessage = t('storage.status', status.size, status.percent);
     if (!this.temperatureSensorEnabled) return storageMessage;
     try {
@@ -27,3 +39,21 @@ export class Hardware {
     }
   }
 }
+
+export const hardwareStubProvider = {
+  provide: Hardware,
+  factory() {
+    @injectable
+    class HardwareStub extends Hardware {
+      #i18n = inject(I18nService);
+      async getStatus() {
+        const { t } = this.#i18n();
+        const status = { size: '-1', percent: '-1' };
+        const storageMessage = t('storage.status', status.size, status.percent);
+        const temperatureMessage = 'Stubbed Temperature';
+        return `${temperatureMessage}\n${storageMessage}`;
+      }
+    }
+    return new HardwareStub();
+  },
+};

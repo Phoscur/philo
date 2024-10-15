@@ -25,11 +25,17 @@ import { Injector, Provider } from '@joist/di';
 import { consoleProvider } from './Logger.js';
 import { cameraStubProvider } from './CameraStub.js';
 import { rendererStubProvider } from './TimelapseVideoRendererStub.js';
+import { hardwareStubProvider } from './Hardware.js';
 
 export function createInjector(providers: Provider<any>[] = []) {
   return new Injector([...providers, consoleProvider]);
 }
 
 export function createInjectorWithStubbedDependencies(providers: Provider<any>[] = []) {
-  return createInjector([...providers, cameraStubProvider, rendererStubProvider]);
+  return createInjector([
+    ...providers,
+    cameraStubProvider,
+    rendererStubProvider,
+    hardwareStubProvider,
+  ]);
 }

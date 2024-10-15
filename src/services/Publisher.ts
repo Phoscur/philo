@@ -88,10 +88,7 @@ export class Publisher {
     return this.#openAppraisment;
   }
 
-  async getCaption(
-    messageId: number,
-    langKey: 'timelapse.title' | 'sunset.title' = 'timelapse.title'
-  ) {
+  async getCaption(messageId: number) {
     const { t } = this.#i18n();
 
     const inventory = await this.getInventory();
@@ -104,6 +101,7 @@ export class Publisher {
     const appraisement = await this.getAppraisement();
     const like = await appraisement.getLike(pub.name);
     const cloudStudy = appraisement.getCloudStudy(pub.name);
+    const langKey = (pub.type + '.title') as 'timelapse.title' | 'sunset.title' | 'shot.title';
     return t(langKey, new Date(pub.created), cloudStudy, like);
   }
 
