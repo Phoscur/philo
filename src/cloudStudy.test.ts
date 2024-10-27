@@ -112,7 +112,7 @@ describe('CloudStudy', () => {
       created,
     });
 
-    const cloudStudy = await publisher.saveCloudStudy(-111, `cloud-${cloud}`);
+    const cloudStudy = await publisher.saveCloudStudy(messageId, `cloud-${cloud}`);
     expect(cloudStudy).toEqual(cloud);
     const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#0"\n}`);
@@ -131,8 +131,9 @@ describe('CloudStudy', () => {
     const sunMoon = injector.get(SunMoonTime);
     const { t } = injector.get(I18nService);
 
-    const name = 'sunset-test';
+    const name = director.nameNow;
     const messageId = -111;
+    const channelMessageId = -222;
     const created = dateFormat();
 
     const editMedia = vi.fn(async () => {});
@@ -150,11 +151,19 @@ describe('CloudStudy', () => {
           message_id: messageId,
         };
       }),
+      sendMessageCopy: vi.fn(async () => {
+        return {
+          messageId: channelMessageId,
+        };
+      }),
     } as unknown as ChatMessenger;
 
     producer.scheduleDailySunset(chat);
-    await emitter.emit('started');
-    await expect(chat.sendMessage).toHaveBeenCalledWith(`🌇 Sunset is soon...
+    emitter.emit('started');
+    //await Promise.resolve();
+    //await Promise.resolve();
+    await sunMoon.sleep(0); // = 2x await
+    expect(chat.sendMessage).toHaveBeenCalledWith(`🌇 Sunset is soon...
 ⤵️ Starting daily timelapse 🎥
 Stubbed Temperature
 💾 Storage (-1): -1`);
@@ -162,10 +171,28 @@ Stubbed Temperature
       caption: undefined,
     });
     const dir = await fs.createDirectory(name);
-    await emitter.emit('file', name, dir);
-    await emitter.emit('frame', name, 'fps'); // why do we really need this call here?! and why does this alternative not work?: await sunMoon.sleep(0);
-    expect(editCaption).toBeCalledWith('🎞️ Rendered Frames sunset-test (fps FPS)');
-    await emitter.emit('rendered', name, dir);
+
+    emitter.emit('file', name, dir);
+    await producer.settled;
+    expect(editMedia).toBeCalledWith(
+      {
+        caption: `📷 Last Timelapse frame created:\n${name}`,
+        media: {
+          filename: undefined,
+          source: dir.joinAbsolute(name),
+        },
+        type: 'photo',
+      },
+      producer.markupCancel
+    );
+    expect(editMedia).toHaveBeenCalledOnce();
+
+    emitter.emit('frame', name, 'fps');
+    await producer.settled;
+    expect(editCaption).toBeCalledWith(`🎞️ Rendered Frames ${name} (fps FPS)`);
+
+    emitter.emit('rendered', name, dir);
+    await producer.settled;
     expect(editMedia).toBeCalledWith({
       caption: '🎥  ' + created,
       media: {
@@ -174,6 +201,21 @@ Stubbed Temperature
       },
       type: 'animation',
     });
+    expect(editMedia).toHaveBeenCalledTimes(2);
+
+    const author = 'Phoscur';
+    const like = LIKE.HEART;
+    const cloud = CLOUD.LESS;
+    await publisher.saveLike(messageId, author, `like-${like}`);
+    await publisher.saveCloudStudy(messageId, `cloud-${cloud}`);
+    //?expect(editCaption).toBeCalledWith('🎥');
+
+    const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
+    expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#1"\n}`);
+    expect(await publisher.getCaption(messageId)).toBe(`${cloud}🌇 ${like} ${created}`);
+
+    await publisher.publish(chat, messageId);
+    expect(chat.sendMessageCopy).toHaveBeenCalledWith(messageId, publisher.markupPublished);
   });
 });
 
@@ -182,10 +224,10 @@ describe('Publisher', () => {
     const { injector, spies } = createInjectorSpies();
     const publisher = injector.get(Publisher);
     const publications = injector.get(PublicationInventoryStorage);
-    const author = 'Phoscur';
     const name = 'timelapse-test';
     const messageId = -111;
     const created = Number(new Date(2024, 9, 13, 18, 45));
+    const author = 'Phoscur';
     const like = LIKE.HEART;
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
     await pubs.setMessage(messageId, {

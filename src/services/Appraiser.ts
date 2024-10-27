@@ -196,7 +196,7 @@ export class Appraiser {
   }
 
   get cloudStudies() {
-    return Object.keys(CLOUD).map((cloud) => ({
+    return Object.values(CLOUD).map((cloud) => ({
       text: cloud,
       data: `study-${cloud}`,
     }));

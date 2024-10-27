@@ -178,9 +178,50 @@ export class Producer {
         await chat.sendMessage(t('sunset.start', hdStatus));
 
         const message = await this.createAnimation(chat);
+        await this.resetQueue();
         this.addEventListeners(events, message, MEDIA.SUNSET, director.nameNow);
       });
     });
+  }
+
+  #queue = Promise.resolve();
+  #errors = 0;
+  #done = false;
+  /**
+   * to ensure promise control on async event emitter callbacks
+   * @param task waiting to edit a message
+   */
+  enqueue(task = async () => {}) {
+    const logger = this.#logger();
+    const BACKOFF_MULTIPLIER = 1000;
+
+    const queued = this.#queue;
+    this.#queue = queued.then(async () => {
+      if (this.#done) {
+        logger.log('Skipped a task');
+        return;
+      }
+      if (this.#errors) {
+        await new Promise((res) => setTimeout(res, this.#errors * BACKOFF_MULTIPLIER));
+      }
+      try {
+        await task();
+      } catch (e) {
+        this.#errors++;
+        logger.log('Failed to edit message:', e);
+      }
+    });
+  }
+
+  get settled() {
+    return this.#queue;
+  }
+
+  async resetQueue(wait = true) {
+    if (wait) await this.#queue;
+    this.#queue = Promise.resolve();
+    this.#errors = 0;
+    this.#done = false;
   }
 
   private addEventListeners(
@@ -191,66 +232,32 @@ export class Producer {
     date = new Date()
   ) {
     const logger = this.#logger();
-
-    const onFile = this.editMessageOnPhotoFile(message);
-    const onVideoFrame = this.editMessageOnVideoFrame(message);
-    const onVideoRendered = this.editMessageOnVideoFile(message, type, name, date);
-    const finishHandler = async (fileName: string, dir: Directory) => {
-      await onVideoRendered(fileName, dir);
-      removeEventListeners();
-      logger.log('Finished producing the timelapse.');
-    };
-    const errorMessage = this.editMessageOnError(message);
-    const errorHandler = async (error: unknown) => {
-      await errorMessage();
-      removeEventListeners();
-      logger.log('Canceled the timelapse with errors', error);
-    };
-
-    const removeEventListeners = () => {
-      events.off('error', errorHandler);
-      events.off('file', onFile);
-      events.off('frame', onVideoFrame);
-      events.off('rendered', finishHandler);
-    };
-
-    events.on('error', errorHandler);
-    events.on('file', onFile);
-    events.on('frame', onVideoFrame);
-    events.once('rendered', finishHandler);
-  }
-
-  editMessageOnPhotoFile(message: ChatAnimationMessage) {
-    const logger = this.#logger();
+    const publisher = this.#publisher();
     const { t } = this.#i18n();
-    return async (filename: string, dir: Directory) => {
-      try {
-        const caption = t('timelapse.frameTaken', filename);
+
+    const onFile = (fileName: string, dir: Directory) => {
+      this.enqueue(async () => {
+        const caption = t('timelapse.frameTaken', fileName);
         await message.editMedia(
           {
             type: 'photo',
             caption,
-            media: Input.fromLocalFile(dir.joinAbsolute(filename)),
+            media: Input.fromLocalFile(dir.joinAbsolute(fileName)),
           },
           this.markupCancel
         );
-      } catch (e) {
-        logger.log('Failed to edit message:', e);
-      }
+      });
     };
-  }
 
-  editMessageOnVideoFile(
-    message: ChatAnimationMessage,
-    type: 'sunset' | 'timelapse',
-    name: string,
-    date: Date
-  ) {
-    const logger = this.#logger();
-    const { t } = this.#i18n();
-    const publisher = this.#publisher();
-    return async (fileName: string, dir: Directory) => {
-      try {
+    const onVideoFrame = (frame: string, fps: string) => {
+      this.enqueue(async () => {
+        const caption = t('timelapse.frameRendered', frame, fps);
+        await message.editCaption(caption);
+      });
+    };
+
+    const onVideoRendered = (fileName: string, dir: Directory) => {
+      this.enqueue(async () => {
         logger.log(`[${dir.path}] Stitched: ${fileName}`);
         const caption = t('timelapse.title', date);
         await message.editMedia({
@@ -259,35 +266,33 @@ export class Producer {
           media: Input.fromLocalFile(dir.joinAbsolute(fileName), fileName),
         });
         await publisher.prepare(message, type, name);
-      } catch (e) {
-        logger.log('Failed to edit message:', e);
-      }
-    };
-  }
+        this.#done = true;
+      });
 
-  editMessageOnVideoFrame(message: ChatAnimationMessage) {
-    const logger = this.#logger();
-    const { t } = this.#i18n();
-    return async (frame: string, fps: string) => {
-      try {
-        const caption = t('timelapse.frameRendered', frame, fps);
-        await message.editCaption(caption);
-      } catch (e) {
-        logger.log('Failed to edit message:', e);
-      }
+      removeEventListeners();
+      logger.log('Finished producing the timelapse.');
     };
-  }
 
-  editMessageOnError(message: ChatAnimationMessage) {
-    const logger = this.#logger();
-    const { t } = this.#i18n();
-    return async () => {
-      try {
+    const errorMessage = (error: unknown) => {
+      this.enqueue(async () => {
         const caption = t('timelapse.tooManyErrors');
         await message?.editCaption(caption);
-      } catch (e) {
-        logger.log('Failed to edit message:', e);
-      }
+      });
+
+      removeEventListeners();
+      logger.log('Canceled the timelapse with errors', error);
     };
+
+    const removeEventListeners = () => {
+      events.off('error', errorMessage);
+      events.off('file', onFile);
+      events.off('frame', onVideoFrame);
+      events.off('rendered', onVideoRendered);
+    };
+
+    events.on('error', errorMessage);
+    events.on('file', onFile);
+    events.on('frame', onVideoFrame);
+    events.once('rendered', onVideoRendered);
   }
 }
