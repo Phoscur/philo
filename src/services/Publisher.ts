@@ -122,6 +122,8 @@ export class Publisher {
     return {
       caption: t(langKey, new Date(pub.created), cloudStudy, like),
       publication: pub,
+      cloudStudy,
+      like,
     };
   }
 
@@ -137,14 +139,22 @@ export class Publisher {
     await message.editCaption(caption, this.markupShare);
   }
 
-  async updateCaption(chat: ChatMessenger, messageId: number) {
-    const { publication, caption } = await this.getPublication(messageId);
+  getMarkupPublished(withCloudStudy = true) {
+    return Markup.inlineKeyboard([
+      this.markupRowLikes,
+      ...(withCloudStudy ? [this.markupRowCloudStudy] : []),
+    ]);
+  }
+
+  async updateCaptions(chat: ChatMessenger, messageId: number) {
+    const { publication, caption, cloudStudy } = await this.getPublication(messageId);
+    const markup = this.getMarkupPublished(!cloudStudy);
     if (publication.channelMessageId) {
       const channelMessage = chat.getChannelMessage(publication.channelMessageId);
-      await channelMessage.editCaption(caption);
+      await channelMessage.editCaption(caption, markup);
     }
     const message = chat.getMessage(publication.messageId);
-    await message.editCaption(caption);
+    await message.editCaption(caption, markup);
   }
 
   async publish(group: ChatMessenger, messageId: number) {

@@ -89,11 +89,8 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
 
     const liked = await publisher.saveLike(message.message_id, user, data);
+    await publisher.updateCaptions(ctx.group, message.message_id);
     await ctx.answerCbQuery(liked);
-
-    const caption = await publisher.getCaption(message.message_id);
-    const markup = Markup.inlineKeyboard([publisher.markupRowLikes]);
-    await ctx.editMessageCaption(caption, markup);
   });
 
   scene.action(Publisher.ACTION.STUDY, async (ctx, next) => {
@@ -109,8 +106,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
       return ctx.answerCbQuery(producer.callbackMessageAdminOnlyGuarded);
     }
     const cloud = await publisher.saveCloudStudy(message.message_id, data);
-    const caption = await publisher.getCaption(message.message_id);
-    await ctx.editMessageCaption(caption, publisher.markupPublished);
+    await publisher.updateCaptions(ctx.group, message.message_id);
     await ctx.answerCbQuery(cloud);
   });
 

@@ -7,7 +7,6 @@ import {
   Director,
   Directory,
   FileSystem,
-  I18nService,
   Injector,
   LIKE,
   Logger,
@@ -136,8 +135,8 @@ describe('CloudStudy', () => {
 
     const editMedia = vi.fn(async () => {});
     const editCaption = vi.fn(async () => {});
-    const editCaptionLater = vi.fn(async () => {});
-    const editCaptionChannel = vi.fn(async () => {});
+    const editCaptionLater = vi.fn(async () => {}).mockName('editCaptionGroup');
+    const editCaptionChannel = vi.fn(async () => {}).mockName('editCaptionChannel');
     const chat = {
       createAnimation: vi.fn(async () => {
         return {
@@ -218,24 +217,30 @@ describe('CloudStudy', () => {
     const like = LIKE.HEART;
     const cloud = CLOUD.LESS;
     await publisher.saveLike(messageId, author, `like-${like}`);
+    await publisher.updateCaptions(chat, messageId);
+    expect(editCaptionLater).toBeCalledWith(
+      `🌇 ${like} ${created}`,
+      publisher.getMarkupPublished(true)
+    );
     await publisher.saveCloudStudy(messageId, `cloud-${cloud}`);
-    await publisher.updateCaption(chat, messageId);
-    expect(editCaptionLater).toBeCalledWith(`${cloud}🌇 ${like} ${created}`);
 
     const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#1"\n}`);
-    expect((await publisher.getPublication(messageId)).caption).toBe(
-      `${cloud}🌇 ${like} ${created}`
-    );
 
     await publisher.publish(chat, messageId);
     expect(chat.sendMessageCopy).toHaveBeenCalledWith(messageId, publisher.markupPublished);
 
     await publisher.saveLike(messageId, author, `like-${like}`);
-    await publisher.updateCaption(chat, messageId);
-    expect(editCaptionLater).toBeCalledWith(`${cloud}🌇 ${LIKE.GROWING} ${created}`);
+    await publisher.updateCaptions(chat, messageId);
+    expect(editCaptionLater).toBeCalledWith(
+      `${cloud}🌇 ${LIKE.GROWING} ${created}`,
+      publisher.getMarkupPublished(false)
+    );
     expect(editCaptionLater).toBeCalledTimes(2);
-    expect(editCaptionChannel).toBeCalledWith(`${cloud}🌇 ${LIKE.GROWING} ${created}`);
+    expect(editCaptionChannel).toBeCalledWith(
+      `${cloud}🌇 ${LIKE.GROWING} ${created}`,
+      publisher.getMarkupPublished(false)
+    );
   });
 });
 
