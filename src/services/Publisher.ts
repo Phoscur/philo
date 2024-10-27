@@ -92,7 +92,7 @@ export class Publisher {
     const { t } = this.#i18n();
 
     const inventory = await this.getInventory();
-    const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
+    const pub = inventory.getPublication(messageId) ?? inventory.getDraft(messageId);
     if (!pub) {
       this.#logger().log(`Failed to find publication [${messageId}]`, inventory.prettyIndex);
       return `Error: Message [${messageId}] not found`;
@@ -105,9 +105,29 @@ export class Publisher {
     return t(langKey, new Date(pub.created), cloudStudy, like);
   }
 
-  async prepare(message: ChatAnimationMessage, type: MediaType, name: string) {
+  async getPublication(messageId: number) {
+    const { t } = this.#i18n();
+
     const inventory = await this.getInventory();
-    await inventory.setMessage(message.id, {
+    const pub = inventory.getPublication(messageId) ?? inventory.getDraft(messageId);
+    if (!pub) {
+      this.#logger().log(`Failed to find publication [${messageId}]`, inventory.prettyIndex);
+      throw new Error(`Message [${messageId}] not found`);
+    }
+
+    const appraisement = await this.getAppraisement();
+    const like = await appraisement.getLike(pub.name);
+    const cloudStudy = appraisement.getCloudStudy(pub.name);
+    const langKey = (pub.type + '.title') as 'timelapse.title' | 'sunset.title' | 'shot.title';
+    return {
+      caption: t(langKey, new Date(pub.created), cloudStudy, like),
+      publication: pub,
+    };
+  }
+
+  async prepare(message: ChatAnimationMessage, type: MediaType, name: string) {
+    const inventory = await this.getInventory(true);
+    await inventory.setDraft(message.id, {
       messageId: message.id,
       name,
       type,
@@ -115,6 +135,16 @@ export class Publisher {
     });
     const caption = await this.getCaption(message.id);
     await message.editCaption(caption, this.markupShare);
+  }
+
+  async updateCaption(chat: ChatMessenger, messageId: number) {
+    const { publication, caption } = await this.getPublication(messageId);
+    if (publication.channelMessageId) {
+      const channelMessage = chat.getChannelMessage(publication.channelMessageId);
+      await channelMessage.editCaption(caption);
+    }
+    const message = chat.getMessage(publication.messageId);
+    await message.editCaption(caption);
   }
 
   async publish(group: ChatMessenger, messageId: number) {
@@ -137,7 +167,7 @@ export class Publisher {
     const cloud = data.split('-')[1] as CloudStudySymbol; // split: cloud-$1
 
     const inventory = await this.getInventory();
-    const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
+    const pub = inventory.getPublication(messageId) ?? inventory.getDraft(messageId);
     if (!pub) {
       return `Error: Message [${messageId}] not found`;
     }
@@ -149,7 +179,7 @@ export class Publisher {
 
   async readRating(messageId: number): Promise<number> {
     const inventory = await this.getInventory();
-    const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
+    const pub = inventory.getPublication(messageId) ?? inventory.getDraft(messageId);
     if (!pub) {
       this.#logger().log(`Error: Failed to find publication [${messageId}]`, inventory.prettyIndex);
       return 0;
@@ -161,7 +191,7 @@ export class Publisher {
 
   async saveRating(messageId: number, author: string, rating: number, like: LikeSymbol) {
     const inventory = await this.getInventory();
-    const pub = inventory.getPublicationMessage(messageId) ?? inventory.getMessage(messageId);
+    const pub = inventory.getPublication(messageId) ?? inventory.getDraft(messageId);
     if (!pub) {
       this.#logger().log(`Error: Failed to find publication [${messageId}]`, inventory.prettyIndex);
       return 0;

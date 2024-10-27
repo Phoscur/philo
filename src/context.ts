@@ -28,6 +28,8 @@ export interface ChatAnimationMessage {
 }
 
 export interface ChatMessenger {
+  getMessage(messageId: number): ChatAnimationMessage;
+  getChannelMessage(messageId: number): ChatAnimationMessage;
   sendMessage(message: string, extra?: Convenience.ExtraReplyMessage): Promise<Message.TextMessage>;
   sendMessageCopy(messageId: number, extra?: Convenience.ExtraReplyMessage): Promise<MessageId>;
   sendPhoto(
@@ -44,12 +46,38 @@ export interface ChatMessenger {
   ): Promise<ChatAnimationMessage>;
 }
 
+export function messageFactory(
+  bot: Telegraf<PhiloContext>,
+  chatId: number,
+  messageId: number
+): ChatAnimationMessage {
+  return {
+    id: messageId,
+    editCaption: async (caption, extra) => {
+      try {
+        await bot.telegram.editMessageCaption(chatId, messageId, undefined, caption, extra);
+      } catch (err) {
+        console.error(`Cannot edit message caption ${messageId} (${chatId}): ${caption}`);
+        console.error(err);
+      }
+    },
+    editMedia: async (media, extra) => {
+      await bot.telegram.editMessageMedia(chatId, messageId, undefined, media, extra);
+    },
+    delete: async () => {
+      await bot.telegram.deleteMessage(chatId, messageId);
+    },
+  };
+}
+
 export function createTelegramMessengerChat(
   bot: Telegraf<PhiloContext>,
-  chatId: string,
-  copyTargetChatId: string
+  chatId: number,
+  copyTargetChatId: number
 ): ChatMessenger {
   return {
+    getMessage: messageFactory.bind(null, bot, chatId),
+    getChannelMessage: messageFactory.bind(null, bot, copyTargetChatId),
     sendMessage: bot.telegram.sendMessage.bind(bot.telegram, chatId),
     sendMessageCopy: bot.telegram.copyMessage.bind(bot.telegram, chatId, copyTargetChatId),
     sendPhoto: bot.telegram.sendPhoto.bind(bot.telegram, chatId),
@@ -59,31 +87,7 @@ export function createTelegramMessengerChat(
       extra?: Convenience.ExtraAnimation
     ): Promise<ChatAnimationMessage> => {
       const message = await bot.telegram.sendAnimation(chatId, animation, extra);
-      return {
-        id: message.message_id,
-        editCaption: async (caption, extra) => {
-          try {
-            await bot.telegram.editMessageCaption(
-              chatId,
-              message.message_id,
-              undefined,
-              caption,
-              extra
-            );
-          } catch (err) {
-            console.error(
-              `Cannot edit message caption ${message.message_id} (${message.chat.id}): ${caption}`
-            );
-            console.error(err);
-          }
-        },
-        editMedia: async (media, extra) => {
-          await bot.telegram.editMessageMedia(chatId, message.message_id, undefined, media, extra);
-        },
-        delete: async () => {
-          await bot.telegram.deleteMessage(chatId, message.message_id);
-        },
-      };
+      return messageFactory(bot, chatId, message.message_id);
     },
   };
 }
@@ -99,14 +103,10 @@ export function setupChatContext(
 ): ChatContext {
   ctx.group = createTelegramMessengerChat(
     bot,
-    `${process.env.TELEGRAM_CHAT_ID}`,
-    `${process.env.TELEGRAM_CHANNEL_ID}`
+    Number(`${process.env.TELEGRAM_CHAT_ID}`),
+    Number(`${process.env.TELEGRAM_CHANNEL_ID}`)
   );
-  ctx.channel = createTelegramMessengerChat(
-    bot,
-    `${process.env.TELEGRAM_CHANNEL_ID}`,
-    'no copy target'
-  );
+  ctx.channel = createTelegramMessengerChat(bot, Number(`${process.env.TELEGRAM_CHANNEL_ID}`), 0);
   return ctx;
 }
 

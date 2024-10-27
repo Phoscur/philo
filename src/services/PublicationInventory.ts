@@ -4,7 +4,7 @@ import { Logger } from './Logger.js';
 import { MediaType } from './Producer.js';
 
 const PUBLICATION_SCHEMA_VERSION = 'Publication-1';
-export interface PublicationMessage {
+export interface Publication {
   messageId: number;
   name: string;
   type: MediaType;
@@ -13,7 +13,7 @@ export interface PublicationMessage {
 }
 
 export interface MessageCollection {
-  [messageId: number]: PublicationMessage;
+  [messageId: number]: Publication;
 }
 /** channelMessageId => messageId */
 export interface PublicationCollection {
@@ -60,19 +60,19 @@ export class PublicationInventory {
     return JSON.stringify(output, null, 2);
   }
 
-  async setMessage(messageId: number, publicationStatus: PublicationMessage) {
+  async setDraft(messageId: number, publicationStatus: Publication) {
     await this.readIndex();
     this.index.messages[messageId] = publicationStatus;
     await this.writeIndex();
   }
 
-  getMessage(messageId: number): PublicationMessage | undefined {
+  getDraft(messageId: number): Publication | undefined {
     return this.index.messages[messageId];
   }
 
-  getPublicationMessage(channelMessageId: number): PublicationMessage | undefined {
+  getPublication(channelMessageId: number): Publication | undefined {
     const messageId = this.index.publications[channelMessageId];
-    return this.getMessage(messageId);
+    return this.getDraft(messageId);
   }
 
   async setPublication(channelMessageId: number, messageId: number) {

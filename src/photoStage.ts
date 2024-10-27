@@ -109,10 +109,9 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
       return ctx.answerCbQuery(producer.callbackMessageAdminOnlyGuarded);
     }
     const cloud = await publisher.saveCloudStudy(message.message_id, data);
-    await ctx.answerCbQuery(cloud);
-
     const caption = await publisher.getCaption(message.message_id);
     await ctx.editMessageCaption(caption, publisher.markupPublished);
+    await ctx.answerCbQuery(cloud);
   });
 
   // ---------------------------------------------------------------------------------------------------

@@ -105,7 +105,7 @@ describe('CloudStudy', () => {
     const cloud = CLOUD.Y;
 
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
-    await pubs.setMessage(messageId, {
+    await pubs.setDraft(messageId, {
       messageId,
       name,
       type: 'timelapse',
@@ -125,11 +125,9 @@ describe('CloudStudy', () => {
     const producer = injector.get(Producer);
     const publisher = injector.get(Publisher);
     const appraiser = injector.get(Appraiser);
-    const publications = injector.get(PublicationInventoryStorage);
     const assets = injector.get(Assets);
     const fs = injector.get(FileSystem);
     const sunMoon = injector.get(SunMoonTime);
-    const { t } = injector.get(I18nService);
 
     const name = director.nameNow;
     const messageId = -111;
@@ -138,6 +136,8 @@ describe('CloudStudy', () => {
 
     const editMedia = vi.fn(async () => {});
     const editCaption = vi.fn(async () => {});
+    const editCaptionLater = vi.fn(async () => {});
+    const editCaptionChannel = vi.fn(async () => {});
     const chat = {
       createAnimation: vi.fn(async () => {
         return {
@@ -153,7 +153,19 @@ describe('CloudStudy', () => {
       }),
       sendMessageCopy: vi.fn(async () => {
         return {
+          message_id: channelMessageId,
+        };
+      }),
+      getMessage: vi.fn(() => {
+        return {
+          messageId: messageId,
+          editCaption: editCaptionLater,
+        };
+      }),
+      getChannelMessage: vi.fn(() => {
+        return {
           messageId: channelMessageId,
+          editCaption: editCaptionChannel,
         };
       }),
     } as unknown as ChatMessenger;
@@ -163,10 +175,9 @@ describe('CloudStudy', () => {
     //await Promise.resolve();
     //await Promise.resolve();
     await sunMoon.sleep(0); // = 2x await
-    expect(chat.sendMessage).toHaveBeenCalledWith(`🌇 Sunset is soon...
-⤵️ Starting daily timelapse 🎥
-Stubbed Temperature
-💾 Storage (-1): -1`);
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\nStubbed Temperature\n💾 Storage (-1): -1`
+    );
     expect(chat.createAnimation).toHaveBeenCalledWith(assets.telegramSpinner, {
       caption: undefined,
     });
@@ -208,14 +219,23 @@ Stubbed Temperature
     const cloud = CLOUD.LESS;
     await publisher.saveLike(messageId, author, `like-${like}`);
     await publisher.saveCloudStudy(messageId, `cloud-${cloud}`);
-    //?expect(editCaption).toBeCalledWith('🎥');
+    await publisher.updateCaption(chat, messageId);
+    expect(editCaptionLater).toBeCalledWith(`${cloud}🌇 ${like} ${created}`);
 
     const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#1"\n}`);
-    expect(await publisher.getCaption(messageId)).toBe(`${cloud}🌇 ${like} ${created}`);
+    expect((await publisher.getPublication(messageId)).caption).toBe(
+      `${cloud}🌇 ${like} ${created}`
+    );
 
     await publisher.publish(chat, messageId);
     expect(chat.sendMessageCopy).toHaveBeenCalledWith(messageId, publisher.markupPublished);
+
+    await publisher.saveLike(messageId, author, `like-${like}`);
+    await publisher.updateCaption(chat, messageId);
+    expect(editCaptionLater).toBeCalledWith(`${cloud}🌇 ${LIKE.GROWING} ${created}`);
+    expect(editCaptionLater).toBeCalledTimes(2);
+    expect(editCaptionChannel).toBeCalledWith(`${cloud}🌇 ${LIKE.GROWING} ${created}`);
   });
 });
 
@@ -230,7 +250,7 @@ describe('Publisher', () => {
     const author = 'Phoscur';
     const like = LIKE.HEART;
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
-    await pubs.setMessage(messageId, {
+    await pubs.setDraft(messageId, {
       messageId,
       name,
       type: 'timelapse',
@@ -289,7 +309,7 @@ describe('Publisher', () => {
     const name = 'timelapse-publication-test';
     const created = Date.now();
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
-    await pubs.setMessage(messageId, {
+    await pubs.setDraft(messageId, {
       messageId,
       name,
       type: 'timelapse',
