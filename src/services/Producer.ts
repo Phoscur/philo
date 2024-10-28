@@ -63,10 +63,6 @@ export class Producer {
     const { t } = this.#i18n();
     return t('message.canceling');
   }
-  get callbackMessageAdminOnlyGuarded() {
-    const { t } = this.#i18n();
-    return t('message.cancelNotAllowed');
-  }
 
   get markupOptions() {
     const { t } = this.#i18n();

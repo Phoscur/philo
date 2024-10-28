@@ -22,7 +22,7 @@ const base = {
     'message.takingTimelapse': 'Starting timelapse now!',
     'message.sharingToChannel': 'Sharing to Channel!',
     'message.canceling': 'Canceling!',
-    'message.cancelNotAllowed': 'Only Admins can cancel.',
+    'message.noPermission': 'Not permitted.',
     'timelapse.tooManyErrors': '❌ Too many errors while creating the timelapse',
   },
   de: {
@@ -41,7 +41,7 @@ const base = {
     'message.takingTimelapse': 'Starte die Zeitrafferaufnahme!',
     'message.sharingToChannel': 'Teile im Channel!',
     'message.canceling': 'Breche ab!',
-    'message.cancelNotAllowed': 'Nur Administratoren können abbrechen.',
+    'message.noPermission': 'Nicht zugelassen.',
     'timelapse.tooManyErrors': '❌ Zu viele Fehler beim Erstellen des Zeitraffers',
   },
 } as const;
