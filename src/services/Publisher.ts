@@ -86,7 +86,7 @@ export class Publisher {
     return this.#openAppraisment;
   }
 
-  async getCaption(messageId: number) {
+  async getCaption(messageId: number, skipAppraisements = false) {
     const { t } = this.#i18n();
 
     const inventory = await this.getInventory();
@@ -96,10 +96,14 @@ export class Publisher {
       return `Error: Message [${messageId}] not found`;
     }
 
+    const langKey = (pub.type + '.title') as 'timelapse.title' | 'sunset.title' | 'shot.title';
+    if (skipAppraisements) {
+      return t(langKey, new Date(pub.created), '', '');
+    }
+
     const appraisement = await this.getAppraisement();
     const like = await appraisement.getLike(pub.name);
     const cloudStudy = appraisement.getCloudStudy(pub.name);
-    const langKey = (pub.type + '.title') as 'timelapse.title' | 'sunset.title' | 'shot.title';
     return t(langKey, new Date(pub.created), cloudStudy, like);
   }
 
@@ -133,7 +137,7 @@ export class Publisher {
       type,
       created: Date.now(),
     });
-    const caption = await this.getCaption(message.id);
+    const caption = await this.getCaption(message.id, true);
     await message.editCaption(caption, this.getMarkupPublished(true, false, false));
   }
 
