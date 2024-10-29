@@ -70,17 +70,16 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
   scene.action(Publisher.ACTION.SHARE, async (ctx, next) => {
     const publisher = ctx.di.get(Publisher);
-    const { t } = ctx.di.get(I18nService);
     const { message } = ctx.callbackQuery;
 
     const user = ctx.from?.username || '';
     if (!~ADMINS.indexOf(user)) {
-      return ctx.answerCbQuery(t('message.noPermission'));
+      return ctx.answerCbQuery(publisher.callbackMessageNoPermission);
     }
 
     if (!message) return next();
     if (isTextMessage(message)) return next();
-    await publisher.publish(ctx.group, message.message_id);
+    await publisher.share(ctx.group, message.message_id);
     await ctx.answerCbQuery(publisher.callbackMessageShare);
   });
 
@@ -99,7 +98,6 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
   scene.action(Publisher.ACTION.STUDY, async (ctx, next) => {
     const publisher = ctx.di.get(Publisher);
-    const { t } = ctx.di.get(I18nService);
     const data = ctx.match[0] || '';
 
     const { message } = ctx.callbackQuery;
@@ -107,7 +105,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
 
     if (!~ADMINS.indexOf(user)) {
-      return ctx.answerCbQuery(t('message.noPermission'));
+      return ctx.answerCbQuery(publisher.callbackMessageNoPermission);
     }
     const cloud = await publisher.saveCloudStudy(message.message_id, data);
     await publisher.updateCaptions(ctx.group, message.message_id);

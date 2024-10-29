@@ -9,7 +9,9 @@ export interface Publication {
   name: string;
   type: MediaType;
   created: number;
+  shared?: number;
   channelMessageId?: number;
+  published?: number;
 }
 
 export interface MessageCollection {
@@ -75,10 +77,18 @@ export class PublicationInventory {
     return this.getDraft(messageId);
   }
 
-  async setPublication(channelMessageId: number, messageId: number) {
+  async setShared(channelMessageId: number, messageId: number) {
     await this.readIndex();
     this.index.messages[messageId].channelMessageId = channelMessageId;
+    this.index.messages[messageId].shared = Date.now();
     this.index.publications[channelMessageId] = messageId;
+    await this.writeIndex();
+  }
+
+  async setPublished(channelOrMessageId: number) {
+    await this.readIndex();
+    const messageId = this.getPublication(channelOrMessageId)?.messageId ?? channelOrMessageId;
+    this.index.messages[messageId].published = Date.now();
     await this.writeIndex();
   }
 

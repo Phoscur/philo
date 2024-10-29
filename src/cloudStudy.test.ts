@@ -1,4 +1,4 @@
-import { describe, expect, it, MockInstance, vi } from 'vitest';
+import { beforeAll, describe, expect, it, MockInstance, vi } from 'vitest';
 import {
   Appraiser,
   Assets,
@@ -227,19 +227,22 @@ describe('CloudStudy', () => {
     const appraisals = await appraiser.loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "${cloud}#1"\n}`);
 
-    await publisher.publish(chat, messageId);
-    expect(chat.sendMessageCopy).toHaveBeenCalledWith(messageId, publisher.markupPublished);
+    await publisher.share(chat, messageId);
+    expect(chat.sendMessageCopy).toHaveBeenCalledWith(
+      messageId,
+      publisher.getMarkupPublished(false, true, true)
+    );
 
     await publisher.saveLike(messageId, author, `like-${like}`);
     await publisher.updateCaptions(chat, messageId);
     expect(editCaptionLater).toBeCalledWith(
       `${cloud}🌇 ${LIKE.GROWING} ${created}`,
-      publisher.getMarkupPublished(false)
+      publisher.getMarkupPublished(false, true)
     );
     expect(editCaptionLater).toBeCalledTimes(2);
     expect(editCaptionChannel).toBeCalledWith(
       `${cloud}🌇 ${LIKE.GROWING} ${created}`,
-      publisher.getMarkupPublished(false)
+      publisher.getMarkupPublished(false, true)
     );
   });
 });
@@ -335,7 +338,11 @@ describe('Publisher', () => {
     });
 
     expect(publisher.callbackMessageShare).toBeDefined();
-    const cid = await publisher.publish(chat, messageId);
+
+    const shared = Date.now();
+    vi.setSystemTime(shared); // test can be a bit flaky without mocking Date.now() below
+
+    const cid = await publisher.share(chat, messageId);
     expect(chat.sendMessageCopy).toHaveBeenCalledOnce();
     expect(cid).toEqual(channelMessageId);
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
@@ -345,7 +352,32 @@ describe('Publisher', () => {
           name,
           type: 'timelapse',
           created,
+          shared,
           channelMessageId,
+        },
+      },
+      name: 'publications-2024.json',
+      publications: {
+        '-222': -111,
+      },
+      version: 'Publication-1',
+    });
+    expect(pubs.prettyIndex).toBe(
+      `{\n  "-111": "shared as -222",\n  "-222": "shared from -111"\n}`
+    );
+
+    await publisher.publish(messageId);
+    const published = Date.now();
+    expect(spies[DIR]).toHaveBeenCalledWith(publisher.publicationsFile, {
+      messages: {
+        '-111': {
+          messageId,
+          name,
+          type: 'timelapse',
+          created,
+          shared,
+          channelMessageId,
+          published,
         },
       },
       name: 'publications-2024.json',

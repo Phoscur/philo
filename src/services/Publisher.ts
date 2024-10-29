@@ -38,6 +38,11 @@ export class Publisher {
     return t('message.sharingToChannel');
   }
 
+  get callbackMessageNoPermission() {
+    const { t } = this.#i18n();
+    return t('message.noPermission');
+  }
+
   get markupRowLikes() {
     const appraiser = this.#appraiser();
     return appraiser.likesWithRatings.map(({ text, data }) => Markup.button.callback(text, data));
@@ -48,21 +53,14 @@ export class Publisher {
     return appraiser.cloudStudies.map(({ text, data }) => Markup.button.callback(text, data));
   }
 
-  get markupShare() {
+  get markupRowShare() {
     const { t } = this.#i18n();
-    return Markup.inlineKeyboard([
-      [Markup.button.callback(t('action.shareToChannel'), Publisher.ACTION.SHARE)],
-    ]);
+    return [Markup.button.callback(t('action.shareToChannel'), Publisher.ACTION.SHARE)];
   }
 
-  get markupPublished() {
+  get markupRowPublish() {
     const { t } = this.#i18n();
-    return Markup.inlineKeyboard([
-      this.markupRowLikes,
-      this.markupRowCloudStudy,
-      [Markup.button.callback(t('action.publish'), Publisher.ACTION.PUBLISH)],
-      // [Markup.button.callback('❌', ``)],
-    ]);
+    return [Markup.button.callback(t('action.publish'), Publisher.ACTION.PUBLISH)];
   }
 
   #openInventory: PublicationInventory | null = null;
@@ -136,19 +134,25 @@ export class Publisher {
       created: Date.now(),
     });
     const caption = await this.getCaption(message.id);
-    await message.editCaption(caption, this.markupShare);
+    await message.editCaption(caption, this.getMarkupPublished(true, false, false));
   }
 
-  getMarkupPublished(withCloudStudy = true) {
+  getMarkupPublished(withCloudStudy = true, shared = false, published = false) {
     return Markup.inlineKeyboard([
       this.markupRowLikes,
       ...(withCloudStudy ? [this.markupRowCloudStudy] : []),
+      ...(shared ? [] : [this.markupRowShare]),
+      ...(published ? [] : [this.markupRowPublish]),
     ]);
   }
 
   async updateCaptions(chat: ChatMessenger, messageId: number) {
     const { publication, caption, cloudStudy } = await this.getPublication(messageId);
-    const markup = this.getMarkupPublished(!cloudStudy);
+    const markup = this.getMarkupPublished(
+      !cloudStudy,
+      !!publication.shared,
+      !!publication.published
+    );
     if (publication.channelMessageId) {
       const channelMessage = chat.getChannelMessage(publication.channelMessageId);
       await channelMessage.editCaption(caption, markup);
@@ -157,12 +161,23 @@ export class Publisher {
     await message.editCaption(caption, markup);
   }
 
-  async publish(group: ChatMessenger, messageId: number) {
-    const channelMessage = await group.sendMessageCopy(messageId, this.markupPublished);
+  async share(group: ChatMessenger, messageId: number) {
+    const channelMessage = await group.sendMessageCopy(
+      messageId,
+      this.getMarkupPublished(false, true, true)
+    );
     const pubs = await this.getInventory();
-    await pubs.setPublication(channelMessage.message_id, messageId);
+    await pubs.setShared(channelMessage.message_id, messageId);
 
     return channelMessage.message_id;
+  }
+
+  async publish(messageId: number) {
+    // TODO actually publish ... enableAndWaitForPages
+    const pubs = await this.getInventory();
+    await pubs.setPublished(messageId);
+
+    return messageId;
   }
 
   async saveLike(messageId: number, author: string, data: string) {
