@@ -1,10 +1,10 @@
 import { Provider } from '@joist/di';
 
 export class Logger {
-  log(...args: any[]) {}
-  timeLog(label?: string, ...args: any[]) {}
-  time(label?: string) {}
-  timeEnd(label?: string) {}
+  log(..._args: any[]) {}
+  timeLog(_label?: string, ..._args: any[]) {}
+  time(_label?: string) {}
+  timeEnd(_label?: string) {}
 }
 
 export const consoleProvider: Provider<Logger> = {

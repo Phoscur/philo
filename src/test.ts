@@ -70,7 +70,7 @@ async function upload() {
 async function backup() {
   const directory = await fs.createDirectory(repoName);
   const targetDirectory = await fs.createDirectory('data-archive');
-  const date = new Date().toISOString().split('T')[0];
+  //const date = new Date().toISOString().split('T')[0];
   const outputFilePath = targetDirectory.join(`images.tar.gz`);
 
   try {

@@ -14,7 +14,7 @@ export async function stitchImages(
   options: StitchOptions = {},
   inFolder: string = '.',
   outFolder: string = '.',
-  onStatus = (frame: string, fps: string) => {},
+  onStatus = (_frame: string, _fps: string) => {},
   logger = { log: console.log }
 ) {
   const partMatch = !options.parts ? '%d' : '%0' + options.parts.toString().length + 'd'; // e.g. %04d - without zero padding use %d instead

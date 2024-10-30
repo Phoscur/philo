@@ -25,7 +25,7 @@ export class VideoRenderer {
     options: StitchOptions = {},
     inFolder: string = '.',
     outFolder: string = '.',
-    onData = (frame: string, fps: string) => {},
+    onData = (_frame: string, _fps: string) => {},
     logger = { log: console.log }
   ) {
     return stitchImages(name, cwd, options, inFolder, outFolder, onData, logger);

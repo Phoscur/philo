@@ -291,7 +291,7 @@ export class Git {
       this.#logger().log(`Checked ${url}: ${check.headers['content-type']}, length: ${length}`);
       return parseInt(length) > 0;
     } catch (e) {
-      this.#logger().log(`Failed to check ${url}`);
+      this.#logger().log(`Failed to check ${url}`, e);
       return false;
     }
   }

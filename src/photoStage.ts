@@ -1,5 +1,5 @@
 import { MiddlewareFn, Scenes, Markup, Telegraf, Input } from 'telegraf';
-import type { Message, InlineKeyboardMarkup, InputMediaPhoto } from 'telegraf/types';
+import type { Message } from 'telegraf/types';
 import { PhiloContext, setupChatContext, setupContext } from './context.js';
 import {
   Assets,

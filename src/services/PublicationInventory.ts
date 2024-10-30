@@ -56,7 +56,6 @@ export class PublicationInventory {
       output[messageId] = id ? `shared as ${id}` : 'not shared';
     }
     for (const messageId in publications) {
-      const id = messages[publications[messageId]].channelMessageId;
       output[messageId] = `shared from ${publications[messageId]}`;
     }
     return JSON.stringify(output, null, 2);

@@ -14,7 +14,7 @@ export class StubRenderer implements VideoRenderer {
     { parts }: StitchOptions = {},
     inFolder: string = '.',
     outFolder: string = '.',
-    onData = (frame: string, fps: string) => {},
+    _onData = (_frame: string, _fps: string) => {},
     logger = { log: console.log }
   ) {
     const dir = this.#fs().dir('');

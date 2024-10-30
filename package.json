@@ -8,6 +8,7 @@
     "start": "tsx --env-file=.env src/main.ts",
     "production": "npm run build && npm run run-built",
     "run-built": "node --env-file=.env dist/main.js",
+    "lint": "oxlint",
     "build": "tsc -b",
     "clean-build": "tsc -b --clean",
     "watch": "tsx watch --env-file=.env src/main.ts",
@@ -56,8 +57,12 @@
     "@types/node": "^22.5.1",
     "@types/node-dht-sensor": "^0.4.2",
     "@types/suncalc": "^1.9.2",
+    "oxlint": "^0.10.3",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "vitest": "^2.1.2"
+  },
+  "lint-staged": {
+    "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue,astro,svelte}": "oxlint"
   }
 }

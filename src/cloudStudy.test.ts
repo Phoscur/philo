@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, MockInstance, vi } from 'vitest';
+import { describe, expect, it, MockInstance, vi } from 'vitest';
 import {
   Appraiser,
   Assets,
@@ -55,7 +55,7 @@ function createInjectorSpies() {
     },
     {
       provide: Director,
-      factory(injector) {
+      factory(_injector) {
         class StubDirector extends Director {
           scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>) => void) {
             onStart(emitter);
@@ -66,13 +66,13 @@ function createInjectorSpies() {
     },
     {
       provide: Appraiser,
-      factory(injector) {
+      factory(_injector) {
         return new Appraiser(DIR);
       },
     },
     {
       provide: PublicationInventoryStorage,
-      factory(injector) {
+      factory(_injector) {
         return new PublicationInventoryStorage(DIR);
       },
     },

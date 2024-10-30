@@ -47,7 +47,7 @@ export const spawnPromisePrependStdErr = (
   command: string,
   args?: Array<string>,
   options?: SpawnOptions,
-  onData = (frame: string, fps: string) => {}
+  onData = (_frame: string, _fps: string) => {}
 ) =>
   new Promise<Buffer>((resolve, reject) => {
     const childProcess = spawn(command, args ?? [], options ?? {});

@@ -13,9 +13,10 @@ export const cameraStubProvider = {
 export function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length);
 }
-export function ascendingPaddedNumbers(max: number): string[] {
-  // de- & recomposing the array fills it, so it is iterable
-  return [...new Array(max)].map((_, i) => padZero((i + 1).toString(), max.toString().length));
+export function ascendingPaddedNumbers(length: number): string[] {
+  return Array.from({ length }).map((_, i) =>
+    padZero((i + 1).toString(), length.toString().length)
+  );
 }
 export const jpegSignature = Buffer.from([0xff, 0xd8, 0xff, 0xe1]);
 export const examples = [
