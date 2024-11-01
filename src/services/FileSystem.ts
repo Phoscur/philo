@@ -108,8 +108,8 @@ export class FileSystem {
    */
   async mkdir(directory: string) {
     try {
-      await mkdir(join(this.cwd, directory));
-      this.#logger().log(`[Storage: ${join(this.cwd, directory)}] Folder created`);
+      await mkdir(join(this.cwd, directory), { recursive: true });
+      this.#logger().log(`[Storage: ${join(this.cwd, directory)}] Directory created`);
       return true;
     } catch (error: any) {
       if (error?.code !== 'EEXIST') {

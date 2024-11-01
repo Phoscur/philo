@@ -1,7 +1,17 @@
 import { inject, injectable } from '@joist/di';
-import { createWriteStream } from 'node:fs';
-import archiver from 'archiver';
 import { Logger } from './Logger.js';
+
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { createGunzip } from 'node:zlib';
+import { pipeline } from 'node:stream';
+import { promisify } from 'node:util';
+
+import archiver from 'archiver';
+import tar from 'tar-stream';
+
+const pipelineAsync = promisify(pipeline);
 
 @injectable
 export class Archiver {
@@ -45,8 +55,42 @@ export class Archiver {
       archive.finalize();
     });
   }
-}
 
+  async extract(archiveFile: string, outputFolder: string): Promise<void> {
+    const logger = this.#logger();
+
+    await mkdir(outputFolder, { recursive: true });
+
+    const extract = tar.extract();
+
+    extract.on('entry', async (header, stream, next) => {
+      const filePath = join(outputFolder, header.name);
+
+      if (header.type === 'directory') {
+        await mkdir(filePath, { recursive: true });
+        stream.resume();
+        next();
+      } else {
+        await mkdir(join(filePath, '..'), { recursive: true });
+        const fileStream = createWriteStream(filePath);
+
+        await pipelineAsync(stream, fileStream);
+        next();
+      }
+    });
+
+    extract.on('finish', () => {
+      logger.log('Archive extraction complete.');
+    });
+
+    try {
+      await pipelineAsync(createReadStream(archiveFile), createGunzip(), extract);
+    } catch (err) {
+      logger.log('Error extracting archive:', err);
+      throw err;
+    }
+  }
+}
 
 /* 
 Anecdote:
