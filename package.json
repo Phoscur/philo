@@ -64,6 +64,13 @@
     "typescript": "^5.5.4",
     "vitest": "^2.1.2"
   },
+  "overrides": {
+    "telegraf": {
+      "node-fetch": {
+        "whatwg-url": "^14.0.0"
+      }
+    }
+  },
   "lint-staged": {
     "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue,astro,svelte}": "oxlint"
   }
