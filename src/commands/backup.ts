@@ -1,35 +1,47 @@
-import { Archiver, FileSystem, Logger, injectable, inject } from '../services/index.js';
+import {
+  Archiver,
+  FileSystem,
+  Logger,
+  injectable,
+  inject,
+  GlacierBackup,
+} from '../services/index.js';
 export const defaultTargetFolder = process.env.BACKUP_TARGET_FOLDER || 'data-archive';
 
 @injectable
 export class BackupCommand {
   #fs = inject(FileSystem);
   #logger = inject(Logger);
+  #backup = inject(GlacierBackup);
   #archiver = inject(Archiver);
 
   constructor(readonly defaultTargetFolder = process.env.BACKUP_TARGET_FOLDER || 'data-archive') {}
 
-  async run(folderName: string, fileName: string, targetFolderName = this.defaultTargetFolder) {
+  async run(
+    folderName: string,
+    fileName: string,
+    targetFolderName = this.defaultTargetFolder,
+    vaultName = '',
+    vaultDescription = ''
+  ) {
     const logger = this.#logger();
     const fs = this.#fs();
     const archiver = this.#archiver();
+    const backup = this.#backup();
 
     logger.log(`[Backup] Folder: ${folderName} Name: ${fileName} Target: ${targetFolderName}`);
 
     const directory = await fs.createDirectory(folderName);
     const targetDirectory = await fs.createDirectory(targetFolderName);
-    const outputFilePath = targetDirectory.join(`${fileName}.tar.gz`);
+    const file = `${fileName}.tar.gz`;
+    const outputFilePath = targetDirectory.join(file);
 
-    try {
-      logger.log('Compressing', directory.path);
-      await archiver.compressFolder(directory.path, outputFilePath);
-      process.exit(0);
+    logger.log('Compressing', directory.path);
+    await archiver.compressFolder(directory.path, outputFilePath);
 
-      //const vaultName = 'your-glacier-vault';
-      //await uploadToGlacier(vaultName, outputFilePath);
-    } catch (error) {
-      logger.log('Error:', error);
-      process.exit(1);
+    if (vaultName) {
+      const vault = await backup.createVault(vaultName);
+      await vault.uploadArchive(targetDirectory.readStream(file), vaultDescription || file);
     }
   }
 }
@@ -56,13 +68,7 @@ export class BackupRestoreCommand {
     //const vaultName = 'your-glacier-vault';
     const targetDirectory = await fs.createDirectory(targetFolderName);
 
-    try {
-      logger.log('Decompressing', file, 'into', targetDirectory.path);
-      await archiver.extract(file, targetDirectory.path);
-      process.exit(0);
-    } catch (error) {
-      logger.log('Error:', error);
-      process.exit(1);
-    }
+    logger.log('Decompressing', file, 'into', targetDirectory.path);
+    await archiver.extract(file, targetDirectory.path);
   }
 }
