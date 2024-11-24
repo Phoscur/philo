@@ -9,7 +9,7 @@ export class Camera {
   name = 'still-test';
   options: StillOptions = {
     roi: '', // x,y,w,h
-    height: 1080,
+    // height: 1080,
   };
 
   #mutex: Promise<unknown> | false = false;

@@ -7,10 +7,10 @@
   "scripts": {
     "start": "tsx --env-file=.env src/main.ts",
     "command": "tsx --env-file=.env src/commands/index.ts",
-    "production": "npm run build && npm run run-built",
-    "run-built": "node --env-file=.env dist/main.js",
-    "lint": "oxlint",
+    "production": "npm run build && npm run built",
     "build": "tsc -b",
+    "built": "node --env-file=.env dist/main.js",
+    "lint": "oxlint",
     "clean-build": "tsc -b --clean",
     "watch": "tsx watch --env-file=.env src/main.ts",
     "test": "vitest",

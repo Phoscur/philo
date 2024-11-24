@@ -35,8 +35,8 @@ export class Producer {
     { count: 420, intervalMS: 12000, prefix: 'timelapse' },
     { count: 210, intervalMS: 12000, prefix: 'timelapse-half' },
     { count: 140, intervalMS: 12000, prefix: 'timelapse-third' },
-    { count: 30, intervalMS: 2000, prefix: 'timelapse-short' },
-    { count: 14, intervalMS: 2000, prefix: 'timelapse-super-short' },
+    { count: 30, intervalMS: 3000, prefix: 'timelapse-short' },
+    { count: 14, intervalMS: 3000, prefix: 'timelapse-super-short' },
   ] as const;
 
   #logger = inject(Logger);

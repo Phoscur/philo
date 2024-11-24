@@ -8,6 +8,7 @@ const logger = di.get(Logger);
 const args = process.argv.slice(3);
 const command = process.argv[2];
 /*
+Full backup & restore
 
 1. Tar/Gzip & Upload 
 

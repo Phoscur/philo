@@ -67,6 +67,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
   // ---------------------------------------------------------------------------------------------------
   // Sharing / Publishing: Collecting Appraisals
+  // TODO? let clickLock = false;
 
   scene.action(Publisher.ACTION.SHARE, async (ctx, next) => {
     const publisher = ctx.di.get(Publisher);
@@ -76,9 +77,8 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     if (!~ADMINS.indexOf(user)) {
       return ctx.answerCbQuery(publisher.callbackMessageNoPermission);
     }
+    if (!isActionableMessage(message)) return next();
 
-    if (!message) return next();
-    if (isTextMessage(message)) return next();
     await publisher.share(ctx.group, message.message_id);
     await ctx.answerCbQuery(publisher.callbackMessageShare);
   });
@@ -89,7 +89,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
     const { message } = ctx.callbackQuery;
     const user = ctx.from?.username || 'Anonymous';
-    if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
+    if (!isActionableMessage(message)) return next();
 
     const liked = await publisher.saveLike(message.message_id, user, data);
     await publisher.updateCaptions(ctx.group, message.message_id);
@@ -102,7 +102,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
     const { message } = ctx.callbackQuery;
     const user = ctx.from?.username || '';
-    if (!(isPhotoMessage(message) || isVideoMessage(message))) return next();
+    if (!isActionableMessage(message)) return next();
 
     if (!~ADMINS.indexOf(user)) {
       return ctx.answerCbQuery(publisher.callbackMessageNoPermission);
@@ -236,12 +236,18 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   };
 }
 
-function isTextMessage(message: any): message is Message.TextMessage {
+/* unused function isTextMessage(message: any): message is Message.TextMessage {
   return 'text' in message;
-}
+}*/
 function isVideoMessage(message: any): message is Message.VideoMessage {
   return 'video' in message;
 }
+function isAnimationMessage(message: any): message is Message.AnimationMessage {
+  return 'animation' in message;
+}
 function isPhotoMessage(message: any): message is Message.PhotoMessage {
-  return 'video' in message;
+  return 'photo' in message;
+}
+function isActionableMessage(message: any) {
+  return isAnimationMessage(message) || isVideoMessage(message) || isPhotoMessage(message);
 }

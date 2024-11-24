@@ -8,7 +8,16 @@ module.exports = {
       watch: true,
       // Delay between restart
       watch_delay: 1000,
-      ignore_watch: ['node_modules', 'src', 'sun*', 'ecosystem.config.js', 'README.md'],
+      ignore_watch: [
+        'node_modules',
+        'src',
+        'stora*',
+        'sun*',
+        'time*',
+        'photo*',
+        'ecosystem.config.js',
+        'README.md',
+      ],
       watch_options: {
         followSymlinks: false,
       },

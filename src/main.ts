@@ -41,4 +41,8 @@ async function setupBot() {
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
 
-setupBot().then(() => console.log('🚀 Bot is running!'));
+setupBot().then(() =>
+  console.log(
+    `🚀 Bot is running!\n(In chat [${process.env.TELEGRAM_CHAT_ID}], sharing to channel [${process.env.TELEGRAM_CHANNEL_ID}])`
+  )
+);

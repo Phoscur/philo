@@ -79,7 +79,7 @@ export function createTelegramMessengerChat(
     getMessage: messageFactory.bind(null, bot, chatId),
     getChannelMessage: messageFactory.bind(null, bot, copyTargetChatId),
     sendMessage: bot.telegram.sendMessage.bind(bot.telegram, chatId),
-    sendMessageCopy: bot.telegram.copyMessage.bind(bot.telegram, chatId, copyTargetChatId),
+    sendMessageCopy: bot.telegram.copyMessage.bind(bot.telegram, copyTargetChatId, chatId),
     sendPhoto: bot.telegram.sendPhoto.bind(bot.telegram, chatId),
     sendAnimation: bot.telegram.sendAnimation.bind(bot.telegram, chatId),
     createAnimation: async (

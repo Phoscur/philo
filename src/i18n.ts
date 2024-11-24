@@ -27,7 +27,7 @@ const base = {
   },
   de: {
     'action.presetSwitch': 'Einstellung wechseln 📷',
-    'action.shotSingle': 'Einzelschuss 🥃',
+    'action.shotSingle': 'Schüsschen 🥃',
     'action.timelapse': 'Zeitraffer jetzt 🎥',
     'action.timelapse-half': 'Halber 🎥',
     'action.timelapse-third': 'Drittel 🎥',
@@ -51,7 +51,9 @@ type BasicEntry = keyof BasicIndex;
 export type SlottedTranslate = (index: BasicIndex, ...args: BasicEntry[]) => string;
 
 export function dateFormat(d = new Date()) {
-  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
+  const clock = d.toLocaleTimeString().slice(0, 5);
+  // js dates are the best, I don't regret to have removed dayjs at all!!11
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${clock}`;
 }
 
 const composite = {

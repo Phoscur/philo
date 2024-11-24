@@ -119,6 +119,8 @@ export class Timelapse {
           events.emit('error', error);
           abort();
         }
+      } finally {
+        logger.timeEnd('timelapse');
       }
     };
     setTimeout(() => {
