@@ -32,7 +32,7 @@ export class Hardware {
     if (!this.temperatureSensorEnabled) return storageMessage;
     try {
       const temperatureMessage = await getTemperatureHumidityMessage();
-      return `${temperatureMessage}\n${storageMessage}`;
+      return `${storageMessage}\n${temperatureMessage}`;
     } catch (error) {
       this.#logger().log('Failed to read temperature', error);
       return storageMessage;
@@ -51,7 +51,7 @@ export const hardwareStubProvider = {
         const status = { size: '-1', percent: '-1' };
         const storageMessage = t('storage.status', status.size, status.percent);
         const temperatureMessage = 'Stubbed Temperature';
-        return `${temperatureMessage}\n${storageMessage}`;
+        return `${storageMessage}\n${temperatureMessage}`;
       }
     }
     return new HardwareStub();

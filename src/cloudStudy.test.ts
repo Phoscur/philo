@@ -175,7 +175,7 @@ describe('CloudStudy', () => {
     //await Promise.resolve();
     await sunMoon.sleep(0); // = 2x await
     expect(chat.sendMessage).toHaveBeenCalledWith(
-      `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\nStubbed Temperature\n💾 Storage (-1): -1`
+      `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\n💾 Storage (-1): -1\nStubbed Temperature`
     );
     expect(chat.createAnimation).toHaveBeenCalledWith(assets.telegramSpinner, {
       caption: undefined,
@@ -232,6 +232,7 @@ describe('CloudStudy', () => {
       messageId,
       publisher.getMarkupPublished(false, true, true)
     );
+    expect(editCaptionLater).toBeCalledTimes(2);
 
     await publisher.saveLike(messageId, author, `like-${like}`);
     await publisher.updateCaptions(chat, messageId);
@@ -239,11 +240,12 @@ describe('CloudStudy', () => {
       `${cloud}🌇 ${LIKE.GROWING} ${created}`,
       publisher.getMarkupPublished(false, true)
     );
-    expect(editCaptionLater).toBeCalledTimes(2);
+    expect(editCaptionLater).toBeCalledTimes(3);
     expect(editCaptionChannel).toBeCalledWith(
       `${cloud}🌇 ${LIKE.GROWING} ${created}`,
       publisher.getMarkupPublished(false, true)
     );
+    expect(editCaptionChannel).toBeCalledTimes(2);
   });
 });
 
@@ -309,6 +311,16 @@ describe('Publisher', () => {
       sendMessageCopy: vi.fn(async () => {
         return {
           message_id: channelMessageId,
+        };
+      }),
+      getChannelMessage: vi.fn(() => {
+        return {
+          editCaption: vi.fn(),
+        };
+      }),
+      getMessage: vi.fn(() => {
+        return {
+          editCaption: vi.fn(),
         };
       }),
     } as unknown as ChatMessenger;

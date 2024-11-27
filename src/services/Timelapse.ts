@@ -87,6 +87,7 @@ export class Timelapse {
     const abort = () => {
       clearInterval(this.#intervalId);
       signal.removeEventListener('abort', abort);
+      logger.timeEnd('timelapse');
       return events.emit('stopped', photoDir);
     };
     signal.addEventListener('abort', abort);
@@ -119,8 +120,6 @@ export class Timelapse {
           events.emit('error', error);
           abort();
         }
-      } finally {
-        logger.timeEnd('timelapse');
       }
     };
     setTimeout(() => {
@@ -135,6 +134,7 @@ export class Timelapse {
 
     events.once('captured', async () => {
       try {
+        logger.timeLog('timelapse', 'render', 'started');
         await renderer.stitchImages(
           this.namePrefix,
           videoDir.fs.cwd,
@@ -146,11 +146,14 @@ export class Timelapse {
           },
           logger
         );
+        logger.timeLog('timelapse', 'render', 'finished');
         events.emit('rendered', this.output, videoDir);
       } catch (error) {
         events.emit('error', error);
+      } finally {
+        signal.removeEventListener('abort', abort);
+        logger.timeEnd('timelapse');
       }
-      signal.removeEventListener('abort', abort);
     });
 
     return events;

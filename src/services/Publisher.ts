@@ -172,6 +172,7 @@ export class Publisher {
     );
     const pubs = await this.getInventory();
     await pubs.setShared(channelMessage.message_id, messageId);
+    await this.updateCaptions(group, messageId);
 
     return channelMessage.message_id;
   }
