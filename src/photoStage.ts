@@ -20,6 +20,13 @@ export const COMMAND = {
   PHOTO: 'photo',
   PRESET: 'preset',
 } as const;
+export const SHORTHAND = {
+  STATUS: 's',
+  RANDOM: 'r',
+  PREVIEW: 'p',
+  PHOTO: 'options',
+  PRESET: 'presets',
+} as const;
 
 const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
 
@@ -33,7 +40,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // storage and temperature do not have a scenes (yet)
   const scene = new Scenes.BaseScene<PhiloContext>('photo');
   // basic utility commands
-  scene.command([COMMAND.STATUS, 's'], (ctx) => {
+  scene.command([COMMAND.STATUS, SHORTHAND.STATUS], (ctx) => {
     const hd = ctx.di.get(Hardware);
     setImmediate(async () => {
       ctx.reply(await hd.getStatus());
@@ -43,18 +50,18 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // ---------------------------------------------------------------------------------------------------
   // Photos
 
-  scene.command([COMMAND.RANDOM, 'r'], (ctx) => {
+  scene.command([COMMAND.RANDOM, SHORTHAND.RANDOM], (ctx) => {
     const assets = ctx.di.get(Assets);
     ctx.replyWithPhoto(assets.randomImage);
     // or ctx.replyWithAnimation(ctx.di.get(Assets).telegramSpinner);
   });
-  scene.command([COMMAND.PREVIEW, 'p'], async (ctx) => {
+  scene.command([COMMAND.PREVIEW, SHORTHAND.PREVIEW], async (ctx) => {
     const director = ctx.di.get(Director);
     const { filename, dir } = await director.photo('default');
     ctx.replyWithPhoto(Input.fromLocalFile(dir.joinAbsolute(filename)));
   });
 
-  scene.command([COMMAND.PHOTO, 'options'], async function (ctx: PhiloContext) {
+  scene.command([COMMAND.PHOTO, SHORTHAND.PHOTO], async function (ctx: PhiloContext) {
     const producer = ctx.di.get(Producer);
     await producer.options(ctx.group, ctx.presetName);
   });
@@ -132,7 +139,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     };
   }
 
-  scene.command([COMMAND.PRESET, 'presets'], async (ctx) => {
+  scene.command([COMMAND.PRESET, SHORTHAND.PRESET], async (ctx) => {
     const producer = ctx.di.get(Producer);
 
     const { text, markup } = renderPresetSelect(ctx);
