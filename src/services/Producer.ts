@@ -153,6 +153,7 @@ export class Producer {
       prefix: prefix + datePostfix,
     });
 
+    await this.resetQueue();
     // skipping the `started` event here (sleepMS=0)
     this.addEventListeners(events, message, MEDIA.TIMELAPSE, director.nameNow);
   }
@@ -187,7 +188,7 @@ export class Producer {
    * to ensure promise control on async event emitter callbacks
    * @param task waiting to edit a message
    */
-  enqueue(task = async () => {}) {
+  private enqueue(task = async () => {}, retry = 0) {
     const logger = this.#logger();
     const BACKOFF_MULTIPLIER = 1000;
 
@@ -202,9 +203,28 @@ export class Producer {
       }
       try {
         await task();
-      } catch (e) {
+      } catch (e: any) {
         this.#errors++;
-        logger.log('Failed to edit message:', e);
+        logger.log(
+          'Failed to edit message:',
+          e,
+          retry ? `${retry} retries pending` : 'no retry planned'
+        );
+
+        if (retry-- > 0) {
+          let retryWaitTime = this.#errors * BACKOFF_MULTIPLIER || 5000;
+          if (e?.response?.error_code === 429) {
+            const { retry_after } = e?.response?.parameters ?? {};
+            retryWaitTime = retry_after * 1000;
+          }
+          try {
+            await new Promise((res) => setTimeout(res, retryWaitTime));
+            await task();
+          } catch (re) {
+            this.#errors++;
+            logger.log('Failed to edit message on retry:', re);
+          }
+        }
       }
     });
   }
@@ -253,6 +273,7 @@ export class Producer {
     };
 
     const onVideoRendered = (fileName: string, dir: Directory) => {
+      const retry = 2;
       this.enqueue(async () => {
         logger.log(`[${dir.path}] Stitched: ${fileName}`);
         const caption = t('timelapse.title', date);
@@ -263,10 +284,10 @@ export class Producer {
         });
         await publisher.prepare(message, type, name);
         this.#done = true;
-      });
+        logger.log('Finished producing the timelapse.');
+      }, retry);
 
       removeEventListeners();
-      logger.log('Finished producing the timelapse.');
     };
 
     const errorMessage = (error: unknown) => {

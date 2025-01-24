@@ -54,12 +54,7 @@ export function messageFactory(
   return {
     id: messageId,
     editCaption: async (caption, extra) => {
-      try {
-        await bot.telegram.editMessageCaption(chatId, messageId, undefined, caption, extra);
-      } catch (err) {
-        console.error(`Cannot edit message caption ${messageId} (${chatId}): ${caption}`);
-        console.error(err);
-      }
+      await bot.telegram.editMessageCaption(chatId, messageId, undefined, caption, extra);
     },
     editMedia: async (media, extra) => {
       await bot.telegram.editMessageMedia(chatId, messageId, undefined, media, extra);

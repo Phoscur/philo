@@ -67,7 +67,7 @@ const composite = {
     'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
       `📷 Last Timelapse frame created:\n${filename}`,
     'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
-      `🎞️ Rendered Frames ${frame} (${fps} FPS)`,
+      `🎞️ Rendered Frames: ${frame} (${fps} FPS)`,
     'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
       `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\n${hardwareStatus}`,
     'sunset.title': (t: BasicIndex, d = new Date(), cloud = '', rated = '') =>
@@ -88,9 +88,9 @@ const composite = {
     'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
       `📷 Letztes aufgenommenes Bild:\n${filename}`,
     'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
-      `🎞️ Gerenderte Videobilder ${frame} (${fps} FPS)`,
+      `🎞️ Gerenderte Videobilder: ${frame} (${fps} FPS)`,
     'sunset.start': (t: BasicIndex, hardwareStatus: string) =>
-      `🌇 Sonnenuntergang ist schon bald...\n⤵️ Starte den täglichen Zeitraffer 🎥\n${hardwareStatus}`,
+      `🌇 Sonnenuntergang ist schon bald...\n⤵️ Starte den täglichen Zeitraffer 🎥\n${hardwareStatus}`, // alternate icon: 🌆
     'sunset.title': (t: BasicIndex, d = new Date(), cloud = '', rated = '') =>
       `${cloud}🌇 ${rated} ${dateFormat(d)}`,
     'timelapse.title': (t: BasicIndex, d = new Date(), cloud = '', rated = '') =>

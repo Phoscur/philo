@@ -23,8 +23,8 @@ export const COMMAND = {
 export const SHORTHAND = {
   STATUS: 's',
   RANDOM: 'r',
-  PREVIEW: 'p',
-  PHOTO: 'options',
+  PREVIEW: 'pre',
+  PHOTO: 'p',
   PRESET: 'presets',
 } as const;
 

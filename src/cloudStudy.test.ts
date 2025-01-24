@@ -199,7 +199,7 @@ describe('CloudStudy', () => {
 
     emitter.emit('frame', name, 'fps');
     await producer.settled;
-    expect(editCaption).toBeCalledWith(`🎞️ Rendered Frames ${name} (fps FPS)`);
+    expect(editCaption).toBeCalledWith(`🎞️ Rendered Frames: ${name} (fps FPS)`);
 
     emitter.emit('rendered', name, dir);
     await producer.settled;
