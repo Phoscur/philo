@@ -151,18 +151,22 @@ export class Publisher {
   }
 
   async updateCaptions(chat: ChatMessenger, messageId: number) {
+    const { t } = this.#i18n();
     const { publication, caption, cloudStudy } = await this.getPublication(messageId);
     const markup = this.getMarkupPublished(
       !cloudStudy,
       !!publication.shared,
       !!publication.published
     );
+    let status = ' ';
     if (publication.channelMessageId) {
       const channelMessage = chat.getChannelMessage(publication.channelMessageId);
-      await channelMessage.editCaption(caption, markup);
+      // we'll fail here if we don't change the message - noone is going to notice the space at the end though :P
+      await channelMessage.editCaption(caption + status, markup);
+      status += t('caption.status', !!publication.shared, !!publication.published);
     }
     const message = chat.getMessage(publication.messageId);
-    await message.editCaption(caption, markup);
+    await message.editCaption(caption + status, markup);
   }
 
   async share(group: ChatMessenger, messageId: number) {
