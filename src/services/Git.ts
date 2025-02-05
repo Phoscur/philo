@@ -61,28 +61,21 @@ export class Git {
 
   /**
    * Attempt `git clone` including checkout
-   * @returns {Promise<boolean>} success
    */
   async checkout(repo: string, branch = this.ref) {
     const { log } = this.#logger();
     const dir = this.#fs().getAbsolutePath(repo);
-    try {
-      log('Checking out:', this.publicUrlPrefix + repo);
-      await this.git.clone({
-        fs: { promises },
-        dir,
-        http,
-        url: this.privateUrlPrefix + repo,
-        singleBranch: true,
-        depth: 1,
-      });
-      log('Successfully cloned:', dir);
-      if (branch) await this.branch(repo, this.ref);
-      return true;
-    } catch (err: any) {
-      log('Checkout failed:', dir, err?.message);
-      return false;
-    }
+    log('Checking out:', this.publicUrlPrefix + repo);
+    await this.git.clone({
+      fs: { promises },
+      dir,
+      http,
+      url: this.privateUrlPrefix + repo,
+      singleBranch: true,
+      depth: 1,
+    });
+    log('Successfully cloned:', dir);
+    if (branch) await this.branch(repo, this.ref);
   }
 
   /**
