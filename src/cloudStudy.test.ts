@@ -237,7 +237,7 @@ describe('CloudStudy', () => {
 
     // same author should stack likes
     await publisher.saveLike(messageId, author, `like-${like}`);
-    //await publisher.saveLike(messageId, author, `like-${like}`);
+    await publisher.saveLike(messageId, author, `like-${like}`);
     await publisher.saveLike(messageId, anotherAuthor, `like-${like}`);
     await publisher.updateCaptions(chat, messageId);
     expect(editCaptionLater).toBeCalledWith(

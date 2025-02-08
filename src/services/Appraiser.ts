@@ -123,7 +123,17 @@ export class Appraisement {
     if (!this.index.appraisals[name]) {
       this.index.appraisals[name] = { votes: [] };
     }
-    this.index.appraisals[name].votes.push(data);
+    let overwritten = false;
+    for (const vote of this.index.appraisals[name].votes) {
+      if (vote.author === data.author) {
+        vote.like = data.like;
+        vote.rating = data.rating;
+        overwritten = true;
+      }
+    }
+    if (!overwritten) {
+      this.index.appraisals[name].votes.push(data);
+    }
     await this.writeIndex();
   }
 
