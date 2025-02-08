@@ -214,12 +214,13 @@ describe('CloudStudy', () => {
     expect(editMedia).toHaveBeenCalledTimes(2);
 
     const author = 'Phoscur';
+    const anotherAuthor = 'NonAnon';
     const like = LIKE.HEART;
     const cloud = CLOUD.LESS;
     await publisher.saveLike(messageId, author, `like-${like}`);
     await publisher.updateCaptions(chat, messageId);
     expect(editCaptionLater).toBeCalledWith(
-      `🌇 ${like} ${created}`,
+      `🌇 ${like} ${created} `,
       publisher.getMarkupPublished(true)
     );
     await publisher.saveCloudStudy(messageId, `cloud-${cloud}`);
@@ -234,10 +235,13 @@ describe('CloudStudy', () => {
     );
     expect(editCaptionLater).toBeCalledTimes(2);
 
+    // same author should stack likes
     await publisher.saveLike(messageId, author, `like-${like}`);
+    //await publisher.saveLike(messageId, author, `like-${like}`);
+    await publisher.saveLike(messageId, anotherAuthor, `like-${like}`);
     await publisher.updateCaptions(chat, messageId);
     expect(editCaptionLater).toBeCalledWith(
-      `${cloud}🌇 ${LIKE.GROWING} ${created}`,
+      `${cloud}🌇 ${LIKE.GROWING} ${created} - shared ✔️- published ✖️`,
       publisher.getMarkupPublished(false, true)
     );
     expect(editCaptionLater).toBeCalledTimes(3);
@@ -245,7 +249,7 @@ describe('CloudStudy', () => {
       `${cloud}🌇 ${LIKE.GROWING} ${created}`,
       publisher.getMarkupPublished(false, true)
     );
-    expect(editCaptionChannel).toBeCalledTimes(2);
+    expect(editCaptionChannel).toBeCalledTimes(1);
   });
 });
 
@@ -256,7 +260,9 @@ describe('Publisher', () => {
     const publications = injector.get(PublicationInventoryStorage);
     const name = 'timelapse-test';
     const messageId = -111;
-    const created = Number(new Date(2024, 9, 13, 18, 45));
+    // TODO read/merge older likes from the previous year?
+    const year = new Date().getFullYear();
+    const created = Number(new Date(year, 9, 13, 18, 45));
     const author = 'Phoscur';
     const like = LIKE.HEART;
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
@@ -279,12 +285,12 @@ describe('Publisher', () => {
           created,
         },
       },
-      name: 'publications-2024.json',
+      name: `publications-${year}.json`,
       publications: {},
       version: 'Publication-1',
     });
     expect(spies[DIR]).toHaveBeenCalledWith(publisher.appraisalsFile, {
-      name: 'appraisals-2024.json',
+      name: `appraisals-${year}.json`,
       appraisals: {
         'timelapse-test': {
           votes: [
@@ -301,7 +307,7 @@ describe('Publisher', () => {
     expect(pubs.prettyIndex).toBe(`{\n  "-111": "not shared"\n}`);
     const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "#1"\n}`);
-    expect(await publisher.getCaption(messageId)).toBe(`🎥 ${like} 13.10.2024 18:45`);
+    expect(await publisher.getCaption(messageId)).toBe(`🎥 ${like} 13.10.${year} 18:45`);
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
@@ -327,6 +333,7 @@ describe('Publisher', () => {
     const messageId = -111;
     const channelMessageId = -222;
     const name = 'timelapse-publication-test';
+    const year = new Date().getFullYear();
     const created = Date.now();
     const pubs = await publications.loadOrCreate(publisher.publicationsFile);
     await pubs.setDraft(messageId, {
@@ -344,7 +351,7 @@ describe('Publisher', () => {
           created,
         },
       },
-      name: 'publications-2024.json',
+      name: `publications-${year}.json`,
       publications: {},
       version: 'Publication-1',
     });
@@ -368,7 +375,7 @@ describe('Publisher', () => {
           channelMessageId,
         },
       },
-      name: 'publications-2024.json',
+      name: `publications-${year}.json`,
       publications: {
         '-222': -111,
       },
@@ -392,7 +399,7 @@ describe('Publisher', () => {
           published,
         },
       },
-      name: 'publications-2024.json',
+      name: `publications-${year}.json`,
       publications: {
         '-222': -111,
       },
