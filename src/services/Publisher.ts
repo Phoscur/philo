@@ -146,11 +146,15 @@ export class Publisher {
       this.markupRowLikes,
       ...(withCloudStudy ? [this.markupRowCloudStudy] : []),
       ...(shared ? [] : [this.markupRowShare]),
-      ...(published ? [] : [this.markupRowPublish]),
+      ...(published
+        ? []
+        : [
+            /* TODO enable this.markupRowPublish */
+          ]),
     ]);
   }
 
-  async updateCaptions(chat: ChatMessenger, messageId: number) {
+  async updateCaptions(chat: ChatMessenger, messageId: number, justShared = false) {
     const { t } = this.#i18n();
     const { publication, caption, cloudStudy } = await this.getPublication(messageId);
     const markup = this.getMarkupPublished(
@@ -161,8 +165,7 @@ export class Publisher {
     let status = ' ';
     if (publication.channelMessageId) {
       const channelMessage = chat.getChannelMessage(publication.channelMessageId);
-      // we'll fail here if we don't change the message - noone is going to notice the space at the end though :P
-      await channelMessage.editCaption(caption + status, markup);
+      if (!justShared) await channelMessage.editCaption(caption, markup);
       status += t('caption.status', !!publication.shared, !!publication.published);
     }
     const message = chat.getMessage(publication.messageId);
@@ -176,7 +179,7 @@ export class Publisher {
     );
     const pubs = await this.getInventory();
     await pubs.setShared(channelMessage.message_id, messageId);
-    await this.updateCaptions(group, messageId);
+    await this.updateCaptions(group, messageId, true);
 
     return channelMessage.message_id;
   }

@@ -78,7 +78,7 @@ const composite = {
       `${cloud} ${rated} ${dateFormat(d)}`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
     'caption.status': (t: BasicIndex, shared = false, published = false) =>
-      `- shared ${shared ? '✔️' : '✖️'}, published ${published ? '✔️' : '✖️'}`,
+      `- shared ${shared ? '✔️' : '✖️'}- published ${published ? '✔️' : '✖️'}`,
   },
   de: {
     'message.preset': (t: BasicIndex, name: string) =>
@@ -101,7 +101,7 @@ const composite = {
       `${cloud} ${rated} ${dateFormat(d)}`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
     'caption.status': (t: BasicIndex, shared = false, published = false) =>
-      `- geteilt ${shared ? '✔️' : '✖️'}, veröffentlicht ${published ? '✔️' : '✖️'}`,
+      `- geteilt ${shared ? '✔️' : '✖️'}`, //- veröffentlicht ${published ? '✔️' : '✖️'}`,
   },
 } as const;
 
