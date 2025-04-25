@@ -6,6 +6,7 @@ module.exports = {
       script: 'dist/main.js',
       node_args: '--env-file=.env',
       watch: true,
+      time: true,
       // Delay between restart
       watch_delay: 1000,
       ignore_watch: [
@@ -15,7 +16,7 @@ module.exports = {
         'sun*',
         'time*',
         'photo*',
-        'ecosystem.config.js',
+        'ecosystem.config.cjs',
         'README.md',
       ],
       watch_options: {
