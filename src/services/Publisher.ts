@@ -43,6 +43,11 @@ export class Publisher {
     return t('message.noPermission');
   }
 
+  get callbackMessageNoUsername() {
+    const { t } = this.#i18n();
+    return t('message.noUsername');
+  }
+
   get markupRowLikes() {
     const appraiser = this.#appraiser();
     return appraiser.likesWithRatings.map(({ text, data }) => Markup.button.callback(text, data));

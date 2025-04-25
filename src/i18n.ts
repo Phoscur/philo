@@ -23,6 +23,7 @@ const base = {
     'message.sharingToChannel': 'Sharing to Channel!',
     'message.canceling': 'Canceling!',
     'message.noPermission': 'Not permitted.',
+    'message.noUsername': 'Username is required for uniqueness!',
     'timelapse.tooManyErrors': '❌ Too many errors while creating the timelapse',
   },
   de: {
@@ -42,6 +43,7 @@ const base = {
     'message.sharingToChannel': 'Teile im Channel!',
     'message.canceling': 'Breche ab!',
     'message.noPermission': 'Nicht zugelassen.',
+    'message.noUsername': 'Hierfür wird ein Username zur Eindeutigkeit benötigt!',
     'timelapse.tooManyErrors': '❌ Zu viele Fehler beim Erstellen des Zeitraffers',
   },
 } as const;

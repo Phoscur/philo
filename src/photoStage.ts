@@ -95,7 +95,10 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     const data = ctx.match[0] || '';
 
     const { message } = ctx.callbackQuery;
-    const user = ctx.from?.username || 'Anonymous';
+    const user = ctx.from?.username || '';
+    if (!user) {
+      return ctx.answerCbQuery(publisher.callbackMessageNoUsername);
+    }
     if (!isActionableMessage(message)) return next();
 
     const liked = await publisher.saveLike(message.message_id, user, data);
