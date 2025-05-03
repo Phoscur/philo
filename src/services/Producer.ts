@@ -11,6 +11,7 @@ import { Directory } from './FileSystem.js';
 import type { TimelapseEventMap } from './Timelapse.js';
 import type EventEmitter from 'node:events';
 import { Publisher } from './Publisher.js';
+import { Queue } from './Queue.js';
 
 export const MEDIA = {
   SHOT: 'shot',
@@ -46,6 +47,13 @@ export class Producer {
   #assets = inject(Assets);
   #hd = inject(Hardware);
   #i18n = inject(I18nService);
+
+  #messageQueue = new Queue('Message');
+  //#uploadQueue = new Queue('Upload');
+
+  get settled() {
+    return this.#messageQueue.settled;
+  }
 
   get callbackMessagePhotograph() {
     const { t } = this.#i18n();
@@ -153,7 +161,7 @@ export class Producer {
       prefix: prefix + datePostfix,
     });
 
-    await this.resetQueue();
+    await this.#messageQueue.reset();
     // skipping the `started` event here (sleepMS=0)
     this.addEventListeners(events, message, MEDIA.TIMELAPSE, director.nameNow);
   }
@@ -175,69 +183,10 @@ export class Producer {
         await chat.sendMessage(t('sunset.start', hdStatus));
 
         const message = await this.createAnimation(chat);
-        await this.resetQueue();
+        await this.#messageQueue.reset();
         this.addEventListeners(events, message, MEDIA.SUNSET, director.nameNow);
       });
     });
-  }
-
-  #queue = Promise.resolve();
-  #errors = 0;
-  #done = false;
-  /**
-   * to ensure promise control on async event emitter callbacks
-   * @param task waiting to edit a message
-   */
-  private enqueue(task = async () => {}, retry = 0) {
-    const logger = this.#logger();
-    const BACKOFF_MULTIPLIER = 1000;
-
-    const queued = this.#queue;
-    this.#queue = queued.then(async () => {
-      if (this.#done) {
-        logger.log('Skipped a task');
-        return;
-      }
-      if (this.#errors) {
-        await new Promise((res) => setTimeout(res, this.#errors * BACKOFF_MULTIPLIER));
-      }
-      try {
-        await task();
-      } catch (e: any) {
-        this.#errors++;
-        logger.log(
-          'Failed to edit message:',
-          e,
-          retry ? `${retry} retries pending` : 'no retry planned'
-        );
-
-        if (retry-- > 0) {
-          let retryWaitTime = this.#errors * BACKOFF_MULTIPLIER || 5000;
-          if (e?.response?.error_code === 429) {
-            const { retry_after } = e?.response?.parameters ?? {};
-            retryWaitTime = retry_after * 1000;
-          }
-          try {
-            await new Promise((res) => setTimeout(res, retryWaitTime));
-            await task();
-          } catch (re) {
-            this.#errors++;
-            logger.log('Failed to edit message on retry:', re);
-          }
-        }
-      }
-    });
-  }
-
-  get settled() {
-    return this.#queue;
-  }
-
-  async resetQueue(wait = true) {
-    if (wait) await this.#queue;
-    this.#queue = Promise.resolve();
-    this.#errors = 0;
-    this.#done = false;
   }
 
   private addEventListeners(
@@ -252,7 +201,7 @@ export class Producer {
     const { t } = this.#i18n();
 
     const onFile = (fileName: string, dir: Directory) => {
-      this.enqueue(async () => {
+      this.#messageQueue.enqueue(async () => {
         const caption = t('timelapse.frameTaken', fileName);
         await message.editMedia(
           {
@@ -266,7 +215,7 @@ export class Producer {
     };
 
     const onVideoFrame = (frame: string, fps: string) => {
-      this.enqueue(async () => {
+      this.#messageQueue.enqueue(async () => {
         const caption = t('timelapse.frameRendered', frame, fps);
         await message.editCaption(caption);
       });
@@ -274,7 +223,7 @@ export class Producer {
 
     const onVideoRendered = (fileName: string, dir: Directory) => {
       const retry = 2;
-      this.enqueue(async () => {
+      this.#messageQueue.enqueue(async () => {
         logger.log(`[${dir.path}] Stitched: ${fileName}`);
         const caption = t('timelapse.title', date);
         await message.editMedia({
@@ -283,7 +232,7 @@ export class Producer {
           media: Input.fromLocalFile(dir.joinAbsolute(fileName), fileName),
         });
         await publisher.prepare(message, type, name);
-        this.#done = true;
+        void this.#messageQueue.forceFinish(); // would deadlock waiting for itself
         logger.log('Finished producing the timelapse.');
       }, retry);
 
@@ -291,7 +240,7 @@ export class Producer {
     };
 
     const errorMessage = (error: unknown) => {
-      this.enqueue(async () => {
+      this.#messageQueue.enqueue(async () => {
         const caption = t('timelapse.tooManyErrors');
         await message?.editCaption(caption);
       });
