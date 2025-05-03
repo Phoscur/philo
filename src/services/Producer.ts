@@ -1,4 +1,5 @@
 import { inject, injectable } from '@joist/di';
+import type EventEmitter from 'node:events';
 import { Director } from './Director.js';
 import { Hardware } from './Hardware.js';
 import { Logger } from './Logger.js';
@@ -9,7 +10,7 @@ import { I18nService } from './I18n.js';
 import { Preset } from './Preset.js';
 import { Directory } from './FileSystem.js';
 import type { TimelapseEventMap } from './Timelapse.js';
-import type EventEmitter from 'node:events';
+import type { Repo } from './Repository.js';
 import { Publisher } from './Publisher.js';
 import { Queue } from './Queue.js';
 
@@ -49,7 +50,7 @@ export class Producer {
   #i18n = inject(I18nService);
 
   #messageQueue = new Queue('Message');
-  //#uploadQueue = new Queue('Upload');
+  #uploadQueue = new Queue('Upload');
 
   get settled() {
     return this.#messageQueue.settled;
@@ -152,7 +153,7 @@ export class Producer {
     }
   ) {
     const director = this.#director();
-    await director.setupPrivateRepo(director.repoTimelapse);
+    const repo = await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
     const datePostfix = '-' + director.nameNow;
     const events = await director.timelapse(presetName ?? 'default', {
@@ -162,8 +163,9 @@ export class Producer {
     });
 
     await this.#messageQueue.reset();
+    await this.#uploadQueue.reset();
     // skipping the `started` event here (sleepMS=0)
-    this.addEventListeners(events, message, MEDIA.TIMELAPSE, director.nameNow);
+    this.addEventListeners(events, repo, message, MEDIA.TIMELAPSE, director.nameNow);
   }
 
   cancel() {
@@ -176,7 +178,7 @@ export class Producer {
     const logger = this.#logger();
     const director = this.#director();
 
-    director.scheduleSunset((events) => {
+    director.scheduleSunset((events, repo) => {
       logger.log('Scheduled the daily sunset timelapse.');
       events.once('started', async () => {
         const hdStatus = await this.#hd().getStatus();
@@ -184,13 +186,15 @@ export class Producer {
 
         const message = await this.createAnimation(chat);
         await this.#messageQueue.reset();
-        this.addEventListeners(events, message, MEDIA.SUNSET, director.nameNow);
+        await this.#uploadQueue.reset();
+        this.addEventListeners(events, repo, message, MEDIA.SUNSET, director.nameNow);
       });
     });
   }
 
   private addEventListeners(
     events: EventEmitter<TimelapseEventMap>,
+    repo: Repo,
     message: ChatAnimationMessage,
     type: 'timelapse' | 'sunset',
     name: string,
@@ -211,6 +215,10 @@ export class Producer {
           },
           this.markupCancel
         );
+      });
+      this.#uploadQueue.enqueue(async () => {
+        await repo.upload(fileName);
+        logger.log('Successfully uploaded', fileName);
       });
     };
 

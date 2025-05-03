@@ -1,6 +1,6 @@
 import { inject, injectable } from '@joist/di';
 import { EventEmitter } from 'node:events';
-import { Repository } from './Repository.js';
+import { Repository, Repo } from './Repository.js';
 import { Logger } from './Logger.js';
 import { Camera } from './Camera.js';
 import { TimelapseEventMap, Timelapse } from './Timelapse.js';
@@ -134,7 +134,7 @@ export class Director {
   }
 
   #sunsetTimeout: NodeJS.Timeout | undefined;
-  scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>) => void) {
+  scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>, repo: Repo) => void) {
     //if (!this.enableSunsetTimelapse) return;
     const logger = this.#logger();
     const sunMoon = this.#sunMoonTime();
@@ -154,7 +154,7 @@ export class Director {
         }
         logger.log('Sunset timelapse scheduled in', (diff / 60 / 60000).toFixed(2), 'hours');
         await sunMoon.sleep(diff - messageDelayMS);
-        await this.setupPublicRepo(this.repoSunset);
+        const repo = await this.setupPublicRepo(this.repoSunset);
         const events = await this.timelapse(
           'sunset',
           {
@@ -165,7 +165,7 @@ export class Director {
           this.repoSunsetStitched,
           messageDelayMS
         );
-        onStart(events);
+        onStart(events, repo);
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);

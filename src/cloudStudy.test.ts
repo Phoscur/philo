@@ -13,6 +13,7 @@ import {
   Producer,
   PublicationInventoryStorage,
   Publisher,
+  Repo,
   SunMoonTime,
   TimelapseEventMap,
 } from './services/index.js';
@@ -57,8 +58,8 @@ function createInjectorSpies() {
       provide: Director,
       factory(_injector) {
         class StubDirector extends Director {
-          scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>) => void) {
-            onStart(emitter);
+          scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>, repo: Repo) => void) {
+            onStart(emitter, {} as Repo);
           }
         }
         return new StubDirector();
