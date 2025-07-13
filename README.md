@@ -18,6 +18,7 @@ Photo & Timelapse Telegram Bot
 - indent 4 spaces, default to double quotes?
 
 - compress (zip?) before glacier upload
+- add moderator role to share to channel
 
 Fix regressions, lost features:
 

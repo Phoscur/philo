@@ -45,8 +45,8 @@ export class Git {
         return;
       }
       await this.commit(repo, message);
-      await this.push(repo);
-      log('Git Status', fileName, await this.status(repo, fileName));
+      const push = await this.push(repo);
+      log('Git Status', fileName, await this.status(repo, fileName), push.ok ? 'ok' : 'push fail');
       const commits = await this.log(repo);
       log(
         'Git Log length:',
