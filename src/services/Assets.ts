@@ -4,7 +4,7 @@ import { Input } from 'telegraf';
 import { InputFile } from 'telegraf/types';
 
 const ASSETS_FOLDER = 'assets';
-@injectable
+@injectable()
 export class Assets {
   #fs = inject(FileSystem);
 

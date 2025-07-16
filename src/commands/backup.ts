@@ -8,7 +8,7 @@ import {
 } from '../services/index.js';
 export const defaultTargetFolder = process.env.BACKUP_TARGET_FOLDER || 'data-archive';
 
-@injectable
+@injectable()
 export class BackupCommand {
   #fs = inject(FileSystem);
   #logger = inject(Logger);
@@ -46,7 +46,7 @@ export class BackupCommand {
   }
 }
 
-@injectable
+@injectable()
 export class BackupRestoreCommand {
   #fs = inject(FileSystem);
   #logger = inject(Logger);

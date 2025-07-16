@@ -1,14 +1,16 @@
-import { inject, injectable } from '@joist/di';
+import { inject, injectable, Provider } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
 import { Camera } from './Camera.js';
 import { StillOptions } from './index.js';
 
-export const cameraStubProvider = {
-  provide: Camera,
-  factory() {
-    return new CameraStub();
+export const cameraStubProvider: Provider<Camera> = [
+  Camera,
+  {
+    factory() {
+      return new CameraStub();
+    },
   },
-} as const;
+] as const;
 
 export function padZero(s: string, length: number): string {
   return s.length >= length ? s : padZero('0' + s, length);
@@ -41,7 +43,7 @@ function* exampleFiles(): Generator<string> {
 
 const exampleStream = exampleFiles();
 
-@injectable
+@injectable()
 export class CameraStub extends Camera {
   #fs = inject(FileSystem);
 

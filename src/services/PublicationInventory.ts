@@ -115,7 +115,7 @@ export class PublicationInventory {
  * Provide Publication Storage on top of Inventory in JSON format (publications.json)
  * to save the state of publications and references to their controlling messages
  */
-@injectable
+@injectable()
 export class PublicationInventoryStorage {
   #fs = inject(FileSystem);
   #logger = inject(Logger);

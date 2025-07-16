@@ -1,7 +1,7 @@
 import { inject, injectable } from '@joist/di';
 import { Logger } from './Logger.js';
 
-@injectable
+@injectable()
 export class Queue {
   BACKOFF_MULTIPLIER = 1000;
   #logger = inject(Logger);

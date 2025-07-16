@@ -7,9 +7,11 @@ export class Logger {
   timeEnd(_label?: string) {}
 }
 
-export const consoleProvider: Provider<Logger> = {
-  provide: Logger,
-  factory(): Logger {
-    return console;
+export const consoleProvider: Provider<Logger> = [
+  Logger,
+  {
+    factory(): Logger {
+      return console;
+    },
   },
-} as const;
+] as const;

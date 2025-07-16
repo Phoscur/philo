@@ -18,16 +18,16 @@ const outFolder = 'timelapse-test-output';
 
 const useNoStub = process.argv.includes('--no-stub');
 const injector = useNoStub ? createInjector() : createInjectorWithStubbedDependencies();
-const camera = injector.get(Camera);
-//const camera = injector.get(CameraStub);
+const camera = injector.inject(Camera);
+//const camera = injector.inject(CameraStub);
 (camera as CameraStub).copyMode = true;
-const timelapse = injector.get(Timelapse);
-const director = injector.get(Director);
-const git = injector.get(Git);
-const logger = injector.get(Logger);
-const fs = injector.get(FileSystem);
-const repo = injector.get(Repository);
-const archiver = injector.get(Archiver);
+const timelapse = injector.inject(Timelapse);
+const director = injector.inject(Director);
+const git = injector.inject(Git);
+const logger = injector.inject(Logger);
+const fs = injector.inject(FileSystem);
+const repo = injector.inject(Repository);
+const archiver = injector.inject(Archiver);
 
 async function upload() {
   /*const isNew = await fs.setupPath(repoName)

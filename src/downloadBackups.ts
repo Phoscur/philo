@@ -3,8 +3,8 @@ import { Logger, createInjector, Repository, Director } from './services/index.j
 
 // defineEnvironment
 const injector = createInjector();
-const logger = injector.get(Logger);
-const repo = injector.get(Repository);
+const logger = injector.inject(Logger);
+const repo = injector.inject(Repository);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

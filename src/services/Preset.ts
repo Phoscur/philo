@@ -2,7 +2,7 @@ import { inject, injectable } from '@joist/di';
 import { Logger } from './Logger.js';
 import { Camera, StillOptions } from './Camera.js';
 
-@injectable
+@injectable()
 export class Preset {
   #logger = inject(Logger);
   #cam = inject(Camera);

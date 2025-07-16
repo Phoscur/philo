@@ -32,7 +32,7 @@ export class VideoRenderer {
   }
 }
 
-@injectable
+@injectable()
 export class Timelapse {
   #logger = inject(Logger);
   #cam = inject(Camera);

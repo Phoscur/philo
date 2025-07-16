@@ -1,11 +1,11 @@
-import { inject, injectable } from '@joist/di';
+import { inject, injectable, Provider } from '@joist/di';
 import { VideoRenderer } from './Timelapse.js';
 import { FileSystem } from './FileSystem.js';
 import type { StitchOptions } from '../lib/ffmpeg.js';
 
 const example = './data-example/2021-12-21--16-01.42095079-1278.mp4';
 
-@injectable
+@injectable()
 export class StubRenderer implements VideoRenderer {
   #fs = inject(FileSystem);
   async stitchImages(
@@ -26,9 +26,11 @@ export class StubRenderer implements VideoRenderer {
   }
 }
 
-export const rendererStubProvider = {
-  provide: VideoRenderer,
-  factory() {
-    return new StubRenderer();
+export const rendererStubProvider: Provider<VideoRenderer> = [
+  VideoRenderer,
+  {
+    factory() {
+      return new StubRenderer();
+    },
   },
-} as const;
+] as const;

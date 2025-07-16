@@ -7,7 +7,7 @@ import { PublicationInventory, PublicationInventoryStorage } from './Publication
 import { ChatAnimationMessage, ChatMessenger } from '../context.js';
 import { MediaType } from './Producer.js';
 
-@injectable
+@injectable()
 export class Publisher {
   static ACTION = {
     SHARE: 'share',

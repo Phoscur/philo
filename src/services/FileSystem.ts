@@ -85,7 +85,7 @@ export class Directory {
  * Operations are relative to the current working directory and setup path directory
  * @throws {Error} all kinds of file system errors
  */
-@injectable
+@injectable()
 export class FileSystem {
   #logger = inject(Logger);
   cwd = process.cwd();

@@ -41,7 +41,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   const scene = new Scenes.BaseScene<PhiloContext>('photo');
   // basic utility commands
   scene.command([COMMAND.STATUS, SHORTHAND.STATUS], (ctx) => {
-    const hd = ctx.di.get(Hardware);
+    const hd = ctx.di.inject(Hardware);
     setImmediate(async () => {
       ctx.reply(await hd.getStatus());
     });
@@ -51,23 +51,23 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // Photos
 
   scene.command([COMMAND.RANDOM, SHORTHAND.RANDOM], (ctx) => {
-    const assets = ctx.di.get(Assets);
+    const assets = ctx.di.inject(Assets);
     ctx.replyWithPhoto(assets.randomImage);
-    // or ctx.replyWithAnimation(ctx.di.get(Assets).telegramSpinner);
+    // or ctx.replyWithAnimation(ctx.di.inject(Assets).telegramSpinner);
   });
   scene.command([COMMAND.PREVIEW, SHORTHAND.PREVIEW], async (ctx) => {
-    const director = ctx.di.get(Director);
+    const director = ctx.di.inject(Director);
     const { filename, dir } = await director.photo('default');
     ctx.replyWithPhoto(Input.fromLocalFile(dir.joinAbsolute(filename)));
   });
 
   scene.command([COMMAND.PHOTO, SHORTHAND.PHOTO], async function (ctx: PhiloContext) {
-    const producer = ctx.di.get(Producer);
+    const producer = ctx.di.inject(Producer);
     await producer.options(ctx.group, ctx.presetName);
   });
 
   scene.action(Producer.ACTION.SHOT, async (ctx) => {
-    const producer = ctx.di.get(Producer);
+    const producer = ctx.di.inject(Producer);
     await ctx.answerCbQuery(producer.callbackMessagePhotograph);
     await producer.photograph(ctx.group, ctx.presetName);
   });
@@ -77,7 +77,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // TODO? let clickLock = false;
 
   scene.action(Publisher.ACTION.SHARE, async (ctx, next) => {
-    const publisher = ctx.di.get(Publisher);
+    const publisher = ctx.di.inject(Publisher);
     const { message } = ctx.callbackQuery;
 
     const user = ctx.from?.username || '';
@@ -91,7 +91,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
 
   scene.action(Publisher.ACTION.LIKE, async (ctx, next) => {
-    const publisher = ctx.di.get(Publisher);
+    const publisher = ctx.di.inject(Publisher);
     const data = ctx.match[0] || '';
 
     const { message } = ctx.callbackQuery;
@@ -107,7 +107,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
 
   scene.action(Publisher.ACTION.STUDY, async (ctx, next) => {
-    const publisher = ctx.di.get(Publisher);
+    const publisher = ctx.di.inject(Publisher);
     const data = ctx.match[0] || '';
 
     const { message } = ctx.callbackQuery;
@@ -126,8 +126,8 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   // Presets: Test different e.g. region of interest settings for the images taken
 
   function renderPresetSelect(ctx: PhiloContext) {
-    const presets = ctx.di.get(Preset);
-    const { t } = ctx.di.get(I18nService);
+    const presets = ctx.di.inject(Preset);
+    const { t } = ctx.di.inject(I18nService);
     const presetNames = Object.keys(presets.presets).filter((name) => name !== ctx.presetName);
     const buttons = presetNames.map((presetName) =>
       // TODO? buttons split into multiple rows
@@ -143,7 +143,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   }
 
   scene.command([COMMAND.PRESET, SHORTHAND.PRESET], async (ctx) => {
-    const producer = ctx.di.get(Producer);
+    const producer = ctx.di.inject(Producer);
 
     const { text, markup } = renderPresetSelect(ctx);
     const { message, name: title } = await producer.shot(ctx.group, ctx.presetName);
@@ -151,9 +151,9 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
 
   scene.action(/presetSelect-.+/, async (ctx, next) => {
-    const presets = ctx.di.get(Preset);
-    const director = ctx.di.get(Director);
-    const { t } = ctx.di.get(I18nService);
+    const presets = ctx.di.inject(Preset);
+    const director = ctx.di.inject(Director);
+    const { t } = ctx.di.inject(I18nService);
 
     const name = ctx.match[0].replace('presetSelect-', '');
     const preset = presets.get(name);
@@ -175,8 +175,8 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
   scene.action(Producer.ACTION.CANCEL, async (ctx) => {
     try {
-      const producer = ctx.di.get(Producer);
-      const { t } = ctx.di.get(I18nService);
+      const producer = ctx.di.inject(Producer);
+      const { t } = ctx.di.inject(I18nService);
       const { message } = ctx.callbackQuery;
       if (!message?.message_id) return;
       const user = ctx.from?.username || '';
@@ -204,11 +204,11 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   }) {
     return async (ctx: PhiloContext) => {
       try {
-        const producer = ctx.di.get(Producer);
+        const producer = ctx.di.inject(Producer);
         await ctx.answerCbQuery(producer.callbackMessageTimelapse);
         await producer.timelapse(ctx.group, options);
       } catch (error) {
-        ctx.di.get(Logger).log('Failed timelapse!', error);
+        ctx.di.inject(Logger).log('Failed timelapse!', error);
         await ctx.reply(`Failed timelapse: ${error}`);
       }
     };
@@ -223,7 +223,7 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
 
   if (DAILY) {
     console.log('Setting up daily timelapse ...');
-    const producer = di.get(Producer);
+    const producer = di.inject(Producer);
     const chat = setupChatContext(bot).group;
     producer.scheduleDailySunset(chat);
   }

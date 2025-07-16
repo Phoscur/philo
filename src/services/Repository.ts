@@ -128,7 +128,7 @@ export class Repo {
  * - creates action file
  * - push files
  */
-@injectable
+@injectable()
 export class Repository {
   #git = inject(Git);
   #fs = inject(FileSystem);

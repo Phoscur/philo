@@ -24,7 +24,7 @@ export type MediaType = (typeof MEDIA)[keyof typeof MEDIA];
 /**
  * Given (Telegram) messenger context, Producer will interact with the Director to stream content production.
  */
-@injectable
+@injectable()
 export class Producer {
   static ACTION = {
     SHOT: 'shot',

@@ -28,14 +28,17 @@ import { rendererStubProvider } from './TimelapseVideoRendererStub.js';
 import { hardwareStubProvider } from './Hardware.js';
 
 export function createInjector(providers: Provider<any>[] = []) {
-  return new Injector([...providers, consoleProvider]);
+  return new Injector({ providers: [...providers, consoleProvider] });
 }
 
 export function createInjectorWithStubbedDependencies(providers: Provider<any>[] = []) {
-  return createInjector([
-    ...providers,
-    cameraStubProvider,
-    rendererStubProvider,
-    hardwareStubProvider,
-  ]);
+  return new Injector({
+    providers: [
+      ...providers,
+      consoleProvider,
+      cameraStubProvider,
+      rendererStubProvider,
+      hardwareStubProvider,
+    ],
+  });
 }

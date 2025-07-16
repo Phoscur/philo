@@ -182,7 +182,7 @@ export class Appraisement {
 /**
  * Provide Appraisals ontop of Inventory in JSON format (appraisals.json)
  */
-@injectable
+@injectable()
 export class Appraiser {
   static LIKE_CHOICES = [LIKE.HEART, LIKE.GROWING, LIKE.MINUS] as const;
 

@@ -2,7 +2,7 @@ import { createInjector, Logger } from '../services/index.js';
 import { BackupCommand, BackupRestoreCommand } from './backup.js';
 
 const di = createInjector();
-const logger = di.get(Logger);
+const logger = di.inject(Logger);
 
 // <node|npm> <script> <command>
 const args = process.argv.slice(3);
@@ -35,7 +35,7 @@ npm run command backup-restore sunset-karlsruhe-2024-10-02-restored
 */
 try {
   if ('backup' === command) {
-    const backup = di.get(BackupCommand);
+    const backup = di.inject(BackupCommand);
     // <command> <folder> <name> [<target>] [<vault>] [<description>]
     const [folderName, fileName, targetFolderName, vaultName, vaultDescription] = args;
     await backup.run(folderName, fileName, targetFolderName, vaultName, vaultDescription);
@@ -43,7 +43,7 @@ try {
   }
 
   if ('backup-restore' === command) {
-    const backupRestore = di.get(BackupRestoreCommand);
+    const backupRestore = di.inject(BackupRestoreCommand);
     // <command> <name> [<target>]
     const [fileName, targetFolderName] = args;
     await backupRestore.run(fileName, targetFolderName);

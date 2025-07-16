@@ -1,10 +1,10 @@
-import { inject, injectable } from '@joist/di';
+import { inject, injectable, Provider } from '@joist/di';
 import { getStorageStatus } from '../lib/df.js';
 import { getTemperatureHumidityMessage } from '../lib/temperature.js';
 import { Logger } from './Logger.js';
 import { I18nService } from './I18n.js';
 
-@injectable
+@injectable()
 export class Hardware {
   #logger = inject(Logger);
   #i18n = inject(I18nService);
@@ -40,20 +40,22 @@ export class Hardware {
   }
 }
 
-export const hardwareStubProvider = {
-  provide: Hardware,
-  factory() {
-    @injectable
-    class HardwareStub extends Hardware {
-      #i18n = inject(I18nService);
-      async getStatus() {
-        const { t } = this.#i18n();
-        const status = { size: '-1', percent: '-1' };
-        const storageMessage = t('storage.status', status.size, status.percent);
-        const temperatureMessage = 'Stubbed Temperature';
-        return `${storageMessage}\n${temperatureMessage}`;
+export const hardwareStubProvider: Provider<Hardware> = [
+  Hardware,
+  {
+    factory() {
+      @injectable()
+      class HardwareStub extends Hardware {
+        #i18n = inject(I18nService);
+        async getStatus() {
+          const { t } = this.#i18n();
+          const status = { size: '-1', percent: '-1' };
+          const storageMessage = t('storage.status', status.size, status.percent);
+          const temperatureMessage = 'Stubbed Temperature';
+          return `${storageMessage}\n${temperatureMessage}`;
+        }
       }
-    }
-    return new HardwareStub();
+      return new HardwareStub();
+    },
   },
-};
+] as const;

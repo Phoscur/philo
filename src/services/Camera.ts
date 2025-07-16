@@ -5,7 +5,7 @@ import { StillCamera } from '../lib/libcamera-still.js';
 import type { StillOptions } from '../lib/libcamera-still.js';
 export type { StillOptions } from '../lib/libcamera-still.js';
 
-@injectable
+@injectable()
 export class Camera {
   name = 'still-test';
   #logger = inject(Logger);

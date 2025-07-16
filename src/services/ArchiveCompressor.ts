@@ -13,7 +13,7 @@ import tar from 'tar-stream';
 
 const pipelineAsync = promisify(pipeline);
 
-@injectable
+@injectable()
 export class Archiver {
   #logger = inject(Logger);
 

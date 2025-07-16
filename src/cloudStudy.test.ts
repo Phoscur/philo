@@ -28,55 +28,63 @@ function createInjectorSpies() {
   const emitter = new EventEmitter<TimelapseEventMap>();
   const directories: Record<string, Directory> = {};
   const injector = createInjectorWithStubbedDependencies([
-    {
-      provide: FileSystem,
-      factory(injector: Injector) {
-        class MockFileSystem extends FileSystem {
-          async createDirectory(path: string) {
-            if (directories[path]) {
-              return directories[path];
+    [
+      FileSystem,
+      {
+        factory(injector: Injector) {
+          class MockFileSystem extends FileSystem {
+            async createDirectory(path: string) {
+              if (directories[path]) {
+                return directories[path];
+              }
+              // skip actual folder creation
+              const dir = Object.create(new Directory(injector.inject(Logger), this, path));
+              // cache file contents
+              const dataCache: Record<string, any> = {};
+              dir.saveJSON = vi.fn((fileName: string, data: any) => {
+                dataCache[fileName] = data;
+              });
+              dir.readJSON = vi.fn((fileName: string) => {
+                return dataCache[fileName] ?? null;
+              });
+              spies[path] = dir.saveJSON;
+              directories[path] = dir;
+              return dir;
             }
-            // skip actual folder creation
-            const dir = Object.create(new Directory(injector.get(Logger), this, path));
-            // cache file contents
-            const dataCache: Record<string, any> = {};
-            dir.saveJSON = vi.fn((fileName: string, data: any) => {
-              dataCache[fileName] = data;
-            });
-            dir.readJSON = vi.fn((fileName: string) => {
-              return dataCache[fileName] ?? null;
-            });
-            spies[path] = dir.saveJSON;
-            directories[path] = dir;
-            return dir;
           }
-        }
-        return new MockFileSystem();
+          return new MockFileSystem();
+        },
       },
-    },
-    {
-      provide: Director,
-      factory(_injector) {
-        class StubDirector extends Director {
-          scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>, repo: Repo) => void) {
-            onStart(emitter, {} as Repo);
+    ],
+    [
+      Director,
+      {
+        factory(_injector) {
+          class StubDirector extends Director {
+            scheduleSunset(onStart: (events: EventEmitter<TimelapseEventMap>, repo: Repo) => void) {
+              onStart(emitter, {} as Repo);
+            }
           }
-        }
-        return new StubDirector();
+          return new StubDirector();
+        },
       },
-    },
-    {
-      provide: Appraiser,
-      factory(_injector) {
-        return new Appraiser(DIR);
+    ],
+    [
+      Appraiser,
+      {
+        factory(_injector) {
+          return new Appraiser(DIR);
+        },
       },
-    },
-    {
-      provide: PublicationInventoryStorage,
-      factory(_injector) {
-        return new PublicationInventoryStorage(DIR);
+    ],
+    [
+      PublicationInventoryStorage,
+      {
+        factory(_injector) {
+          return new PublicationInventoryStorage(DIR);
+        },
       },
-    },
+    ],
   ]);
   return {
     injector,
@@ -89,16 +97,16 @@ function createInjectorSpies() {
 describe('CloudStudy', () => {
   it('is saved by the Publisher', async () => {
     const { injector } = createInjectorSpies();
-    const publisher = injector.get(Publisher);
+    const publisher = injector.inject(Publisher);
 
     const cloud = await publisher.saveCloudStudy(-111, 'c');
     expect(cloud).toEqual('Error: Message [-111] not found');
   });
   it('is saved by the Publisher when found', async () => {
     const { injector } = createInjectorSpies();
-    const publisher = injector.get(Publisher);
-    const appraiser = injector.get(Appraiser);
-    const publications = injector.get(PublicationInventoryStorage);
+    const publisher = injector.inject(Publisher);
+    const appraiser = injector.inject(Appraiser);
+    const publications = injector.inject(PublicationInventoryStorage);
     const name = 'timelapse-test';
     const messageId = -111;
     const created = Number(new Date(2024, 9, 13, 18, 45));
@@ -121,13 +129,13 @@ describe('CloudStudy', () => {
 
   it('is part of the production, appraisal & publishing process for sunset timelapses', async () => {
     const { injector, emitter } = createInjectorSpies();
-    const director = injector.get(Director);
-    const producer = injector.get(Producer);
-    const publisher = injector.get(Publisher);
-    const appraiser = injector.get(Appraiser);
-    const assets = injector.get(Assets);
-    const fs = injector.get(FileSystem);
-    const sunMoon = injector.get(SunMoonTime);
+    const director = injector.inject(Director);
+    const producer = injector.inject(Producer);
+    const publisher = injector.inject(Publisher);
+    const appraiser = injector.inject(Appraiser);
+    const assets = injector.inject(Assets);
+    const fs = injector.inject(FileSystem);
+    const sunMoon = injector.inject(SunMoonTime);
 
     const name = director.nameNow;
     const messageId = -111;
@@ -257,8 +265,8 @@ describe('CloudStudy', () => {
 describe('Publisher', () => {
   it('collects appraisals (likes)', async () => {
     const { injector, spies } = createInjectorSpies();
-    const publisher = injector.get(Publisher);
-    const publications = injector.get(PublicationInventoryStorage);
+    const publisher = injector.inject(Publisher);
+    const publications = injector.inject(PublicationInventoryStorage);
     const name = 'timelapse-test';
     const messageId = -111;
     // TODO read/merge older likes from the previous year?
@@ -306,14 +314,16 @@ describe('Publisher', () => {
       version: 'Appraisals-1',
     });
     expect(pubs.prettyIndex).toBe(`{\n  "-111": "not shared"\n}`);
-    const appraisals = await injector.get(Appraiser).loadOrCreate(publisher.appraisalsFile, true);
+    const appraisals = await injector
+      .inject(Appraiser)
+      .loadOrCreate(publisher.appraisalsFile, true);
     expect(appraisals.prettyIndex).toBe(`{\n  "${name}": "#1"\n}`);
     expect(await publisher.getCaption(messageId)).toBe(`🎥 ${like} 13.10.${year} 18:45`);
   });
   it('takes over when timelapses (or great shots) are to be published', async () => {
     const { injector, spies } = createInjectorSpies();
-    const publisher = injector.get(Publisher);
-    const publications = injector.get(PublicationInventoryStorage);
+    const publisher = injector.inject(Publisher);
+    const publications = injector.inject(PublicationInventoryStorage);
     const chat = {
       sendMessageCopy: vi.fn(async () => {
         return {

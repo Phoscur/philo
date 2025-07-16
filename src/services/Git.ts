@@ -8,7 +8,7 @@ import { inject, injectable } from '@joist/di';
 import { FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
 
-@injectable
+@injectable()
 export class Git {
   git = git;
   #fs = inject(FileSystem);

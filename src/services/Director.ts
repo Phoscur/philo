@@ -12,7 +12,7 @@ import { SunMoonTime } from './SunMoonTime.js';
  * In charge of directing captures and timelapses, and managing the repositories.
  * The director is busy orchestrating and NOT publishing (Telegram, Discord) or post-producing the content (on Github)
  */
-@injectable
+@injectable()
 export class Director {
   #logger = inject(Logger);
   #fs = inject(FileSystem);

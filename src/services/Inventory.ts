@@ -97,7 +97,7 @@ export class Inventory {
 /**
  * Provide Inventory in JSON format (inventory.json) for generated video media and references to raw photo files
  */
-@injectable
+@injectable()
 export class InventoryStorage {
   #fs = inject(FileSystem);
   #logger = inject(Logger);

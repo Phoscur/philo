@@ -25,7 +25,7 @@ export interface GlacierVault {
  * Archive in AWS Glacier Vaults
  * (use AWS CLI to check inventory: https://docs.aws.amazon.com/amazonglacier/latest/dev/retrieving-vault-inventory-cli.html)
  */
-@injectable
+@injectable()
 export class GlacierBackup {
   private readonly client: GlacierClient;
 
