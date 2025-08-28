@@ -14,6 +14,7 @@
     "clean-build": "tsc -b --clean",
     "watch": "tsx watch --env-file=.env src/main.ts",
     "test": "vitest",
+    "ci": "vitest --coverage",
     "testm": "tsx --env-file=.env src/test.ts",
     "test-sunmoon": "tsx --env-file=.env src/services/SunMoonTime.ts",
     "test-df": "tsx watch src/lib/df.ts",

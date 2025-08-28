@@ -8,4 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npx --yes oxlint@0.10.3 --deny-warnings
+      - run: npx --yes oxlint@1.6.0 --deny-warnings
+  vitest:
+    name: Test with coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          npm install
+          npm ci
