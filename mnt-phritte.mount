@@ -1,0 +1,18 @@
+# /etc/systemd/system/mnt-phritte.mount
+# sudo systemctl enable mnt-phritte.mount
+# sudo systemctl start mnt-phritte.mount
+
+[Unit]
+Description=Mount Fritzbox share for Philo
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=//192.168.178.1/Phritte-5590/Seagate_Backup_Plus_Drive/SunsetBackup
+Where=/mnt/phritte
+Type=cifs
+Options=credentials=/etc/cifs-creds-phritte,vers=2.1,uid=1000,gid=1000,noserverino,file_mode=0644,dir_mode=0755
+
+[Install]
+WantedBy=multi-user.target
+
