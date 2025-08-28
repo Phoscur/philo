@@ -18,27 +18,27 @@ export const spawnPromise = (command: string, args?: Array<string>, options?: Sp
 
     childProcess.once('error', (err: Error) => {
       console.error('CMD failed', command, err);
-      reject(err);
+      //reject(err);
     });
 
-    childProcess.stdout.on(
-      'data',
-      (data: Buffer) => (stdoutData = Buffer.concat([stdoutData, data]))
-    );
+    childProcess.stdout.on('data', (data: Buffer) => {
+      stdoutData = Buffer.concat([stdoutData, data]);
+      console.log(command, data.toString());
+    });
     childProcess.stdout.once('error', (err: Error) => reject(err));
 
-    childProcess.stderr.on(
-      'data',
-      (data: Buffer) => (stderrData = Buffer.concat([stderrData, data]))
-    );
+    childProcess.stderr.on('data', (data: Buffer) => {
+      stderrData = Buffer.concat([stderrData, data]);
+
+      //console.log(command, 'err', stderrData.toString());
+    });
     childProcess.stderr.once('error', (err: Error) => reject(err));
 
     childProcess.stdout.on('close', () => {
       console.log('CMD finished', command, stdoutData.length, stderrData.length);
       // TODO? check rejection logic
-      // if (stderrData.length > 0) return reject(new Error(stderrData.toString()))
+      if (stderrData.length > 0) return reject(new Error(stderrData.toString()));
 
       return resolve(stdoutData);
     });
   });
-
