@@ -8,17 +8,22 @@ const injector = createInjector();
 const logger = injector.inject(Logger);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DAYS = 14;
+const DAYS_PERSERVE = 6;
 
-async function hashFile(filePath: string): Promise<string> {
+async function hashFile(filePath: string, algo: string = 'md5'): Promise<string> {
   const buf = await fs.readFile(filePath);
-  return createHash('sha256').update(buf).digest('hex');
+  return createHash(algo).update(buf).digest('hex');
 }
 
-async function hashDir(dir: string): Promise<Map<string, string>> {
+async function hashDir(dir: string, ignore: string[] = ['.git']): Promise<Map<string, string>> {
   const result = new Map<string, string>();
+
   async function walk(base: string) {
     const entries = await fs.readdir(base, { withFileTypes: true });
     for (const entry of entries) {
+      if (ignore.includes(entry.name)) continue;
+
       const p = path.join(base, entry.name);
       if (entry.isDirectory()) {
         await walk(p);
@@ -28,6 +33,7 @@ async function hashDir(dir: string): Promise<Map<string, string>> {
       }
     }
   }
+
   await walk(dir);
   return result;
 }
@@ -42,8 +48,8 @@ async function exists(p: string): Promise<boolean> {
 }
 
 async function moveAndVerify(localDir: string, backupDir: string, destructive = true) {
-  // Step 1: copy only (preserve everything in backup)
-  await spawnPromise('rsync', ['-a', localDir + '/', backupDir + '/']);
+  // Step 1: copy via rsync
+  await spawnPromise('rsync', ['-a', '--exclude=.git', localDir + '/', backupDir + '/']);
 
   // Step 2: verify
   const [localHashes, backupHashes] = await Promise.all([hashDir(localDir), hashDir(backupDir)]);
@@ -62,8 +68,8 @@ async function moveAndVerify(localDir: string, backupDir: string, destructive = 
   await fs.rm(localDir, { recursive: true, force: true });
 }
 
-async function main() {
-  for (let d = 14; d > 0; d--) {
+async function moveBackups() {
+  for (let d = DAYS; d > 0; d--) {
     const date = new Date(Date.now() - DAY_MS * d);
     const repoName = `${process.env.FOLDER_PREFIX_DAILY_TIMELAPSE_SUNSET}-${Director.yyyymmdd(
       date
@@ -74,16 +80,18 @@ async function main() {
       process.env.FOLDER_BACKUP_MOUNT ?? 'missing-FOLDER_BACKUP_MOUNT',
       repoName
     );
-    const destructive = d > 6;
+    const destructive = d > DAYS_PERSERVE;
 
     try {
       if (!(await exists(localDir))) continue;
       await moveAndVerify(localDir, backupDir, destructive);
-      logger.log('Moved + verified', destructive ? '+ deleted' : '', repoName);
+      logger.log(`[${repoName}]`, 'Moved + verified', destructive ? '+ deleted' : '');
     } catch (err: any) {
       logger.log('Failed moving/verifying', repoName, err.message);
     }
   }
 }
 
-main();
+if (process.argv[1]?.includes('moveBackups')) {
+  moveBackups();
+}

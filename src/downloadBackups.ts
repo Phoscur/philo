@@ -7,6 +7,7 @@ const logger = injector.inject(Logger);
 const repo = injector.inject(Repository);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const destructive = false;
 
 async function main() {
   for (let d = 14; d > 0; d--) {
@@ -22,7 +23,7 @@ async function main() {
     if (d < 6) continue;
     const ssh = process.env.CLEAN_SSH_TARGET;
     const home = process.env.CLEAN_SSH_FOLDER;
-    if (!ssh) continue;
+    if (!ssh || !destructive) continue;
     try {
       //const output =
       await spawnPromise('ssh', [ssh, `cd ${home} && rm -rf ${repoName} && exit`]);
