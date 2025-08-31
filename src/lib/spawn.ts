@@ -1,6 +1,13 @@
 import { spawn, SpawnOptions } from 'child_process';
 
-export const spawnPromise = (command: string, args?: Array<string>, options?: SpawnOptions) =>
+const VERBOSE = false;
+
+export const spawnPromise = (
+  command: string,
+  args?: Array<string>,
+  options?: SpawnOptions,
+  allowError = true
+) =>
   new Promise<Buffer>((resolve, reject) => {
     // console.log('CMD SPAWN', command, args?.join(' '), options);
     const childProcess = spawn(command, args ?? [], options ?? {});
@@ -18,26 +25,24 @@ export const spawnPromise = (command: string, args?: Array<string>, options?: Sp
 
     childProcess.once('error', (err: Error) => {
       console.error('CMD failed', command, err);
-      //reject(err);
+      reject(err);
     });
 
     childProcess.stdout.on('data', (data: Buffer) => {
       stdoutData = Buffer.concat([stdoutData, data]);
-      console.log(command, data.toString());
+      if (VERBOSE) console.log(command, data.toString());
     });
     childProcess.stdout.once('error', (err: Error) => reject(err));
 
     childProcess.stderr.on('data', (data: Buffer) => {
       stderrData = Buffer.concat([stderrData, data]);
-
-      //console.log(command, 'err', stderrData.toString());
+      if (VERBOSE) console.log('error', command, stderrData.toString());
     });
     childProcess.stderr.once('error', (err: Error) => reject(err));
 
     childProcess.stdout.on('close', () => {
       console.log('CMD finished', command, stdoutData.length, stderrData.length);
-      // TODO? check rejection logic
-      if (stderrData.length > 0) return reject(new Error(stderrData.toString()));
+      if (stderrData.length > 0 && !allowError) return reject(new Error(stderrData.toString()));
 
       return resolve(stdoutData);
     });
