@@ -31,15 +31,20 @@ export class Camera {
       logger.timeLog('photo', 'mutex blocked');
       throw new Error('Camera is busy, cannot capture!');
     }
-    const camera = new StillCamera({
-      ...this.options,
-      output, // TODO? maybe for a very fast capture, we might want to read the output into a buffer, but for now we just write to disk
-    });
-    this.#mutex = camera.takeImage();
-    await this.#mutex;
-    logger.timeLog('photo', 'image taken');
-    logger.timeEnd('photo');
-    this.#mutex = false;
-    return output;
+    try {
+      const camera = new StillCamera({
+        ...this.options,
+        output, // TODO? maybe for a very fast capture, we might want to read the output into a buffer, but for now we just write to disk
+      });
+      this.#mutex = camera.takeImage();
+      await this.#mutex;
+      logger.timeLog('photo', 'image taken');
+      return output;
+    } catch (e) {
+      logger.timeLog('photo', 'error', e);
+    } finally {
+      logger.timeEnd('photo');
+      this.#mutex = false;
+    }
   }
 }
