@@ -42,6 +42,7 @@ export class Camera {
       return output;
     } catch (e) {
       logger.timeLog('photo', 'error', e);
+      throw e;
     } finally {
       logger.timeEnd('photo');
       this.#mutex = false;

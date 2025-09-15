@@ -68,7 +68,8 @@ async function moveAndVerify(localDir: string, backupDir: string, destructive = 
   await fs.rm(localDir, { recursive: true, force: true });
 }
 
-async function moveBackups() {
+export async function moveBackups() {
+  const errors = [];
   for (let d = DAYS; d > 0; d--) {
     const date = new Date(Date.now() - DAY_MS * d);
     const repoName = `${process.env.FOLDER_PREFIX_DAILY_TIMELAPSE_SUNSET}-${Director.yyyymmdd(
@@ -88,8 +89,10 @@ async function moveBackups() {
       logger.log(`[${repoName}]`, 'Moved + verified', destructive ? '+ deleted' : '');
     } catch (err: any) {
       logger.log('Failed moving/verifying', repoName, err.message);
+      errors.push([repoName, err.message]);
     }
   }
+  return errors;
 }
 
 if (process.argv[1]?.includes('moveBackups')) {

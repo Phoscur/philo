@@ -1,6 +1,7 @@
 import { Context, Telegraf, session } from 'telegraf';
 import { buildStage } from './photoStage.js';
 import type { PhiloContext } from './context.js';
+import { moveBackups } from './moveBackups.js';
 
 const { TELEGRAM_TOKEN, GROUP_CHAT_ID } = process.env;
 
@@ -41,8 +42,9 @@ async function setupBot() {
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
 
-setupBot().then(() =>
+setupBot().then(() => {
   console.log(
     `🚀 Bot is running!\n(In chat [${process.env.TELEGRAM_CHAT_ID}], sharing to channel [${process.env.TELEGRAM_CHANNEL_ID}])`
-  )
-);
+  );
+  moveBackups();
+});

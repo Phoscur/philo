@@ -7,6 +7,7 @@ import { TimelapseEventMap, Timelapse } from './Timelapse.js';
 import { Preset } from './Preset.js';
 import { FileSystem } from './FileSystem.js';
 import { SunMoonTime } from './SunMoonTime.js';
+import { moveBackups } from '../moveBackups.js';
 
 /**
  * In charge of directing captures and timelapses, and managing the repositories.
@@ -152,7 +153,7 @@ export class Director {
           logger.log('Too late for a timelapse today, scheduling for tomorrow instead!');
           diff = sunMoon.getSunsetDiff(sunMoon.addDay(this.#time), this.#time) + goldenHourTimingMS;
         }
-        logger.log('Sunset timelapse scheduled in', (diff / 60 / 60000).toFixed(2), 'hours');
+        logger.log('Sunset timelapse scheduled in', (diff / 60000).toFixed(0), 'minutes');
         await sunMoon.sleep(diff - messageDelayMS);
         const repo = await this.setupPublicRepo(this.repoSunset);
         const events = await this.timelapse(
@@ -170,6 +171,9 @@ export class Director {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);
       }
+      // TODO delegate backup errors to admin chat
+      //const errors =
+      await moveBackups();
       this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS + rescheduleRepeatDelayMS);
     };
     this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS);
