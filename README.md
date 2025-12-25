@@ -30,7 +30,7 @@ Create Gallery and publish on github.io!
 
 Discord API exploration and rearchitectured Bot: Sunseph
 
-## Using `libcamera`
+## Using `rpicam` (previously called `libcamera`)
 
 We have this new utility since Bullseye (buster 2022).
 While taking the pictures for timelapses goes through `libcamera-still`, you can also use other commands,
@@ -62,3 +62,18 @@ Discord:
 
 1. Register App
 2. Authenticate & add to server: https://discord.com/oauth2/authorize?client_id=948316990228033608&scope=bot&permissions=534723950656
+
+### Backup Mount `FOLDER_BACKUP_MOUNT`
+
+0. See [SystemD Service Mount Config](./mnt-phritte.mount)
+1. Create the service e.g. at `sudo nano /etc/systemd/system/mnt-phritte.mount`
+2. Create the credentials file e.g. `sudo nano /etc/cifs-creds-phritte` with
+
+```
+username=username
+password=password
+```
+
+3. Enable and start the service for the first time:
+   `sudo systemctl enable mnt-phritte.mount`
+   `sudo systemctl start mnt-phritte.mount`

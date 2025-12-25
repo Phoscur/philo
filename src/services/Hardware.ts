@@ -1,6 +1,6 @@
 import { inject, injectable, Provider } from '@joist/di';
 import { getStorageStatus } from '../lib/df.js';
-import { getTemperatureHumidityMessage } from '../lib/temperature.js';
+import { getTemperatureHumidityMessage } from '../lib/dht11.js';
 import { Logger } from './Logger.js';
 import { I18nService } from './I18n.js';
 

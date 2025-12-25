@@ -43,6 +43,9 @@ export const spawnPromise = (
     childProcess.stdout.on('close', () => {
       console.log('CMD finished', command, stdoutData.length, stderrData.length);
       if (stderrData.length > 0 && !allowError) return reject(new Error(stderrData.toString()));
+      if (stderrData.length > 0) {
+        console.log('CMD stderr', command, stderrData.toString());
+      }
 
       return resolve(stdoutData);
     });

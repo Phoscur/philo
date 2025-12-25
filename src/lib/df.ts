@@ -29,7 +29,8 @@ export async function getStorageStatus(folderName?: string) {
 
 function parseDfString(df: string) {
   const s = df.split(/\s/).filter((v) => !!v);
-  const [drive, size, used, available, percent, mount, ...more] = s.slice(7);
+  // slice 7 instead of 19 prior to rpi5
+  const [drive, size, used, available, percent, mount, ...more] = s.slice(19);
   return {
     drive,
     size,
@@ -37,7 +38,7 @@ function parseDfString(df: string) {
     available,
     percent,
     mount,
-    more, // TODO? parse lines
+    more, // more lines
   };
 }
 
@@ -47,14 +48,14 @@ function parseDuString(du: string): string {
 
 if (import.meta.url.endsWith(process.argv[1].split(/\/|\\/).pop() as string)) {
   const test = async () => {
-    const df = await spawnPromise('df', ['-h', 'storage']);
-    console.log('df', df.toString(), parseDfString(df.toString()));
-    const du = await spawnPromise('du', ['storage']);
-    console.log('du', du.toString(), parseDuString(du.toString()));
+    //const df = await spawnPromise('df', ['-h', 'storage']);
+    //console.log('df', df.toString(), parseDfString(df.toString()));
+    //const du = await spawnPromise('du', ['storage']);
+    //console.log('du', du.toString(), parseDuString(du.toString()));
     //const dub = await spawnPromise('du', ['storageb'])
     //console.log('du', dub.toString())
     console.log('JSON', await getStorageStatus());
-    console.log('JSON folder', await getStorageStatus('storage'));
+    //console.log('JSON folder', await getStorageStatus('storage'));
   };
   test();
 }
