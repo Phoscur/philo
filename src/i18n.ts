@@ -64,8 +64,8 @@ const composite = {
     'message.preset': (t: BasicIndex, name: string) => `Selected ${name} 📷, updating...`,
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nSelected options: ${presetName} 📷\n${presetText}`,
-    'storage.status': (t: BasicIndex, size: string, percent: string) =>
-      `💾 Storage (${size}): ${percent}`,
+    'storage.status': (t: BasicIndex, size: string, used: string, percent: string) =>
+      `💾 Storage (${used}/${size}): ${percent}`,
     'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
       `📷 Last Timelapse frame created:\n${filename}`,
     'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>
@@ -87,8 +87,8 @@ const composite = {
       `Preset ${name} 📷 ausgewählt, aktualisiere...`,
     'caption.options': (t: BasicIndex, name: string, presetName: string, presetText: string) =>
       `${name}\nKamera Voreinstellung: ${presetName} 📷\n${presetText}`,
-    'storage.status': (t: BasicIndex, size: string, percent: string) =>
-      `💾 Speicherplatz (${size}): ${percent}`,
+    'storage.status': (t: BasicIndex, size: string, used: string, percent: string) =>
+      `💾 Speicherplatz (${used}/${size}): ${percent}`,
     'timelapse.frameTaken': (t: BasicIndex, filename: string) =>
       `📷 Letztes aufgenommenes Bild:\n${filename}`,
     'timelapse.frameRendered': (t: BasicIndex, frame: string, fps: string) =>

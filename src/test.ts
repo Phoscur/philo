@@ -107,7 +107,7 @@ async function still() {
   const path = camera instanceof CameraStub ? camera.dir.path : 'storage-test';
   await fs.createDirectory(path);
   logger.log('Starting still capture');
-  await camera.photo();
+  await camera.photo('storage-test/still-test2.jpg');
   logger.log('Capture finished');
 
   const files = await fs.dir(path).list();
@@ -124,10 +124,12 @@ if (process.argv.includes('upload')) {
   lapse(10, intervalMS);
 } else if (process.argv.includes('still')) {
   still();
+} else if (process.argv.includes('check')) {
+  check();
 } else {
   console.log(
     'Unknown argument(s):',
     process.argv.slice(2),
-    'use "upload", "lapse" or "still" - e.g. "npm test -- still'
+    'use "upload", "lapse" or "still" - e.g. "npm run testm -- still'
   );
 }
