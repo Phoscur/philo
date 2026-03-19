@@ -5,6 +5,7 @@ import {
   Assets,
   createInjector,
   Director,
+  FileSystem,
   Hardware,
   I18nService,
   Logger,
@@ -19,6 +20,7 @@ export const COMMAND = {
   PREVIEW: 'preview',
   PHOTO: 'photo',
   PRESET: 'preset',
+  PUBLICATIONS: 'publications',
 } as const;
 export const SHORTHAND = {
   STATUS: 's',
@@ -26,6 +28,7 @@ export const SHORTHAND = {
   PREVIEW: 'pre',
   PHOTO: 'p',
   PRESET: 'presets',
+  PUBLICATIONS: 'pubs',
 } as const;
 
 const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
@@ -45,6 +48,47 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     setImmediate(async () => {
       ctx.reply(await hd.getStatus());
     });
+  });
+
+  scene.command([COMMAND.PUBLICATIONS, SHORTHAND.PUBLICATIONS], async (ctx) => {
+    const publisher = ctx.di.inject(Publisher);
+    const fs = ctx.di.inject(FileSystem);
+    const logger = ctx.di.inject(Logger);
+
+    try {
+      const inventory = await publisher.getInventory();
+      const index = await inventory.readIndex();
+      const allPublications = Object.values(index.messages);
+
+      const unpublished = allPublications
+        .filter((p) => !p.published && !p.shared)
+        .sort((a, b) => b.created - a.created)
+        .slice(0, 5);
+
+      if (unpublished.length === 0) {
+        return ctx.reply('No unpublished publications found.');
+      }
+
+      let reply = 'Last 5 unpublished publications:\n';
+
+      for (const pub of unpublished) {
+        let fileCount = 0;
+        try {
+          const repoDir = fs.dir(pub.name);
+          const files = await repoDir.list();
+          fileCount = files.length;
+        } catch (e) {
+          logger.log(`Could not list files for ${pub.name}`, e);
+        }
+
+        reply += `\n- ${pub.name}: ${fileCount} files`;
+      }
+
+      ctx.reply(reply);
+    } catch (e) {
+      logger.log('Error fetching publications', e);
+      ctx.reply('Error fetching publications.');
+    }
   });
 
   // ---------------------------------------------------------------------------------------------------

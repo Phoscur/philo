@@ -11,6 +11,7 @@ import {
   Director,
   createInjectorWithStubbedDependencies,
 } from './services/index.js';
+import { Stakeholder } from './services/Stakeholder.js';
 
 const repoName = 'timelapse-test-2024-06-22';
 const timelapseFile = 'timelapse.mp4';
@@ -28,6 +29,18 @@ const logger = injector.inject(Logger);
 const fs = injector.inject(FileSystem);
 const repo = injector.inject(Repository);
 const archiver = injector.inject(Archiver);
+const stake = injector.inject(Stakeholder);
+
+async function check() {
+  const msg = await stake.checkPublications(10);
+  console.log(msg);
+}
+
+/*TODO?! async function fix(name: string) {
+  const missing = await stake.getMissingFrames(name, 541);
+  const prefix = stake.getFramePrefixFromFiles;
+  await stake.fixFrames(name, missing);
+}*/
 
 async function upload() {
   /*const isNew = await fs.setupPath(repoName)
