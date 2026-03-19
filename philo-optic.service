@@ -1,0 +1,17 @@
+# /etc/systemd/system/philo-optic.service
+[Unit]
+Description=Philo Optic - Camera Gatekeeper API
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/philo/philo-optic
+ExecStart=/home/pi/philo/philo-optic/philo-optic
+Restart=always
+RestartSec=3
+Environment=PORT=8080
+# Environment=PHILO_MODE=mock  # <-- Uncomment only for debugging without camera
+
+[Install]
+WantedBy=multi-user.target
