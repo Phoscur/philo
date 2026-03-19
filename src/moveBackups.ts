@@ -14,7 +14,7 @@ const logger = injector.inject(Logger);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAYS = 14;
-const DAYS_PERSERVE = 6;
+const PERSERVE_LOCAL_COPY_DAYS = 6;
 
 async function hashFile(filePath: string, algo: string = 'md5'): Promise<string> {
   const buf = await fs.readFile(filePath);
@@ -86,7 +86,7 @@ export async function moveBackups() {
       process.env.FOLDER_BACKUP_MOUNT ?? 'missing-FOLDER_BACKUP_MOUNT',
       repoName
     );
-    const destructive = d > DAYS_PERSERVE;
+    const destructive = d > PERSERVE_LOCAL_COPY_DAYS;
 
     try {
       if (!(await exists(localDir))) continue;
