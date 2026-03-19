@@ -7,7 +7,6 @@ export type { StillOptions } from '../lib/libcamera-still.js';
 
 @injectable()
 export class Camera {
-  name = 'still-test';
   #logger = inject(Logger);
 
   options: StillOptions = {
@@ -20,11 +19,7 @@ export class Camera {
     return this.#mutex;
   }
 
-  get filename() {
-    return `${this.name}.jpg`;
-  }
-
-  async photo(output: string = this.filename) {
+  async photo(output: string) {
     const logger = this.#logger();
     logger.time('photo');
     if (this.#mutex) {

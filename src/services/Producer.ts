@@ -192,6 +192,10 @@ export class Producer {
     });
   }
 
+  getMedia(fileName: string, dir: Directory) {
+    return Input.fromLocalFile(dir.joinAbsolute(fileName), fileName);
+  }
+
   private addEventListeners(
     events: EventEmitter<TimelapseEventMap>,
     repo: Repo,
@@ -211,7 +215,7 @@ export class Producer {
           {
             type: 'photo',
             caption,
-            media: Input.fromLocalFile(dir.joinAbsolute(fileName)),
+            media: this.getMedia(fileName, dir),
           },
           this.markupCancel
         );
@@ -237,7 +241,7 @@ export class Producer {
         await message.editMedia({
           type: 'animation',
           caption,
-          media: Input.fromLocalFile(dir.joinAbsolute(fileName), fileName),
+          media: this.getMedia(fileName, dir),
         });
         await publisher.prepare(message, type, name);
         void this.#messageQueue.forceFinish(); // would deadlock waiting for itself

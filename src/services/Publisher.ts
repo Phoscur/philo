@@ -151,11 +151,7 @@ export class Publisher {
       this.markupRowLikes,
       ...(withCloudStudy ? [this.markupRowCloudStudy] : []),
       ...(shared ? [] : [this.markupRowShare]),
-      ...(published
-        ? []
-        : [
-            /* TODO enable this.markupRowPublish */
-          ]),
+      //...(published ? [] : [this.markupRowPublish]),
     ]);
   }
 
@@ -191,6 +187,7 @@ export class Publisher {
 
   async publish(messageId: number) {
     // TODO actually publish ... enableAndWaitForPages
+    // don't backup if we publish?!!
     const pubs = await this.getInventory();
     await pubs.setPublished(messageId);
 
