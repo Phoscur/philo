@@ -1,5 +1,7 @@
 /**
  * DHT11 Temperature and Humidity Sensor for Raspberry Pi
+ * Should get a DHT22 sensor instead, as DHT11 is very inaccurate.
+ * https://test-wetterstation.de/temperaturmessung-mit-dem-raspberry-pi
 
 ![GPIO Pins]https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#gpio) 
 
