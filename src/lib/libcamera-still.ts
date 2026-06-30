@@ -1,4 +1,5 @@
 // ## Adaption of the (MIT licensed) code from [pi-camera-connect](https://github.com/launchcodedev/pi-camera-connect/blob/master/src/lib/still-camera.ts)
+import { stat } from 'node:fs/promises';
 import { spawnPromise } from './spawn.js';
 
 const { DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_DELAY } = process.env;
@@ -221,6 +222,20 @@ export class StillCamera {
         true
       );
       //console.log('Image taken!', image?.length);
+      // `spawnPromise` resolves on stdout-close and ignores the exit code (it is shared
+      // with rsync/ssh/df, so we must not change it here). When rpicam-still writes to a
+      // file and fails (sensor hiccup, timeout, "failed to start camera"), it exits non-zero
+      // and writes nothing, yet the promise still resolves. Without this check the timelapse
+      // loop counts it as a success and advances the frame counter, leaving a permanent hole
+      // (and truncating the ffmpeg render at the first gap). Verify a non-empty file landed;
+      // throwing makes Camera.photo reject so the loop retries the same frame number.
+      const out = this.options.output;
+      if (out && out !== '-') {
+        const size = await stat(out).then((s) => s.size, () => 0);
+        if (!size) {
+          throw new Error(`rpicam-still produced no output file: ${out}`);
+        }
+      }
       return image;
     } catch (err: any) {
       if (err && err.code === 'ENOENT') {
