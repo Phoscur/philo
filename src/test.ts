@@ -124,8 +124,6 @@ if (process.argv.includes('upload')) {
   lapse(10, intervalMS);
 } else if (process.argv.includes('still')) {
   still();
-} else if (process.argv.includes('check')) {
-  check();
 } else {
   console.log(
     'Unknown argument(s):',
