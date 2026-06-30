@@ -93,7 +93,8 @@ export class Timelapse {
     signal.addEventListener('abort', abort);
 
     let frame = 1;
-    let errors = 0;
+    let consecutiveErrors = 0; // reset on success: only a stuck camera (many in a row) aborts
+    let totalErrors = 0; // whole-run tally, just for the log so failures can be quantified
     const intervalCapture = async () => {
       try {
         const name = this.getFrameName(frame);
@@ -102,6 +103,7 @@ export class Timelapse {
         await camera.photo();
         logger.timeLog('timelapse', 'frame', camera.filename, 'captured');
         camera.name = name; // remove folder from name after capture
+        consecutiveErrors = 0; // a real file landed, so the frame is good
 
         if (signal.aborted) {
           return abort();
@@ -114,9 +116,18 @@ export class Timelapse {
         }
         frame++;
       } catch (error: any) {
-        logger.log(`Frame [${frame}] Error: ${error?.message}`);
-        errors++;
-        if (errors > 3) {
+        // The frame counter is NOT advanced, so the next tick retries this same frame
+        // number instead of leaving a hole. Errors are counted consecutively (reset on
+        // any success above) so a few flaky frames don't abort the run; only a camera
+        // that is truly stuck (>3 in a row) does. totalErrors lets a sunset's failures
+        // be grepped/counted from the logs.
+        consecutiveErrors++;
+        totalErrors++;
+        logger.log(
+          `Frame [${frame}] capture failed, retrying same frame ` +
+            `(fail #${consecutiveErrors} in a row, ${totalErrors} total this run): ${error?.message}`
+        );
+        if (consecutiveErrors > 3) {
           events.emit('error', error);
           abort();
         }
