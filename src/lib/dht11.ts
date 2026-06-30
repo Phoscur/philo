@@ -16,7 +16,6 @@ dtoverlay=dht11,gpiopin=4
  */
 
 import { readFile } from 'fs/promises';
-import { readTemperatureSensor } from './temperature.js';
 
 const DEVICE = 'iio:device0';
 

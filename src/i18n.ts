@@ -102,8 +102,8 @@ const composite = {
     'shot.title': (t: BasicIndex, d = new Date(), cloud = '', rated = '') =>
       `${cloud} ${rated} ${dateFormat(d)}`,
     'date.title': (t: BasicIndex, d = new Date()) => dateFormat(d),
-    'caption.status': (t: BasicIndex, shared = false, published = false) =>
-      `- geteilt ${shared ? '✔️' : '✖️'}`, //- veröffentlicht ${published ? '✔️' : '✖️'}`,
+    'caption.status': (t: BasicIndex, shared = false, _published = false) =>
+      `- geteilt ${shared ? '✔️' : '✖️'}`, //- veröffentlicht ${_published ? '✔️' : '✖️'}`,
   },
 } as const;
 
