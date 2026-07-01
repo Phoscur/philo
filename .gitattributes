@@ -1,0 +1,10 @@
+# Normalize line endings: LF in the repo, checked out as-is.
+# Keeps the Windows dev box and the Raspberry Pi consistent.
+* text=auto eol=lf
+
+# Never touch binary media.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.mp4 binary
