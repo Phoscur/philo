@@ -225,6 +225,35 @@ finished MP4 + thumbnail and rsyncs the big file to Phedora directly.
 
 ---
 
+## Retroactive archive repair (Stakeholder) — high value, mostly independent
+
+`Stakeholder` (already written, easy to forget) does retroactively what the live loop now does
+on the fly: `getMissingFrames()` finds the holes in an event folder and `fixFrames()` fills each
+by **copying the previous frame** (same copy-forward trick). Since the dropped-frames bug left
+near-daily holes from ~Sep 2025 to Jun 2026 (see the investigation), we can repair a year of
+timelapses and re-render complete videos.
+
+Plan for a batch-repair command (`npm run testm -- check` already wires `checkPublications`):
+
+- [ ] **Pick the source of truth.** Repair the **GitHub event repos** (the frames live there; the
+  N:\SunsetBackup clones mirror them). Filling the holes and pushing re-triggers the repo's ffmpeg
+  Action → a gap-free video, no local ffmpeg needed. Alternative: repair local clones + `stitchImages`
+  locally. Decide which (GitHub-Action re-render is the least work and matches how videos are made).
+- [ ] **Resolve the frame-count discrepancy first.** `Stakeholder` defaults to `expectedCount = 541`
+  but `.env` sets `DAILY_TIMELAPSE_SUNSET_FRAME_COUNT = 540`. Using the wrong expected count would
+  fabricate or miss a frame across the whole archive — confirm the real per-run count (and whether
+  it varies by season/era) before any mass run.
+- [ ] **Wire a real `fix` command.** The commented-out `fix()` in `test.ts` is a sketch and calls
+  `getMissingFrames`/`fixFrames` with the wrong args. Implement: per folder → `dir.list()` →
+  `getFramePrefixFromFiles` + counter length → `getMissingFrames(files, expectedCount)` →
+  `fixFrames(folder, missing, prefix, counterLength)` → re-stitch / push.
+- [ ] **Guard rails:** dry-run mode (report holes + planned copies without writing), skip
+  double-run folders (>expectedCount files = two runs in one dir, per the investigation), and log
+  every fabricated frame. A filled frame is a duplicate — acceptable per SOUL, but must be visible.
+- [ ] **Backfill limitation:** a hole is only fillable if the *previous* frame exists in that
+  folder; isolated single-frame holes (the common case) always have a predecessor, so they repair
+  cleanly. Contiguous gaps at the very start of a run cannot be back-filled.
+
 ## Cross-cutting / open items (from the dropped-frames investigation)
 
 - [x] **Active capturer:** `main` deployed 2026-06-30 evening → the TS bot `philopho` (PM2) is
@@ -250,9 +279,12 @@ finished MP4 + thumbnail and rsyncs the big file to Phedora directly.
 
 ## Suggested order
 
-1. Phase 0 (green branch + shippable frame fix).
-2. Verify the Pi's active capturer (cross-cutting #1) — may reprioritise everything.
+1. Phase 0 (green branch) — DONE.
+2. Verify the Pi's active capturer (cross-cutting #1) — largely answered (main is deployed).
 3. Phase 1 (philo-optic single-flight, mock → real).
 4. Phase 2 (bot → service, delete TS mutex).
 5. Phase 3 (staging + GitOps + Matrix C2).
 6. Later, when 5 lands: the cadence-in-Go milestone.
+
+Parallel/independent track (no dependency on the Go work): **retroactive archive repair** via
+Stakeholder — can be done any time after resolving the 540-vs-541 count.
