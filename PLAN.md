@@ -225,38 +225,46 @@ finished MP4 + thumbnail and rsyncs the big file to Phedora directly.
 
 ---
 
-## Retroactive archive repair (Stakeholder) — high value, mostly independent
+## "One year ago today" — daily throwback + on-the-fly repair (Stakeholder)
 
-`Stakeholder` (already written, easy to forget) does retroactively what the live loop now does
-on the fly: `getMissingFrames()` finds the holes in an event folder and `fixFrames()` fills each
-by **copying the previous frame** (same copy-forward trick). Since the dropped-frames bug left
-near-daily holes from ~Sep 2025 to Jun 2026 (see the investigation), we can repair a year of
-timelapses and re-render complete videos.
+The heron remembers. Each day, Philo re-posts the timelapse from the same date **last year** as
+a memory in Telegram — repairing it first if the dropped-frames bug left holes. This reuses
+almost everything that already exists (`downloadBackups`, `Stakeholder.fixFrames`,
+`stitchImages`, `redraftByName`, `fs.destroy`) and it heals the archive as a side effect.
 
-Plan for a batch-repair command (`npm run testm -- check` already wires `checkPublications`):
+Daily pipeline (one date at a time, ephemeral on disk):
 
-- [ ] **Pick the source of truth.** Repair the **GitHub event repos** (the frames live there; the
-  N:\SunsetBackup clones mirror them). Filling the holes and pushing re-triggers the repo's ffmpeg
-  Action → a gap-free video, no local ffmpeg needed. Alternative: repair local clones + `stitchImages`
-  locally. Decide which (GitHub-Action re-render is the least work and matches how videos are made).
-- [x] **Frame-count discrepancy resolved:** `541 = 540 frames + README.md` (total file count in
-  a complete event folder), NOT the highest frame number. Frames run **1..540**. This exposes an
-  off-by-one in `Stakeholder.getMissingFrames`, which iterates `for i = 1..expectedCount` looking
-  for `prefix-i.jpg`: passing 541 always flags a nonexistent `prefix-541.jpg` as missing. So the
-  two counts must be split when wiring the repair: **file-count sanity check = 541**, but
-  **frame iteration (getMissingFrames/fixFrames) = 540**. Fix `getMissingFrames` (or pass 540)
-  before any mass run. Also confirm 540 held across the whole era (it is the `.env` default, but
-  older runs may differ — the investigation noted double-run folders with >540 files).
-- [ ] **Wire a real `fix` command.** The commented-out `fix()` in `test.ts` is a sketch and calls
-  `getMissingFrames`/`fixFrames` with the wrong args. Implement: per folder → `dir.list()` →
-  `getFramePrefixFromFiles` + counter length → `getMissingFrames(files, expectedCount)` →
-  `fixFrames(folder, missing, prefix, counterLength)` → re-stitch / push.
-- [ ] **Guard rails:** dry-run mode (report holes + planned copies without writing), skip
-  double-run folders (>expectedCount files = two runs in one dir, per the investigation), and log
-  every fabricated frame. A filled frame is a duplicate — acceptable per SOUL, but must be visible.
-- [ ] **Backfill limitation:** a hole is only fillable if the *previous* frame exists in that
-  folder; isolated single-frame holes (the common case) always have a predecessor, so they repair
-  cleanly. Contiguous gaps at the very start of a run cannot be back-filled.
+- [ ] **Pick the date & find the repo.** Today − 1 year → look for that day's event repo on
+  GitHub. Naming evolves across eras (`sunset-YYYY-MM-DD`, and the atomic
+  `timelapse-sunset-YYYY-MM-DD--HH-mm`); reuse `downloadBackups.ts`' enumeration/clone logic.
+  Gracefully **skip** dates with no run (clone fails → catch → nothing to post).
+- [ ] **Shallow-pull the frames.** `git clone --depth 1` gives the final tree = all frames
+  present (they were committed per-frame, but HEAD has the full set). ~540 jpgs / ~1–2 GB.
+- [ ] **Detect holes.** `dir.list()` → derive prefix + counter length → find interior gaps.
+  **Prefer inferring the expected count from the highest frame present** rather than a fixed
+  540 — the count/interval differed across eras, and holes are by definition *interior*
+  (between frame 1 and the max), so range-based detection is robust and sidesteps 540-vs-541.
+- [ ] **Repair if needed.** `fixFrames` copies the previous good frame into each hole (a filled
+  frame is a duplicate — fine per SOUL, but log each one). If no holes, skip straight to render.
+- [ ] **Re-render locally** with `stitchImages` (ffmpeg) → a gap-free MP4. (The GitHub Action's
+  original render is truncated at the first hole, which is exactly why we re-render.)
+- [ ] **Post to Telegram** as a memory, e.g. caption "🕰️ Vor einem Jahr — {date}". Extend the
+  existing `Stakeholder.redraft*` (which already builds an animation message from an MP4).
+- [ ] **Clean up.** `fs.destroy(folder)` deletes the local clone so the Pi never fills up.
+- [ ] **Scheduling.** A daily timer (hang off `Director.scheduleSunset`, or a separate ticker /
+  the future Redis/BullMQ `media:timelapse` job). Keep it sequential and quiet (heron).
+
+Open choices:
+
+- [ ] **Heal GitHub too, or ephemeral only?** The vision says delete the download — so the
+  repaired video is transient and GitHub stays holey. Alternative: also **push the filled frames
+  back** so the archive heals permanently (one-time cost, then future throwbacks need no repair).
+  Recommend: push the fix back the first time a date is repaired, so the archive self-heals.
+- [ ] **Backfill limitation:** a hole is only fillable if the *previous* frame exists; isolated
+  single-frame holes (the common case) always have a predecessor. A contiguous gap at the very
+  start of a run cannot be back-filled — post it as-is or skip.
+- [ ] **One-off mass repair** is just this pipeline run over a date range instead of one day —
+  useful to heal the whole Sep 2025 – Jun 2026 backlog in one pass (with a dry-run mode first).
 
 ## Cross-cutting / open items (from the dropped-frames investigation)
 
@@ -290,5 +298,6 @@ Plan for a batch-repair command (`npm run testm -- check` already wires `checkPu
 5. Phase 3 (staging + GitOps + Matrix C2).
 6. Later, when 5 lands: the cadence-in-Go milestone.
 
-Parallel/independent track (no dependency on the Go work): **retroactive archive repair** via
-Stakeholder — can be done any time after resolving the 540-vs-541 count.
+Parallel/independent track (no dependency on the Go work): the **"one year ago today"** daily
+throwback + on-the-fly repair via Stakeholder — reuses existing download/repair/stitch/redraft,
+heals the archive as a side effect, and can ship any time.
