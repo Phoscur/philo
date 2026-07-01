@@ -12,6 +12,8 @@ import {
   Producer,
   Publisher,
 } from './services/index.js';
+// Import from its own file, not the barrel, to avoid the load-time cycle (see CLAUDE.md).
+import { Stakeholder } from './services/Stakeholder.js';
 
 export const COMMAND = {
   STATUS: 'status',
@@ -19,6 +21,7 @@ export const COMMAND = {
   PREVIEW: 'preview',
   PHOTO: 'photo',
   PRESET: 'preset',
+  PUBLICATIONS: 'publications',
 } as const;
 export const SHORTHAND = {
   STATUS: 's',
@@ -26,6 +29,7 @@ export const SHORTHAND = {
   PREVIEW: 'pre',
   PHOTO: 'p',
   PRESET: 'presets',
+  PUBLICATIONS: 'pubs',
 } as const;
 
 const ADMINS = process.env.ADMINS?.split(',') || ['Phoscur'];
@@ -45,6 +49,13 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
     setImmediate(async () => {
       ctx.reply(await hd.getStatus());
     });
+  });
+
+  scene.command([COMMAND.PUBLICATIONS, SHORTHAND.PUBLICATIONS], async (ctx) => {
+    // Single source of truth: Stakeholder lists unpublished drafts, counts files and
+    // reports missing frames (using the type-dated folder name, not the raw pub.name).
+    const stakeholder = ctx.di.inject(Stakeholder);
+    await ctx.reply(await stakeholder.checkPublications());
   });
 
   // ---------------------------------------------------------------------------------------------------

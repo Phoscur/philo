@@ -71,10 +71,22 @@ export class PublicationInventory {
     return this.index.messages[messageId];
   }
 
+  getDraftByName(name: string): Publication | undefined {
+    return Object.values(this.index.messages).find((p) => p.name === name);
+  }
+
+  getDrafs(): Publication[] {
+    return Object.values(this.index.messages).filter((p) => !p.published && !p.shared);
+  }
+
   getPublication(channelMessageId: number): Publication | undefined {
     const messageId = this.index.publications[channelMessageId];
     return this.getDraft(messageId);
   }
+
+  /*unused getPublications(): Publication[] {
+    return Object.values(this.index.messages).filter((p) => p.published);
+  }*/
 
   async setShared(channelMessageId: number, messageId: number) {
     await this.readIndex();

@@ -11,6 +11,7 @@ import {
   Director,
   createInjectorWithStubbedDependencies,
 } from './services/index.js';
+import { Stakeholder } from './services/Stakeholder.js';
 
 const repoName = 'timelapse-test-2024-06-22';
 const timelapseFile = 'timelapse.mp4';
@@ -28,6 +29,18 @@ const logger = injector.inject(Logger);
 const fs = injector.inject(FileSystem);
 const repo = injector.inject(Repository);
 const archiver = injector.inject(Archiver);
+const stake = injector.inject(Stakeholder);
+
+async function check() {
+  const msg = await stake.checkPublications(10);
+  console.log(msg);
+}
+
+/*TODO?! async function fix(name: string) {
+  const missing = await stake.getMissingFrames(name, 541);
+  const prefix = stake.getFramePrefixFromFiles;
+  await stake.fixFrames(name, missing);
+}*/
 
 async function upload() {
   /*const isNew = await fs.setupPath(repoName)
@@ -42,7 +55,7 @@ async function upload() {
     return;
   }
   logger.log('Creating and checking out repository', repoName);
-  camera.name = 'frame';
+  timelapse.namePrefix = 'frame';
   const r = await repo.create(repoName, false);
   await r.addReadme();
 
@@ -88,8 +101,7 @@ async function backup() {
 async function lapse(count = 20, intervalMS = 2000) {
   //await fs.createDirectory(path);
   logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
-  const photosFolder = director.repoTimelapse;
-  const events = await director.timelapse('default', {
+  const { events, repo } = await director.timelapse('default', {
     prefix: 'timelapse',
     count,
     intervalMS,
@@ -97,9 +109,9 @@ async function lapse(count = 20, intervalMS = 2000) {
   events.once('rendered', async (output, dir) => {
     logger.log('Capture finished', dir.path, output);
 
-    const images = await fs.dir(photosFolder).list();
+    const images = await repo.dir.list();
     const videos = await dir.list();
-    logger.log('Images:', photosFolder, images, 'Videos:', dir, videos);
+    logger.log('Images:', repo.dir.path, images, 'Videos:', dir, videos);
   });
 }
 
@@ -124,10 +136,12 @@ if (process.argv.includes('upload')) {
   lapse(10, intervalMS);
 } else if (process.argv.includes('still')) {
   still();
+} else if (process.argv.includes('check')) {
+  check();
 } else {
   console.log(
     'Unknown argument(s):',
     process.argv.slice(2),
-    'use "upload", "lapse" or "still" - e.g. "npm run testm -- still'
+    'use "upload", "lapse", "still" or "check" - e.g. "npm run testm -- still'
   );
 }

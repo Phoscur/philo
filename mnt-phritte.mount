@@ -11,7 +11,7 @@ Wants=network-online.target
 What=//192.168.178.1/Phritte-5590/Seagate_Backup_Plus_Drive/SunsetBackup
 Where=/mnt/phritte
 Type=cifs
-Options=credentials=/etc/cifs-creds-phritte,vers=2.1,uid=1000,gid=1000,noserverino,file_mode=0644,dir_mode=0755
+Options=credentials=/etc/cifs-creds-phritte,vers=2.1,uid=1000,gid=1000,noserverino,file_mode=0644,dir_mode=0755,noauto,x-systemd.automount,x-systemd.idle-timeout=60,x-systemd.mount-timeout=15
 
 [Install]
 WantedBy=multi-user.target

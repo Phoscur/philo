@@ -146,16 +146,12 @@ export class Publisher {
     await message.editCaption(caption, this.getMarkupPublished(true, false, false));
   }
 
-  getMarkupPublished(withCloudStudy = true, shared = false, published = false) {
+  getMarkupPublished(withCloudStudy = true, shared = false, _published = false) {
     return Markup.inlineKeyboard([
       this.markupRowLikes,
       ...(withCloudStudy ? [this.markupRowCloudStudy] : []),
       ...(shared ? [] : [this.markupRowShare]),
-      ...(published
-        ? []
-        : [
-            /* TODO enable this.markupRowPublish */
-          ]),
+      //...(published ? [] : [this.markupRowPublish]),
     ]);
   }
 
@@ -191,6 +187,7 @@ export class Publisher {
 
   async publish(messageId: number) {
     // TODO actually publish ... enableAndWaitForPages
+    // don't backup if we publish?!!
     const pubs = await this.getInventory();
     await pubs.setPublished(messageId);
 
