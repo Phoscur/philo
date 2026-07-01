@@ -99,7 +99,7 @@ export class Director {
     const filename = `${this.nameNow}.jpg`;
     const fullPath = dir.join(filename);
 
-    await camera.capture(fullPath);
+    await camera.photo(fullPath);
     logger.log('Photo captured:', fullPath);
 
     return {
@@ -111,7 +111,8 @@ export class Director {
   async timelapse(
     presetName: string,
     options: { count: number; intervalMS: number; prefix?: string },
-    // If null, we store the video INSIDE the source folder (Self-Contained)
+    // If undefined, the render is stored INSIDE the event folder (self-contained).
+    // A custom folder is used to collect renders in a monthly "best of" directory.
     customOutFolder?: string,
     sleepMS = 0
   ) {
@@ -119,23 +120,18 @@ export class Director {
     const timelapse = this.#timelapse();
     const preset = this.#preset();
 
-    // 1. GENERATE UNIQUE SESSION NAME
-    // e.g. "timelapse-sunset-2026-01-23--18-45"
+    // 1. UNIQUE SESSION NAME, e.g. "timelapse-sunset-2026-01-23--18-45"
     const basePrefix = presetName === 'sunset' ? this.repoSunsetPrefix : this.repoTimelapsePrefix;
     const sessionName = `${basePrefix}-${this.nameNow}`;
 
-    // 2. CREATE ATOMIC FOLDER
-    // e.g. storage/timelapse-sunset-2026-01-23--18-45
-    const sessionDir = await fs.createDirectory(sessionName);
+    // 2. ATOMIC, SELF-CONTAINED FOLDER + its GitHub repo. Frames and the rendered video
+    //    live together in this one folder (Repo.upload / makeTimelapsePage / ffmpeg all
+    //    expect the .jpg frames next to the .mp4 - so no `source/` subfolder here).
+    const repo = await this.setupPublicRepo(sessionName);
+    const photoDir = repo.dir;
 
-    // 3. CREATE SOURCE SUBFOLDER (Optional, keeps root clean)
-    // e.g. storage/timelapse-sunset.../source
-    const photoDir = await sessionDir.createDirectory('source');
-
-    // 4. DETERMINE VIDEO OUTPUT
-    // Default: Store video in the session root (sessionDir)
-    // Custom: Store in a "Best Of" monthly folder (repoTimelapseStitched)
-    let videoDir = sessionDir;
+    // 3. VIDEO OUTPUT: default inside the event folder; custom = a shared "best of" folder.
+    let videoDir = photoDir;
     if (customOutFolder) {
       videoDir = await fs.createDirectory(customOutFolder);
     }
@@ -143,11 +139,11 @@ export class Director {
     preset.setupPreset(presetName);
     timelapse.count = options.count;
     timelapse.intervalMS = options.intervalMS;
-    // The individual frames will just be named "frame-%04d" inside the source folder
-    // No need for long prefixes on files if they are in a unique folder.
+    // Frames are named "<prefix>-%0Nd.jpg" inside the unique folder.
     timelapse.namePrefix = options.prefix ?? 'frame';
 
-    return timelapse.shoot(photoDir, videoDir, sleepMS);
+    const events = timelapse.shoot(photoDir, videoDir, sleepMS);
+    return { events, repo };
   }
 
   cancel() {
@@ -178,31 +174,19 @@ export class Director {
         logger.log('Sunset timelapse scheduled in', (diff / 60000).toFixed(0), 'minutes');
         await sunMoon.sleep(diff - messageDelayMS);
 
-        // START THE TIMELAPSE
-        // Note: We don't setup the repo *before* anymore, because we need the folder first.
-        // But timelapse() creates the folder.
-        // We might want to refactor setupPublicRepo to take the folder created by timelapse?
-        // OR: We predict the name here.
-
-        // Let's rely on timelapse() to create the folder, and we return the path in the event?
-        // For now, let's keep it simple:
-
-        const events = await this.timelapse(
+        // timelapse() creates the atomic event folder AND its repo, then starts shooting.
+        const { events, repo } = await this.timelapse(
           'sunset',
           {
             count: this.dailySunsetFrameCount,
             intervalMS: this.dailySunsetTimelapseIntervalMS,
           },
-          // Undefined = Store render inside the event folder
+          // Undefined = store the render inside the event folder
           undefined,
           messageDelayMS
         );
 
-        // We hook into 'started' or 'stopped' to initialize the repo?
-        // Or we just pass a dummy repo object for now and initialize it later via the UI buttons?
-        // For the callback onStart, we might need to change the signature if Repo isn't ready yet.
-
-        onStart(events, {} as Repo); // TODO: Fix Repo/Folder coordination
+        onStart(events, repo);
       } catch (error) {
         console.error(`Failed timelapse: ${error}`);
         logger.log('Sunset Timelapse Error:', error);
@@ -213,5 +197,12 @@ export class Director {
     };
 
     this.#sunsetTimeout = setTimeout(sundownTimer, rescheduleDelayMS);
+  }
+
+  /** Stop the daily sunset schedule and any timelapse currently running. */
+  cancelSunset() {
+    clearTimeout(this.#sunsetTimeout);
+    this.#sunsetTimeout = undefined;
+    return this.#timelapse().stop();
   }
 }

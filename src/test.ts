@@ -55,7 +55,7 @@ async function upload() {
     return;
   }
   logger.log('Creating and checking out repository', repoName);
-  camera.name = 'frame';
+  timelapse.namePrefix = 'frame';
   const r = await repo.create(repoName, false);
   await r.addReadme();
 
@@ -101,8 +101,7 @@ async function backup() {
 async function lapse(count = 20, intervalMS = 2000) {
   //await fs.createDirectory(path);
   logger.log('Starting timelapse capture', camera instanceof CameraStub ? 'stub' : 'real');
-  const photosFolder = director.repoTimelapse;
-  const events = await director.timelapse('default', {
+  const { events, repo } = await director.timelapse('default', {
     prefix: 'timelapse',
     count,
     intervalMS,
@@ -110,9 +109,9 @@ async function lapse(count = 20, intervalMS = 2000) {
   events.once('rendered', async (output, dir) => {
     logger.log('Capture finished', dir.path, output);
 
-    const images = await fs.dir(photosFolder).list();
+    const images = await repo.dir.list();
     const videos = await dir.list();
-    logger.log('Images:', photosFolder, images, 'Videos:', dir, videos);
+    logger.log('Images:', repo.dir.path, images, 'Videos:', dir, videos);
   });
 }
 
@@ -137,10 +136,12 @@ if (process.argv.includes('upload')) {
   lapse(10, intervalMS);
 } else if (process.argv.includes('still')) {
   still();
+} else if (process.argv.includes('check')) {
+  check();
 } else {
   console.log(
     'Unknown argument(s):',
     process.argv.slice(2),
-    'use "upload", "lapse" or "still" - e.g. "npm run testm -- still'
+    'use "upload", "lapse", "still" or "check" - e.g. "npm run testm -- still'
   );
 }

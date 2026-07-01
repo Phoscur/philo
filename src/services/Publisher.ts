@@ -146,7 +146,7 @@ export class Publisher {
     await message.editCaption(caption, this.getMarkupPublished(true, false, false));
   }
 
-  getMarkupPublished(withCloudStudy = true, shared = false, published = false) {
+  getMarkupPublished(withCloudStudy = true, shared = false, _published = false) {
     return Markup.inlineKeyboard([
       this.markupRowLikes,
       ...(withCloudStudy ? [this.markupRowCloudStudy] : []),

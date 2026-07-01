@@ -197,7 +197,7 @@ describe('CloudStudy', () => {
       {
         caption: `📷 Last Timelapse frame created:\n${name}`,
         media: {
-          filename: undefined,
+          filename: name,
           source: dir.joinAbsolute(name),
         },
         type: 'photo',

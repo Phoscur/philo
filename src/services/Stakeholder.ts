@@ -1,5 +1,4 @@
 import { inject, injectable } from '@joist/di';
-import { Director } from './Director.js';
 import { FileSystem } from './FileSystem.js';
 import { Logger } from './Logger.js';
 import { Publisher } from './Publisher.js';
@@ -16,7 +15,6 @@ export class Stakeholder {
   #i18n = inject(I18nService);
   #logger = inject(Logger);
   #fileSystem = inject(FileSystem);
-  #director = inject(Director);
   #producer = inject(Producer);
   #publisher = inject(Publisher);
 

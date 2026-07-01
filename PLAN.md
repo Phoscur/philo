@@ -82,39 +82,35 @@ must embody that: **stoic, fault-tolerant, resource-minimal.** Concretely this m
 
 ---
 
-## Phase 0 — Make the branch green (independent of Go, do first)
+## Phase 0 — Make the branch green (independent of Go) — DONE ✅
 
-Goal: `npm run build` exits 0 and the dropped-frames fix is actually deployable, without
-committing to any philo-optic wiring yet. Keep the atomic-session-folder design that `a0`
-started; just finish the seams it left dangling.
+Goal: `npm run build` exits 0, lint clean, tests pass, so the `a0` refactor is shippable.
+Kept the atomic-session-folder design; finished the seams it left dangling.
 
-- [ ] **Camera call:** `Director.photo` → use `camera.photo(fullPath)` (drop the
-  non-existent `capture`). Keep Camera stateless.
-- [ ] **Child directory:** either add `Directory.createDirectory(name)` that `mkdirp`s and
-  returns a child `Directory`, or replace `sessionDir.createDirectory('source')` with
-  `fs.createDirectory(join(sessionName, 'source'))`. Prefer adding the method — it is used
-  by the atomic-folder design and reads cleanly.
-- [ ] **Producer/Director repo coordination:** `Producer.timelapse` still calls
-  `setupPrivateRepo(repoTimelapse)` *before* the folder exists. Under the new design the
-  session folder is created *inside* `director.timelapse()`. Decide the contract:
-  - Option A: `director.timelapse()` returns `{ events, sessionDir }` (or the folder path)
-    and the caller sets up the repo from that path.
-  - Option B: `director.timelapse()` sets up the repo itself and surfaces it via the
-    `started` event payload.
-  Then fix `scheduleSunset`'s `{} as Repo` placeholder the same way, and restore a
-  `cancelSunset()` equivalent (or route cancel through `Director.cancel()` which exists).
+- [x] **Camera call:** `Director.photo` uses `camera.photo(fullPath)` (stateless Camera).
+- [x] **Folder layout:** dropped the half-baked `source/` subfolder — `Repo.upload`,
+  `makeTimelapsePage`, and ffmpeg all expect the `.jpg` frames next to the `.mp4`. Frames +
+  render now live directly in the unique event folder (still atomic/self-contained), so no
+  `Directory.createDirectory` was needed after all.
+- [x] **Repo coordination (Option B-ish):** `director.timelapse()` now creates the event
+  folder + its public repo and returns `{ events, repo }`. `scheduleSunset` and
+  `Producer.timelapse` consume that (the `{} as Repo` hack is gone), and `cancelSunset()` is
+  restored (clears the reschedule timeout + stops the run).
+- [x] **Frame naming:** `.jpg` now added in the Timelapse layer (was previously supplied by
+  the old stateful `Camera.filename`); the `file` event emits the bare `<prefix>-<NNN>.jpg`
+  filename (not a path), matching `onFile`/`repo.upload`/`getMedia`.
 - [ ] **Scratch script `test.ts`:** update to the stateless Camera + new folder API (or drop
   the two dead lines). Note from the investigation: a broken `test.ts` blocks `tsc -b`
   entirely, so this must compile.
-- [ ] **Warn + copy-forward, bounded abort (SOUL decision, confirmed).** The merged
-  `Timelapse.shoot` still aborts after >3 consecutive failures. New behaviour: on a failed
-  capture, **log a warning and fill the gap by copying the previous good frame** (reuse
-  `Stakeholder.fixFrames`' copy trick) so the sequence stays gap-free (ffmpeg would truncate at a
-  real hole) and the run does not stall. Tolerate **up to 5 consecutive copies**; a real capture
-  resets the counter; only the 6th consecutive failure aborts (the eye is truly blind). Edge:
-  frame 1 has no previous frame to copy — retry the same frame instead, same 5-strike budget.
-  Update `timelapse-frames.test.ts` (it currently asserts abort-on-consecutive-overflow).
-- [ ] `npm run build` green, `npm run ci` (vitest run + coverage) green.
+- [x] **Warn + copy-forward, bounded abort (SOUL decision).** `Timelapse.shoot` no longer
+  aborts on a hiccup: on a failed capture it logs a warning and **fills the gap by copying the
+  previous good frame** (`photoDir.copyFile`) so the sequence stays gap-free (ffmpeg would
+  truncate at a real hole) and the run keeps its rhythm. Tolerates **up to 5 copies in a row**;
+  a real capture resets the streak; the 6th consecutive failure ends the run with `error`.
+  Frame 1 (no predecessor) retries in place on the same 5-strike budget. `timelapse-frames.test.ts`
+  rewritten for this (and switched to real tiny intervals — the fake-timer approach was fragile
+  with the new promise-based drift loop).
+- [x] `npm run build` green, lint 0 warnings, `npm test` green (12/12).
 
 > The dropped-frames fix already shipped: `main` was deployed on the evening of 2026-06-30,
 > so the live capturer (TS bot `philopho`) already has it. Phase 0 is **only** about making

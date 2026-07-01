@@ -153,10 +153,10 @@ export class Producer {
     }
   ) {
     const director = this.#director();
-    const repo = await director.setupPrivateRepo(director.repoTimelapse);
     const message = await this.createAnimation(chat);
     const datePostfix = '-' + director.nameNow;
-    const events = await director.timelapse(presetName ?? 'default', {
+    // director.timelapse() creates the atomic event folder + its repo and starts shooting.
+    const { events, repo } = await director.timelapse(presetName ?? 'default', {
       count,
       intervalMS,
       prefix: prefix + datePostfix,

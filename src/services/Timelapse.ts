@@ -114,7 +114,7 @@ export class Timelapse {
         const startTime = Date.now();
         let frame = 1;
         let attempt = 0; // intervals elapsed; advances per attempt so retries don't corrupt the schedule
-        let consecutiveErrors = 0; // reset on success: only a stuck camera (many in a row) aborts
+        let consecutiveFails = 0; // reset on success; a run only aborts after >5 blind frames in a row
         let totalErrors = 0; // whole-run tally, just for the log so failures can be quantified
 
         // Loop until count reached or aborted
@@ -131,41 +131,54 @@ export class Timelapse {
           // 2. Capture. camera.photo() throws if rpicam wrote no file (see libcamera-still),
           //    so a silent failure becomes a real error instead of a hole.
           let captured = false;
+          const fileName = `${this.getFrameName(frame)}.jpg`;
           try {
-            const name = this.getFrameName(frame);
-            const output = photoDir.join(name);
-
             logger.timeLog('timelapse', 'frame', frame, 'of', this.count);
 
             // This await holds the loop. No overlapping calls possible.
-            await camera.photo(output);
+            await camera.photo(photoDir.join(fileName));
 
-            logger.timeLog('timelapse', 'frame', output, 'captured');
+            logger.timeLog('timelapse', 'frame', fileName, 'captured');
 
             if (signal.aborted) break;
-            events.emit('file', output, photoDir);
-            consecutiveErrors = 0; // a real file landed, so the frame is good
+            events.emit('file', fileName, photoDir);
+            consecutiveFails = 0; // a real file landed, so the frame is good
             captured = true;
           } catch (error: any) {
-            // The frame counter is NOT advanced, so the same number is retried on the
-            // next tick instead of leaving a hole. Errors are counted consecutively
-            // (reset on any success) so a few flaky frames don't abort the run; only a
-            // camera that is truly stuck (>3 in a row) does. totalErrors lets a sunset's
-            // failures be grepped/counted from the logs.
-            consecutiveErrors++;
+            // Graceful degradation (SOUL): never abort on a hiccup. Tolerate up to 5 blind
+            // frames in a row; only a camera that stays blind beyond that ends the run.
+            consecutiveFails++;
             totalErrors++;
-            logger.log(
-              `Frame [${frame}] capture failed, retrying same frame ` +
-                `(fail #${consecutiveErrors} in a row, ${totalErrors} total this run): ${error?.message}`
-            );
-            if (consecutiveErrors > 3) {
+            if (consecutiveFails > 5) {
+              logger.log(
+                `Frame [${frame}] failed ${consecutiveFails} times in a row ` +
+                  `(${totalErrors} total this run) - the eye is blind, aborting: ${error?.message}`
+              );
               events.emit('error', error);
               this.#abortController?.abort();
               break;
             }
+            if (frame > 1) {
+              // Fill the gap with the previous good frame so the sequence stays gap-free
+              // (ffmpeg truncates a numbered sequence at the first hole) and the rhythm
+              // continues. A single repeated frame is invisible in a timelapse.
+              const prevName = `${this.getFrameName(frame - 1)}.jpg`;
+              await photoDir.copyFile(photoDir.joinAbsolute(prevName), fileName);
+              logger.log(
+                `Frame [${frame}] capture failed (#${consecutiveFails} in a row, ` +
+                  `${totalErrors} total this run) - copied previous frame to keep the rhythm: ${error?.message}`
+              );
+              events.emit('file', fileName, photoDir);
+              captured = true; // gap filled, advance to the next frame
+            } else {
+              // Frame 1 has no predecessor to copy - retry the same frame next tick.
+              logger.log(
+                `Frame [1] capture failed (#${consecutiveFails} in a row) - retrying same frame: ${error?.message}`
+              );
+            }
           }
 
-          // 3. Advance only on success; a failed frame is retried in the next slot.
+          // 3. Advance when the frame landed (captured or gap-filled); otherwise retry it.
           if (captured) {
             frame++;
             if (frame > this.count) break;
