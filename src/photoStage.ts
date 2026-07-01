@@ -5,7 +5,6 @@ import {
   Assets,
   createInjector,
   Director,
-  FileSystem,
   Hardware,
   I18nService,
   Logger,
@@ -13,6 +12,8 @@ import {
   Producer,
   Publisher,
 } from './services/index.js';
+// Import from its own file, not the barrel, to avoid the load-time cycle (see CLAUDE.md).
+import { Stakeholder } from './services/Stakeholder.js';
 
 export const COMMAND = {
   STATUS: 'status',
@@ -51,44 +52,10 @@ export function buildStage(bot: Telegraf<PhiloContext>) {
   });
 
   scene.command([COMMAND.PUBLICATIONS, SHORTHAND.PUBLICATIONS], async (ctx) => {
-    const publisher = ctx.di.inject(Publisher);
-    const fs = ctx.di.inject(FileSystem);
-    const logger = ctx.di.inject(Logger);
-
-    try {
-      const inventory = await publisher.getInventory();
-      const index = await inventory.readIndex();
-      const allPublications = Object.values(index.messages);
-
-      const unpublished = allPublications
-        .filter((p) => !p.published && !p.shared)
-        .sort((a, b) => b.created - a.created)
-        .slice(0, 5);
-
-      if (unpublished.length === 0) {
-        return ctx.reply('No unpublished publications found.');
-      }
-
-      let reply = 'Last 5 unpublished publications:\n';
-
-      for (const pub of unpublished) {
-        let fileCount = 0;
-        try {
-          const repoDir = fs.dir(pub.name);
-          const files = await repoDir.list();
-          fileCount = files.length;
-        } catch (e) {
-          logger.log(`Could not list files for ${pub.name}`, e);
-        }
-
-        reply += `\n- ${pub.name}: ${fileCount} files`;
-      }
-
-      ctx.reply(reply);
-    } catch (e) {
-      logger.log('Error fetching publications', e);
-      ctx.reply('Error fetching publications.');
-    }
+    // Single source of truth: Stakeholder lists unpublished drafts, counts files and
+    // reports missing frames (using the type-dated folder name, not the raw pub.name).
+    const stakeholder = ctx.di.inject(Stakeholder);
+    await ctx.reply(await stakeholder.checkPublications());
   });
 
   // ---------------------------------------------------------------------------------------------------

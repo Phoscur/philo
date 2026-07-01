@@ -350,9 +350,11 @@ Open choices:
   forward. To decide: does Philo *consume* jobs from the queue (myzelium dispatches "capture
   now"), *publish* progress/results onto it, or both? How does it relate to the Phase-3 Matrix
   C2 (queue = work dispatch, Matrix = human C2)? Revisit before finalizing Phase 3.
-- [ ] **`/publications` duplication:** `Stakeholder.checkPublications` and the inline
-  `/publications` command in `photoStage.ts` implement the same "list unpublished" logic
-  twice. Consolidate on `Stakeholder` once Phase 0 is stable.
+- [x] **`/publications` duplication resolved:** the inline handler in `photoStage.ts` now calls
+  `Stakeholder.checkPublications()` (one source of truth; also uses the type-dated folder name
+  instead of the raw `pub.name`). Note: `checkPublications` still carries the 541 off-by-one in
+  its `getMissingFrames` call — tracked in the "one year ago today" repair section (infer the
+  count from the highest frame; fill from the nearest neighbour).
 
 ---
 
