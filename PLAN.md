@@ -239,10 +239,14 @@ Plan for a batch-repair command (`npm run testm -- check` already wires `checkPu
   N:\SunsetBackup clones mirror them). Filling the holes and pushing re-triggers the repo's ffmpeg
   Action → a gap-free video, no local ffmpeg needed. Alternative: repair local clones + `stitchImages`
   locally. Decide which (GitHub-Action re-render is the least work and matches how videos are made).
-- [ ] **Resolve the frame-count discrepancy first.** `Stakeholder` defaults to `expectedCount = 541`
-  but `.env` sets `DAILY_TIMELAPSE_SUNSET_FRAME_COUNT = 540`. Using the wrong expected count would
-  fabricate or miss a frame across the whole archive — confirm the real per-run count (and whether
-  it varies by season/era) before any mass run.
+- [x] **Frame-count discrepancy resolved:** `541 = 540 frames + README.md` (total file count in
+  a complete event folder), NOT the highest frame number. Frames run **1..540**. This exposes an
+  off-by-one in `Stakeholder.getMissingFrames`, which iterates `for i = 1..expectedCount` looking
+  for `prefix-i.jpg`: passing 541 always flags a nonexistent `prefix-541.jpg` as missing. So the
+  two counts must be split when wiring the repair: **file-count sanity check = 541**, but
+  **frame iteration (getMissingFrames/fixFrames) = 540**. Fix `getMissingFrames` (or pass 540)
+  before any mass run. Also confirm 540 held across the whole era (it is the `.env` default, but
+  older runs may differ — the investigation noted double-run folders with >540 files).
 - [ ] **Wire a real `fix` command.** The commented-out `fix()` in `test.ts` is a sketch and calls
   `getMissingFrames`/`fixFrames` with the wrong args. Implement: per folder → `dir.list()` →
   `getFramePrefixFromFiles` + counter length → `getMissingFrames(files, expectedCount)` →
