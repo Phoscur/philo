@@ -1,105 +1,160 @@
 package camera
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"os/exec"
+	"log/slog"
 	"sync"
 	"time"
 )
 
-// CaptureResult represents the result of a capture operation.
-type CaptureResult struct {
-	Success bool
-	Output  string
-	Error   string
+// Frame is a captured still plus its metadata.
+type Frame struct {
+	Bytes       []byte
+	ContentType string
+	CapturedAt  time.Time
+	ID          string
+	Attempts    int
 }
 
-// CaptureOptions holds options for the Capture function.
-type CaptureOptions struct {
-	TimeoutMs int
-}
-
-// Service represents the camera service.
+// Service owns the single camera and serialises access with single-flight:
+// concurrent requests for a frame share ONE capture (one shutter, shared photons)
+// instead of colliding on the device. This is what lets the TS side drop its mutex.
 type Service struct {
-	// Using a buffered channel as a semaphore for concurrency control.
-	// The capacity of 1 ensures only one goroutine can hold the 'lock' at a time.
-	captureSem chan struct{}
-	// Other fields would go here, e.g., configuration, logger, etc.
+	backend    Capturer
+	log        *slog.Logger
+	retryDelay time.Duration
+
+	mu       sync.Mutex
+	last     *Frame // most recent successful capture, reused within maxAge
+	inflight *call  // a capture currently in progress, if any
 }
 
-// NewService creates a new instance of the camera Service.
-func NewService() *Service {
+// call is one in-flight capture that concurrent callers wait on and share.
+type call struct {
+	done  chan struct{}
+	frame Frame
+	err   error
+}
+
+// NewService builds the capture service around a backend.
+func NewService(backend Capturer, log *slog.Logger) *Service {
+	if log == nil {
+		log = slog.Default()
+	}
 	return &Service{
-		// Initialize the semaphore with a capacity of 1.
-		captureSem: make(chan struct{}, 1),
+		backend:    backend,
+		log:        log,
+		retryDelay: 300 * time.Millisecond,
 	}
 }
 
-// Capture attempts to capture an image with a given command and options.
-// It uses a buffered channel semaphore to manage concurrency and timeouts.
-func (s *Service) Capture(cmd *exec.Cmd, opts CaptureOptions) (CaptureResult, error) {
-	// Set up a timeout channel if a timeout is specified.
-	var timeoutChan <-chan time.Time
-	if opts.TimeoutMs > 0 {
-		timeoutChan = time.After(time.Duration(opts.TimeoutMs) * time.Millisecond)
+// Backend returns the active backend name (for /health).
+func (s *Service) Backend() string { return s.backend.Name() }
+
+// Frame returns a captured still.
+//   - maxAge > 0: a cached frame this fresh (or fresher) is reused, no shutter.
+//   - maxAge == 0: force a fresh capture (unless one is already in flight to join).
+//   - timeout: how long a caller waits for the shared capture to land.
+func (s *Service) Frame(maxAge, timeout time.Duration) (Frame, error) {
+	s.mu.Lock()
+
+	// Fast path: a cached frame young enough for this caller.
+	if maxAge > 0 && s.last != nil && time.Since(s.last.CapturedAt) <= maxAge {
+		f := *s.last
+		s.mu.Unlock()
+		return f, nil
 	}
 
-	// Use select to attempt to acquire the semaphore (lock).
-	select {
-	case s.captureSem <- struct{}{}:
-		// Successfully acquired the semaphore. Proceed with the capture.
-		// Ensure the semaphore is released when the function returns.
-		defer func() {
-			<-s.captureSem // Release the semaphore.
-		}()
-
-		// Execute the command.
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			// If there's an error during command execution, return it.
-			// The defer will still run to release the semaphore.
-			return CaptureResult{Success: false, Output: string(output), Error: err.Error()},
-				fmt.Errorf("command execution failed: %w", err)
-		}
-
-		// Command executed successfully.
-		return CaptureResult{Success: true, Output: string(output)}, nil
-
-	case <-timeoutChan:
-		// Timeout occurred before the semaphore could be acquired.
-		return CaptureResult{Success: false}, fmt.Errorf("capture timed out while waiting for semaphore")
-
-	default:
-		// This default case is reached immediately if the semaphore is not available.
-		// If opts.TimeoutMs is 0 or negative, this effectively becomes a TryLock.
-		// For a true timed lock when opts.TimeoutMs > 0, we need a nested select.
-		if opts.TimeoutMs <= 0 {
-			// If no timeout or negative timeout, treat as immediate failure if locked.
-			return CaptureResult{Success: false}, fmt.Errorf("capture semaphore is already in use (TryLock failed)")
-		}
-
-		// Nested select for actual timed lock behavior when opts.TimeoutMs > 0.
+	// Join a capture already in flight (single-flight coalescing): one shutter, many
+	// waiters, all sharing the same result or the same error.
+	if s.inflight != nil {
+		c := s.inflight
+		s.mu.Unlock()
 		select {
-		case s.captureSem <- struct{}{}:
-			// Successfully acquired the semaphore after waiting.
-			defer func() {
-				<-s.captureSem // Release the semaphore.
-			}()
+		case <-c.done:
+			return c.frame, c.err
+		case <-time.After(timeout):
+			return Frame{}, fmt.Errorf("timed out after %s waiting for in-flight capture", timeout)
+		}
+	}
 
-			output, err := cmd.CombinedOutput()
-			if err != nil {
-				return CaptureResult{Success: false, Output: string(output), Error: err.Error()},
-					fmt.Errorf("command execution failed: %w", err)
-			}
-			return CaptureResult{Success: true, Output: string(output)}, nil
+	// Become the leader: everyone arriving now joins this call.
+	c := &call{done: make(chan struct{})}
+	s.inflight = c
+	s.mu.Unlock()
 
-		case <-time.After(time.Duration(opts.TimeoutMs) * time.Millisecond):
-			// Timeout occurred in the nested select.
-			return CaptureResult{Success: false}, fmt.Errorf("capture timed out after waiting for semaphore")
+	frame, err := s.capture(timeout)
+
+	s.mu.Lock()
+	if err == nil {
+		f := frame
+		s.last = &f
+	}
+	s.inflight = nil
+	c.frame = frame
+	c.err = err
+	close(c.done)
+	s.mu.Unlock()
+
+	return frame, err
+}
+
+// capture retries the backend until a non-empty image lands or the timeout expires
+// ("try for a few seconds"). Graceful degradation: it never panics; a failure is a
+// returned error that every waiter shares.
+func (s *Service) capture(timeout time.Duration) (Frame, error) {
+	if timeout <= 0 {
+		timeout = 4 * time.Second
+	}
+	deadline := time.Now().Add(timeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
+	var lastErr error
+	for attempt := 1; ; attempt++ {
+		img, err := s.captureOnce(ctx)
+		if err == nil && len(img) > 0 {
+			return Frame{
+				Bytes:       img,
+				ContentType: "image/jpeg",
+				CapturedAt:  time.Now(),
+				ID:          newID(),
+				Attempts:    attempt,
+			}, nil
+		}
+		if err == nil {
+			err = fmt.Errorf("backend returned no image")
+		}
+		lastErr = err
+		s.log.Warn("capture attempt failed",
+			"backend", s.backend.Name(), "attempt", attempt, "err", err)
+
+		select {
+		case <-ctx.Done():
+			return Frame{}, fmt.Errorf("capture failed after %d attempt(s): %w", attempt, lastErr)
+		case <-time.After(s.retryDelay):
 		}
 	}
 }
 
-// Note: The original memory mentioned a potential race condition with cmd.Wait() and logging goroutines.
-// This fix focuses solely on the semaphore/mutex issue as requested. Further investigation into logging
-// race conditions would be a separate task.
+// captureOnce guards against a panicking backend so the daemon stays up (stoic heron).
+func (s *Service) captureOnce(ctx context.Context) (img []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("backend panicked: %v", r)
+		}
+	}()
+	return s.backend.Capture(ctx)
+}
+
+// newID returns a short random hex id identifying a captured frame.
+func newID() string {
+	var b [6]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
+}
