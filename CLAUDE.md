@@ -81,6 +81,10 @@ Code reaches the Pi via the **VS Code SFTP extension** (`.vscode/sftp.json`, `up
 
 ## The dropped-frames bug (diagnosed + fixed, for context)
 
+> Full investigation writeup — evidence, onset timeline, rejected hypotheses, git-history
+> correlation, the fix, and how to regenerate the gap analysis — is in
+> [docs/dropped-frames-investigation.md](./docs/dropped-frames-investigation.md).
+
 Symptom: sunset folders missing a handful of frames (e.g. 535–539 of 540), with **isolated holes
 in the middle** while the run still reaches frame 540; `ffmpeg` renders truncate at the first gap.
 
@@ -95,6 +99,21 @@ in the middle** while the run still reaches frame 540; `ffmpeg` renders truncate
   `Timelapse.shoot` retries the same frame on failure with consecutive-error counting + a
   per-failure log (`Frame [N] capture failed, retrying same frame …`). Grep a night's `pm2 logs`
   for `capture failed` to quantify hardware hiccups.
+
+## Testing
+
+`npm test` (vitest). Regression coverage for the dropped-frames bug:
+- `src/timelapse-frames.test.ts` — the capture loop retries the same frame on failure (no gaps),
+  tolerates scattered failures without aborting, and aborts only on >3 **consecutive** failures.
+  Drives `Timelapse.shoot` with a scripted flaky camera and `stitch=false` (no ffmpeg/FS).
+- `src/lib/libcamera-still.test.ts` — `takeImage` throws when the spawn "succeeds" but no file
+  landed; mocks the shared `spawnPromise` so it runs off-Pi.
+
+**Circular-import gotcha (breaks the whole vitest run):** modules that the `services/index.ts`
+barrel re-exports (or that those re-exports import) must **not** reach back through that barrel.
+`moveBackups.ts` importing `services/index.js` created an `index → Director → moveBackups → index`
+cycle that TDZ-crashes `createInjector` and takes the entire suite down. Import such deps from
+their own files (e.g. `./services/Logger.js`, `./services/Director.js`), not the barrel.
 
 ## Storage / backup model (so you read the data right)
 
@@ -131,4 +150,6 @@ in the middle** while the run still reaches frame 540; `ffmpeg` renders truncate
 - Keep `npm run lint` at **0 warnings** and `npm run build` green — a broken build silently
   blocks deploys.
 - Prefer fixing the camera/capture path over the shared `spawnPromise`.
+- Don't import the `services/index.ts` barrel from modules it re-exports (or that its re-exports
+  import) — it creates a load-time cycle that crashes vitest. Import from the specific file.
 - `.env` is required and not in git; it lives on the Pi independently of uploaded code.
