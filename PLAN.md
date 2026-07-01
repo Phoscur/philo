@@ -93,15 +93,15 @@ Kept the atomic-session-folder design; finished the seams it left dangling.
   render now live directly in the unique event folder (still atomic/self-contained), so no
   `Directory.createDirectory` was needed after all.
 - [x] **Repo coordination (Option B-ish):** `director.timelapse()` now creates the event
-  folder + its public repo and returns `{ events, repo }`. `scheduleSunset` and
-  `Producer.timelapse` consume that (the `{} as Repo` hack is gone), and `cancelSunset()` is
-  restored (clears the reschedule timeout + stops the run).
+  folder + its **private backup repo** (`setupBackupRepo`) and returns `{ events, repo }`.
+  `scheduleSunset` and `Producer.timelapse` consume that (the `{} as Repo` hack is gone), and
+  `cancelSunset()` is restored (clears the reschedule timeout + stops the run). Daily/event
+  repos are private (backup); `setupPublicRepo` is kept for the future publish flow.
 - [x] **Frame naming:** `.jpg` now added in the Timelapse layer (was previously supplied by
   the old stateful `Camera.filename`); the `file` event emits the bare `<prefix>-<NNN>.jpg`
   filename (not a path), matching `onFile`/`repo.upload`/`getMedia`.
-- [ ] **Scratch script `test.ts`:** update to the stateless Camera + new folder API (or drop
-  the two dead lines). Note from the investigation: a broken `test.ts` blocks `tsc -b`
-  entirely, so this must compile.
+- [x] **Scratch script `test.ts`:** updated to the stateless Camera + `{ events, repo }` return
+  (`camera.name`/`repoTimelapse` gone); wired the existing `check` command into the dispatch.
 - [x] **Warn + copy-forward, bounded abort (SOUL decision).** `Timelapse.shoot` no longer
   aborts on a hiccup: on a failed capture it logs a warning and **fills the gap by copying the
   previous good frame** (`photoDir.copyFile`) so the sequence stays gap-free (ffmpeg would
@@ -122,45 +122,40 @@ SFTP→dist→PM2 flow.
 
 ---
 
-## Phase 1 — philo-optic: single-flight capture daemon
+## Phase 1 — philo-optic: single-flight capture daemon — DONE (dev) ✅
 
-Turn the empty skeleton (`main.go` and `go.mod` are 0 bytes) into a runnable gatekeeper whose
-core is the **single-flight** capture.
+The empty skeleton is now a runnable, tested Go daemon (stdlib only, zero external deps —
+heron minimalism). Verified with `PHILO_MODE=mock` + Go unit tests; not yet run on the Pi.
 
-- [ ] `go.mod` (`module philo-optic`, Go 1.24) and a real `package main` in `main.go`:
-  HTTP server on `PORT` (default 8080), graceful shutdown, structured logging.
-- [ ] **Single-flight capture endpoint** — `GET /frame?maxAgeMs=&timeoutMs=` returning image
-  **bytes** + metadata `{ capturedAt, frameId }`. Semantics:
-  - Serve the cached last frame if younger than `maxAgeMs` (`0` = force fresh).
-  - Otherwise **join an in-flight capture** if one is running (all waiters get the same result
-    or the same error), else start a new one.
-  - The capture **retries up to `timeoutMs`** ("try for a few seconds") and only counts as
-    success when a **non-empty file actually lands** — the same guard as the TS fix. This is
-    the one behaviour we must not lose.
-  - **Return bytes, not paths.** Concurrent callers share the same bytes and each writes its
-    own destination. Sequential timelapse frames are not concurrent, so they stay distinct.
-  - Implementation: `golang.org/x/sync/singleflight` or a hand-rolled `captureCall` struct
-    (`sync.Mutex` + `done chan struct{}` + shared result). Simplify/replace the semaphore
-    `select` currently drafted in `camera/service.go`.
-- [ ] **Hexagonal camera backend:** a `Capturer` interface so `libcamera`/`rpicam` (Pi),
-  `gphoto2` (DSLR), `v4l2` (webcam), and `mock` are swappable without touching the HTTP/
-  single-flight layer.
-- [ ] **Graceful degradation:** capture failure never `panic()`s — it logs, returns a
-  structured error to waiters, and the daemon stays up for the next request.
-- [ ] **Mock backend:** `PHILO_MODE=mock` (already referenced in `philo-optic.service`) writes
-  a placeholder JPEG, so the service runs on the dev machine and in CI with no camera.
-- [ ] `/health` (and later `/status` for temperature/disk if we move that here).
-- [ ] `Makefile` cross-compiles arm64 (already present); add a `mock`/dev target.
-- [ ] Avoid the logging race the current code comments flag (`cmd.Wait()` vs. log goroutines) —
-  `CombinedOutput()` already sidesteps it.
+- [x] `go.mod` (`module philo-optic`, go 1.24) + real `package main` in `main.go`: HTTP server
+  on `PORT` (default 8080), graceful shutdown (SIGINT/SIGTERM), `slog` structured logging.
+- [x] **Single-flight capture endpoint** — `GET /frame?maxAgeMs=&timeoutMs=` returns JPEG
+  **bytes** + metadata headers (`X-Frame-Id`, `X-Captured-At`, `X-Attempts`). Serves the cached
+  last frame if younger than `maxAgeMs` (`0` = force fresh); otherwise joins an in-flight
+  capture (shared result/error) or starts one; retries up to `timeoutMs` and counts only a
+  **non-empty image** as success (same guard as the TS fix). Hand-rolled (`sync.Mutex` +
+  `done chan` `call`) — replaced the drafted semaphore `select`, no external dep.
+- [x] **Hexagonal camera backend:** `Capturer` interface (`camera/capturer.go`) with
+  `RpicamCapturer` (rpicam-still → temp file → non-empty check → bytes) and `MockCapturer`;
+  `gphoto2`/`v4l2` slot in later without touching the service/HTTP layer.
+- [x] **Graceful degradation:** capture never `panic()`s (a `recover` in `captureOnce` turns a
+  panicking backend into an error); failures are logged and shared with all waiters.
+- [x] **Mock backend:** `PHILO_MODE=mock` serves a synthetic, time-varying JPEG (no camera).
+- [x] `/health` returns `{status, backend}`.
+- [x] `Makefile`: arm64 cross-compile kept; added `mock` (dev run), `test`, `vet`, `fmt`.
+- [x] Go unit tests (`camera/service_test.go`): force-fresh, cache reuse, concurrent
+  coalescing (20 callers → 1 shutter, shared id), retry-until-success, timeout.
+
+Deferred to Phase 2 / on-Pi: preset/ROI args on `/frame` (Producer passes them), `/status`
+(temp/disk), and a real on-Pi run (`systemctl start philo-optic` → capture + mid-capture
+coalescing against real rpicam).
 
 **Note for staging:** single-flight means a prod + staging request landing together share the
-**same photons** — one shutter, both get the frame. This is the intended zero-interference
-property, not a bug. If staging must ever be optically independent, revisit here.
+**same photons** — one shutter, both get the frame. Intended zero-interference, not a bug.
 
-**Exit criteria:** `PHILO_MODE=mock go run .` serves `/frame` and returns an image; two
-concurrent requests get the same `frameId`; on the Pi, `systemctl start philo-optic` captures
-a real frame and a mid-capture second request coalesces instead of blocking.
+**Exit criteria (dev): met.** `PHILO_MODE=mock` serves `/frame` (valid JPEG), force-fresh gives
+distinct frame ids, `maxAgeMs` reuses the cache, and the concurrency test proves coalescing.
+Remaining: verify on the Pi against real rpicam.
 
 ---
 
@@ -222,6 +217,31 @@ finished MP4 + thumbnail and rsyncs the big file to Phedora directly.
 - [ ] **Archive offloading to Phedora** (Storage Owl, Unraid `Pholiere`): finished timelapses
   pushed via rsync/webhook so edge nodes never fill up. Maps onto the existing `moveBackups`
   concept — reuse, don't reinvent.
+
+---
+
+## Full publishing (epic — later)
+
+The content lifecycle is **private capture → Telegram moderation → public on demand**. Today
+capture + the Telegram preview/appraisal loop exist; the "go public" step is stubbed
+(`Publisher.publish` is a TODO, `markupRowPublish` is commented out).
+
+- [ ] **Private by default.** Daily/event repos are private backups (done in Phase 0 via
+  `setupBackupRepo`). Nothing is public until a human approves it.
+- [ ] **Moderate in Telegram.** The existing likes / cloud-study / share flow is the review
+  surface. A run is only publishable after it has been looked at.
+- [ ] **Publish button → GitHub Pages.** Wire `markupRowPublish` + `Publisher.publish`: make the
+  repo public, run `makeTimelapsePage` (readme + index.html + ffmpeg action), `enablePages`.
+  `setupPublicRepo` / `Repository` already have most of the pieces.
+- [ ] **Higher video quality for published renders.** The Telegram preview can stay a quick,
+  low-overhead stitch; the *published* render should be higher quality (resolution / crf /
+  framerate). Decide the published-render profile separately from the preview.
+- [ ] **Use GitHub Actions compute for the public render.** Instead of rendering high-quality on
+  the Pi, let the repo's ffmpeg Action (`ffmpegActionString`) do the heavy render in CI on
+  publish — offloads the edge node and matches "compute in GitHub pipelines". The Pi only needs
+  the quick preview render locally.
+- [ ] Relationship to the throwback: the "one year ago" post is a *preview-quality* memory in
+  Telegram; if the user then hits publish, it follows this same public-on-demand path.
 
 ---
 

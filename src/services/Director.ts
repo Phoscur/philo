@@ -74,11 +74,20 @@ export class Director {
   }
 
   /**
-   * Creates a Git Repo for a specific Event Folder
+   * Private backup repo for a daily/event folder. Daily repos are private by default
+   * (backup only); they are made public later, on demand, after Telegram moderation via
+   * the publish button (GitHub Pages). See the "full publishing" epic in PLAN.md.
+   */
+  async setupBackupRepo(folderPath: string) {
+    return this.#repo().create(folderPath, true);
+  }
+
+  /**
+   * Make an event folder's repo public and render it as a GitHub Pages timelapse.
+   * Used by the (future) publish flow, not by capture.
    */
   async setupPublicRepo(folderPath: string) {
     const repo = this.#repo();
-    // repo.create now expects the folder path to already exist or be created
     const r = await repo.create(folderPath, false);
     await r.addReadme();
     return r;
@@ -124,10 +133,11 @@ export class Director {
     const basePrefix = presetName === 'sunset' ? this.repoSunsetPrefix : this.repoTimelapsePrefix;
     const sessionName = `${basePrefix}-${this.nameNow}`;
 
-    // 2. ATOMIC, SELF-CONTAINED FOLDER + its GitHub repo. Frames and the rendered video
-    //    live together in this one folder (Repo.upload / makeTimelapsePage / ffmpeg all
-    //    expect the .jpg frames next to the .mp4 - so no `source/` subfolder here).
-    const repo = await this.setupPublicRepo(sessionName);
+    // 2. ATOMIC, SELF-CONTAINED FOLDER + its PRIVATE backup repo. Frames and the rendered
+    //    video live together in this one folder (Repo.upload / makeTimelapsePage / ffmpeg all
+    //    expect the .jpg frames next to the .mp4 - so no `source/` subfolder here). The repo
+    //    is private; going public happens later via the publish button (see PLAN epic).
+    const repo = await this.setupBackupRepo(sessionName);
     const photoDir = repo.dir;
 
     // 3. VIDEO OUTPUT: default inside the event folder; custom = a shared "best of" folder.
