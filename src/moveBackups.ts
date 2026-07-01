@@ -1,10 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { Injector } from '@joist/di';
 import { spawnPromise } from './lib/spawn.js';
-import { Logger, createInjector, Director } from './services/index.js';
+// Import directly, NOT via the services/index barrel: Director imports moveBackups, so pulling
+// the barrel here creates an index -> Director -> moveBackups -> index cycle that TDZ-crashes
+// `createInjector` (and breaks the vitest suite). Direct imports keep the barrel out of the loop.
+import { Logger, consoleProvider } from './services/Logger.js';
+import { Director } from './services/Director.js';
 
-const injector = createInjector();
+const injector = new Injector({ providers: [consoleProvider] });
 const logger = injector.inject(Logger);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
