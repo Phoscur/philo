@@ -245,6 +245,38 @@ capture + the Telegram preview/appraisal loop exist; the "go public" step is stu
 
 ---
 
+## Inventory & Gallery (epic — later)
+
+Philo needs one source of truth for **what he has captured** and a public **gallery** of what has
+been published. Much of the inventory already exists; the gallery is greenfield.
+
+**Inventory** (extend `PublicationInventory` + `Stakeholder`):
+
+- [ ] **One source of truth.** Yearly `publications-YYYY.json` / `appraisals-YYYY.json` already
+  track drafts, shares, likes, and cloud-study ratings. Consolidate the two "list unpublished"
+  implementations (`Stakeholder.checkPublications` vs. the inline `/publications` in
+  `photoStage.ts`) onto `Stakeholder` so there is a single query path.
+- [ ] **Enrich each entry with health + provenance:** frame count, missing/repaired frames (from
+  `getMissingFrames`), backup locations (private GitHub repo / Phedora / Glacier), and lifecycle
+  state (draft → moderated → published). This is what the repair pass and the gallery both read.
+- [ ] **Make it queryable:** "which runs have holes?", "which are unpublished?", "what did we
+  shoot in month X?", "what is publishable?" — the shared basis for repair, throwback, and gallery.
+
+**Gallery** (public presentation of published works):
+
+- [ ] **Aggregate index of published events** (never the private backups) — by year/month, each
+  with a thumbnail + link to that timelapse's GitHub Pages video. Only published items appear, so
+  it respects the private-by-default model.
+- [ ] **Generated from the inventory** (published entries): a top-level GitHub Pages "gallery"
+  repo rebuilt on each publish, or a static site pushed to Phedora. Reuses `indexString`/Pages
+  machinery already in `Repository`.
+- [ ] **Thumbnails / deltas:** a small preview per entry (a representative frame or a short gif)
+  so the gallery is browsable without loading full videos — also what Matrix C2 would post.
+- [ ] Feeds: the publish button (Full publishing epic) adds an entry; the throwback can surface
+  "on this day" entries; both draw from the same inventory.
+
+---
+
 ## "One year ago today" — daily throwback + on-the-fly repair (Stakeholder)
 
 The heron remembers. Each day, Philo re-posts the timelapse from the same date **last year** as
@@ -276,13 +308,19 @@ Daily pipeline (one date at a time, ephemeral on disk):
 
 Open choices:
 
-- [ ] **Heal GitHub too, or ephemeral only?** The vision says delete the download — so the
-  repaired video is transient and GitHub stays holey. Alternative: also **push the filled frames
-  back** so the archive heals permanently (one-time cost, then future throwbacks need no repair).
-  Recommend: push the fix back the first time a date is repaired, so the archive self-heals.
-- [ ] **Backfill limitation:** a hole is only fillable if the *previous* frame exists; isolated
-  single-frame holes (the common case) always have a predecessor. A contiguous gap at the very
-  start of a run cannot be back-filled — post it as-is or skip.
+- [x] **Heal the GitHub backup (decided).** When a date is repaired, **push the filled frames
+  back** to its private backup repo before deleting the local clone. The hole is then gone for
+  good: the backup is complete again and future throwbacks of that date need no repair. The local
+  clone is still deleted afterwards (the fix lives in the private repo, not on the Pi).
+- [x] **Fill every hole from the nearest neighbour (decided).** Repair copies the **previous**
+  good frame into interior/trailing holes and, for a **leading** gap (frame 1..k missing before
+  the first real frame — we have such a case), copies the **next** existing frame *backwards*.
+  This also covers **multiple consecutive** missing frames — each is filled from its nearest
+  neighbour. So any run with ≥1 real frame heals completely; only a totally empty run is
+  unrepairable. Extend `Stakeholder.fixFrames` (currently previous-only, breaks on a missing
+  frame 1) to fall back to the next frame when there is no predecessor. NB: this is the *repair*
+  path; the *live* loop still retries frame 1 in place, since during capture no later frame
+  exists yet.
 - [ ] **One-off mass repair** is just this pipeline run over a date range instead of one day —
   useful to heal the whole Sep 2025 – Jun 2026 backlog in one pass (with a dry-run mode first).
 
