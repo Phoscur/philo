@@ -184,7 +184,7 @@ describe('CloudStudy', () => {
     //await Promise.resolve();
     await sunMoon.sleep(0); // = 2x await
     expect(chat.sendMessage).toHaveBeenCalledWith(
-      `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\n💾 Storage (-1): -1\nStubbed Temperature`
+      `🌇 Sunset is soon...\n⤵️ Starting daily timelapse 🎥\n💾 Storage (-1/-1): -1\nStubbed Temperature`
     );
     expect(chat.createAnimation).toHaveBeenCalledWith(assets.telegramSpinner, {
       caption: undefined,
