@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,17 +20,20 @@ type Frame struct {
 	Attempts    int
 }
 
-// Service owns the single camera and serialises access with single-flight:
-// concurrent requests for a frame share ONE capture (one shutter, shared photons)
-// instead of colliding on the device. This is what lets the TS side drop its mutex.
+// Service owns the single camera and serialises access. Concurrent requests for the
+// SAME capture (same args) share ONE shutter (single-flight, shared photons); a global
+// device lock guarantees only one physical capture runs at a time even across different
+// presets. This is what lets the TS side drop its mutex.
 type Service struct {
 	backend    Capturer
 	log        *slog.Logger
 	retryDelay time.Duration
 
 	mu       sync.Mutex
-	last     *Frame // most recent successful capture, reused within maxAge
-	inflight *call  // a capture currently in progress, if any
+	last     map[string]*Frame // most recent successful capture per args key (maxAge reuse)
+	inflight map[string]*call  // a capture currently in progress, per args key
+
+	device sync.Mutex // only one physical shutter at a time, across all keys
 }
 
 // call is one in-flight capture that concurrent callers wait on and share.
@@ -48,30 +52,35 @@ func NewService(backend Capturer, log *slog.Logger) *Service {
 		backend:    backend,
 		log:        log,
 		retryDelay: 300 * time.Millisecond,
+		last:       map[string]*Frame{},
+		inflight:   map[string]*call{},
 	}
 }
 
 // Backend returns the active backend name (for /health).
 func (s *Service) Backend() string { return s.backend.Name() }
 
-// Frame returns a captured still.
-//   - maxAge > 0: a cached frame this fresh (or fresher) is reused, no shutter.
-//   - maxAge == 0: force a fresh capture (unless one is already in flight to join).
+// Frame returns a captured still for the given capture args.
+//   - maxAge > 0: a cached frame (same args) this fresh or fresher is reused, no shutter.
+//   - maxAge == 0: force a fresh capture (unless one with the same args is already in flight).
 //   - timeout: how long a caller waits for the shared capture to land.
-func (s *Service) Frame(maxAge, timeout time.Duration) (Frame, error) {
+func (s *Service) Frame(args []string, maxAge, timeout time.Duration) (Frame, error) {
+	key := strings.Join(args, "\x00")
+
 	s.mu.Lock()
 
 	// Fast path: a cached frame young enough for this caller.
-	if maxAge > 0 && s.last != nil && time.Since(s.last.CapturedAt) <= maxAge {
-		f := *s.last
-		s.mu.Unlock()
-		return f, nil
+	if maxAge > 0 {
+		if f, ok := s.last[key]; ok && time.Since(f.CapturedAt) <= maxAge {
+			out := *f
+			s.mu.Unlock()
+			return out, nil
+		}
 	}
 
-	// Join a capture already in flight (single-flight coalescing): one shutter, many
-	// waiters, all sharing the same result or the same error.
-	if s.inflight != nil {
-		c := s.inflight
+	// Join a capture with the same args already in flight (single-flight coalescing):
+	// one shutter, many waiters, all sharing the same result or the same error.
+	if c, ok := s.inflight[key]; ok {
 		s.mu.Unlock()
 		select {
 		case <-c.done:
@@ -81,19 +90,19 @@ func (s *Service) Frame(maxAge, timeout time.Duration) (Frame, error) {
 		}
 	}
 
-	// Become the leader: everyone arriving now joins this call.
+	// Become the leader for this key: everyone arriving now joins this call.
 	c := &call{done: make(chan struct{})}
-	s.inflight = c
+	s.inflight[key] = c
 	s.mu.Unlock()
 
-	frame, err := s.capture(timeout)
+	frame, err := s.capture(args, timeout)
 
 	s.mu.Lock()
 	if err == nil {
 		f := frame
-		s.last = &f
+		s.last[key] = &f
 	}
-	s.inflight = nil
+	delete(s.inflight, key)
 	c.frame = frame
 	c.err = err
 	close(c.done)
@@ -103,9 +112,10 @@ func (s *Service) Frame(maxAge, timeout time.Duration) (Frame, error) {
 }
 
 // capture retries the backend until a non-empty image lands or the timeout expires
-// ("try for a few seconds"). Graceful degradation: it never panics; a failure is a
-// returned error that every waiter shares.
-func (s *Service) capture(timeout time.Duration) (Frame, error) {
+// ("try for a few seconds"). It holds the device lock so only one physical shutter runs
+// at a time. Graceful degradation: it never panics; a failure is a returned error that
+// every waiter shares.
+func (s *Service) capture(args []string, timeout time.Duration) (Frame, error) {
 	if timeout <= 0 {
 		timeout = 4 * time.Second
 	}
@@ -113,9 +123,13 @@ func (s *Service) capture(timeout time.Duration) (Frame, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
+	// One shutter at a time across every preset/args key.
+	s.device.Lock()
+	defer s.device.Unlock()
+
 	var lastErr error
 	for attempt := 1; ; attempt++ {
-		img, err := s.captureOnce(ctx)
+		img, err := s.captureOnce(ctx, args)
 		if err == nil && len(img) > 0 {
 			return Frame{
 				Bytes:       img,
@@ -141,13 +155,13 @@ func (s *Service) capture(timeout time.Duration) (Frame, error) {
 }
 
 // captureOnce guards against a panicking backend so the daemon stays up (stoic heron).
-func (s *Service) captureOnce(ctx context.Context) (img []byte, err error) {
+func (s *Service) captureOnce(ctx context.Context, args []string) (img []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("backend panicked: %v", r)
 		}
 	}()
-	return s.backend.Capture(ctx)
+	return s.backend.Capture(ctx, args)
 }
 
 // newID returns a short random hex id identifying a captured frame.

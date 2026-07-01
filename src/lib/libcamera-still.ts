@@ -72,6 +72,46 @@ export interface StillOptions {
   output?: string;
 }
 
+/**
+ * Build the `rpicam-still` argument list for a set of options, **excluding** `--output`
+ * (the caller/daemon owns the destination). Includes `--nopreview` and applies the same
+ * width/height/rotation/flip/delay defaults as {@link StillCamera}. This is the single
+ * source of truth for capture args, shared by the local `StillCamera` and the philo-optic
+ * HTTP client (`Camera`), so the arg logic is never duplicated.
+ */
+export function buildStillArgs(options: StillOptions): string[] {
+  const o: StillOptions = {
+    rotation: Rotation.Rotate0,
+    flip: Flip.None,
+    delay: Number(DEFAULT_DELAY || '') || 500,
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+    ...options,
+  };
+  return [
+    ...(o.width ? ['--width', o.width.toString()] : []),
+    ...(o.height ? ['--height', o.height.toString()] : []),
+    ...(o.rotation ? ['--rotation', o.rotation.toString()] : []),
+    ...(o.flip && (o.flip === Flip.Horizontal || o.flip === Flip.Both) ? ['--hflip'] : []),
+    ...(o.flip && (o.flip === Flip.Vertical || o.flip === Flip.Both) ? ['--vflip'] : []),
+    ...(o.shutter ? ['--shutter', o.shutter.toString()] : []),
+    ...(o.sharpness ? ['--sharpness', o.sharpness.toString()] : []),
+    ...(o.contrast ? ['--contrast', o.contrast.toString()] : []),
+    ...(o.brightness || o.brightness === 0 ? ['--brightness', o.brightness.toString()] : []),
+    ...(o.saturation ? ['--saturation', o.saturation.toString()] : []),
+    ...(o.iso ? ['--ISO', o.iso.toString()] : []),
+    ...(o.exposureCompensation ? ['--ev', o.exposureCompensation.toString()] : []),
+    ...(o.exposureMode ? ['--exposure', o.exposureMode.toString()] : []),
+    ...(o.awbMode ? ['--awb', o.awbMode.toString()] : []),
+    ...(o.analogGain ? ['--analoggain', o.analogGain.toString()] : []),
+    ...(o.digitalGain ? ['--digitalgain', o.digitalGain.toString()] : []),
+    '--timeout',
+    o.delay!.toString(),
+    ...(o.roi ? ['--roi', o.roi.toString()] : []),
+    '--nopreview',
+  ];
+}
+
 export class StillCamera {
   private readonly options: StillOptions;
 
@@ -94,130 +134,7 @@ export class StillCamera {
     try {
       const image = await spawnPromise(
         'rpicam-still',
-        [
-          /**
-           * Width
-           */
-          ...(this.options.width ? ['--width', this.options.width.toString()] : []),
-
-          /**
-           * Height
-           */
-          ...(this.options.height ? ['--height', this.options.height.toString()] : []),
-
-          /**
-           * Rotation
-           */
-          ...(this.options.rotation ? ['--rotation', this.options.rotation.toString()] : []),
-
-          /**
-           * Horizontal flip
-           */
-          ...(this.options.flip &&
-          (this.options.flip === Flip.Horizontal || this.options.flip === Flip.Both)
-            ? ['--hflip']
-            : []),
-
-          /**
-           * Vertical flip
-           */
-          ...(this.options.flip &&
-          (this.options.flip === Flip.Vertical || this.options.flip === Flip.Both)
-            ? ['--vflip']
-            : []),
-
-          /**
-           * Shutter Speed
-           */
-          ...(this.options.shutter ? ['--shutter', this.options.shutter.toString()] : []),
-
-          /**
-           * Sharpness (-100 to 100; default 0)
-           */
-          ...(this.options.sharpness ? ['--sharpness', this.options.sharpness.toString()] : []),
-
-          /**
-           * Contrast (-100 to 100; default 0)
-           */
-          ...(this.options.contrast ? ['--contrast', this.options.contrast.toString()] : []),
-
-          /**
-           * Brightness (0 to 100; default 50)
-           */
-          ...(this.options.brightness || this.options.brightness === 0
-            ? ['--brightness', this.options.brightness.toString()]
-            : []),
-
-          /**
-           * Saturation (-100 to 100; default 0)
-           */
-          ...(this.options.saturation ? ['--saturation', this.options.saturation.toString()] : []),
-
-          /**
-           * ISO
-           */
-          ...(this.options.iso ? ['--ISO', this.options.iso.toString()] : []),
-
-          /**
-           * EV Compensation
-           */
-          ...(this.options.exposureCompensation
-            ? ['--ev', this.options.exposureCompensation.toString()]
-            : []),
-
-          /**
-           * Exposure Mode
-           */
-          ...(this.options.exposureMode
-            ? ['--exposure', this.options.exposureMode.toString()]
-            : []),
-
-          /**
-           * Auto White Balance Mode
-           */
-          ...(this.options.awbMode ? ['--awb', this.options.awbMode.toString()] : []),
-
-          /**
-           * Analog Gain
-           */
-          ...(this.options.analogGain ? ['--analoggain', this.options.analogGain.toString()] : []),
-
-          /**
-           * Digital Gain
-           */
-          ...(this.options.digitalGain
-            ? ['--digitalgain', this.options.digitalGain.toString()]
-            : []),
-
-          /**
-           * Capture delay (ms)
-           */
-          '--timeout',
-          this.options.delay!.toString(),
-
-          /**
-           * Region of interest
-           */
-          ...(this.options.roi ? ['--roi', this.options.roi.toString()] : []),
-
-          /**
-         * Image functions
-         * /
-        ...(this.options.imxfx
-          ? ['--imxfx', this.options.imxfx.toString()]
-          : []),*/
-
-          /**
-           * Do not display preview overlay on screen
-           */
-          '--nopreview',
-
-          /**
-           * Output to stdout
-           */
-          '--output',
-          this.options.output ?? '-',
-        ],
+        [...buildStillArgs(this.options), '--output', this.options.output ?? '-'],
         undefined,
         true
       );

@@ -22,7 +22,7 @@ type fakeCapturer struct {
 
 func (f *fakeCapturer) Name() string { return "fake" }
 
-func (f *fakeCapturer) Capture(ctx context.Context) ([]byte, error) {
+func (f *fakeCapturer) Capture(ctx context.Context, _ []string) ([]byte, error) {
 	n := f.calls.Add(1)
 	if f.delay > 0 {
 		select {
@@ -47,11 +47,11 @@ func TestForceFreshCapturesEachTime(t *testing.T) {
 	b := &fakeCapturer{}
 	s := quietService(b)
 
-	f1, err := s.Frame(0, time.Second)
+	f1, err := s.Frame(nil, 0, time.Second)
 	if err != nil {
 		t.Fatalf("first frame: %v", err)
 	}
-	f2, err := s.Frame(0, time.Second)
+	f2, err := s.Frame(nil, 0, time.Second)
 	if err != nil {
 		t.Fatalf("second frame: %v", err)
 	}
@@ -67,11 +67,11 @@ func TestMaxAgeReusesCache(t *testing.T) {
 	b := &fakeCapturer{}
 	s := quietService(b)
 
-	f1, err := s.Frame(0, time.Second) // fresh
+	f1, err := s.Frame(nil, 0, time.Second) // fresh
 	if err != nil {
 		t.Fatalf("first frame: %v", err)
 	}
-	f2, err := s.Frame(time.Minute, time.Second) // young enough -> reuse
+	f2, err := s.Frame(nil, time.Minute, time.Second) // young enough -> reuse
 	if err != nil {
 		t.Fatalf("second frame: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestSingleFlightCoalescesConcurrentCallers(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			f, err := s.Frame(0, 2*time.Second)
+			f, err := s.Frame(nil, 0, 2*time.Second)
 			if err != nil {
 				t.Errorf("caller %d: %v", i, err)
 				return
@@ -118,7 +118,7 @@ func TestCaptureRetriesUntilSuccess(t *testing.T) {
 	b := &fakeCapturer{fail: 2} // first two attempts fail, third succeeds
 	s := quietService(b)
 
-	f, err := s.Frame(0, time.Second)
+	f, err := s.Frame(nil, 0, time.Second)
 	if err != nil {
 		t.Fatalf("expected success after retries, got %v", err)
 	}
@@ -131,8 +131,43 @@ func TestCaptureFailsAfterTimeout(t *testing.T) {
 	b := &fakeCapturer{fail: -1} // always blind
 	s := quietService(b)
 
-	_, err := s.Frame(0, 50*time.Millisecond)
+	_, err := s.Frame(nil, 0, 50*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected an error when the camera stays blind")
+	}
+}
+
+func TestDifferentArgsCaptureAndCacheSeparately(t *testing.T) {
+	b := &fakeCapturer{}
+	s := quietService(b)
+
+	roiA := []string{"--roi", "0.1,0.1,0.5,0.5"}
+	roiB := []string{"--roi", "0,0,1,1"}
+
+	a1, err := s.Frame(roiA, 0, time.Second)
+	if err != nil {
+		t.Fatalf("roiA: %v", err)
+	}
+	a2, err := s.Frame(roiB, 0, time.Second)
+	if err != nil {
+		t.Fatalf("roiB: %v", err)
+	}
+	if a1.ID == a2.ID {
+		t.Errorf("different args must not share a frame")
+	}
+	if got := b.calls.Load(); got != 2 {
+		t.Fatalf("expected 2 captures for 2 arg sets, got %d", got)
+	}
+
+	// A fresh-enough request with the first args reuses ITS cached frame, not the other's.
+	again, err := s.Frame(roiA, time.Minute, time.Second)
+	if err != nil {
+		t.Fatalf("roiA reuse: %v", err)
+	}
+	if again.ID != a1.ID {
+		t.Errorf("maxAge reuse should return the same-args cached frame")
+	}
+	if got := b.calls.Load(); got != 2 {
+		t.Errorf("cache reuse must not add a capture, got %d", got)
 	}
 }

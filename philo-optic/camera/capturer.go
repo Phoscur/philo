@@ -16,10 +16,14 @@ import (
 // Capturer is Philo's eye: any optical backend that takes one still and returns its
 // JPEG bytes. Implementations (rpicam/libcamera on the Pi, gphoto2, v4l2, mock) are
 // swappable without touching the single-flight service or the HTTP layer.
+//
+// args are backend-specific capture arguments supplied by the caller (the TS side
+// owns preset/ROI translation and passes ready-made rpicam-still args), so the daemon
+// stays a generic executor and the arg-building lives in exactly one place.
 type Capturer interface {
-	// Capture takes a single still and returns the encoded image bytes.
+	// Capture takes a single still with the given args and returns the image bytes.
 	// It must honour ctx (deadline/cancellation) and never panic.
-	Capture(ctx context.Context) ([]byte, error)
+	Capture(ctx context.Context, args []string) ([]byte, error)
 	// Name identifies the backend for logs and /health.
 	Name() string
 }
@@ -41,7 +45,7 @@ func NewRpicamCapturer() *RpicamCapturer {
 
 func (c *RpicamCapturer) Name() string { return "rpicam-still" }
 
-func (c *RpicamCapturer) Capture(ctx context.Context) ([]byte, error) {
+func (c *RpicamCapturer) Capture(ctx context.Context, args []string) ([]byte, error) {
 	// rpicam-still writes to a file; capture to a temp path, then read + clean up.
 	f, err := os.CreateTemp("", "philo-optic-*.jpg")
 	if err != nil {
@@ -51,10 +55,18 @@ func (c *RpicamCapturer) Capture(ctx context.Context) ([]byte, error) {
 	_ = f.Close()
 	defer os.Remove(path)
 
-	args := []string{"--nopreview", "-t", fmt.Sprint(c.DelayMs), "--output", path}
-	args = append(args, c.ExtraArgs...)
+	// The caller (TS Camera) supplies the preset/ROI args. With none (e.g. a bare GET),
+	// fall back to a sensible default snapshot.
+	base := args
+	if len(base) == 0 {
+		base = []string{"--nopreview", "-t", fmt.Sprint(c.DelayMs)}
+	}
+	full := make([]string, 0, len(base)+len(c.ExtraArgs)+2)
+	full = append(full, base...)
+	full = append(full, c.ExtraArgs...)
+	full = append(full, "--output", path)
 
-	cmd := exec.CommandContext(ctx, c.Command, args...)
+	cmd := exec.CommandContext(ctx, c.Command, full...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w (%s)", c.Command, err, trimOutput(out))
@@ -88,7 +100,7 @@ type MockCapturer struct{}
 
 func (MockCapturer) Name() string { return "mock" }
 
-func (MockCapturer) Capture(ctx context.Context) ([]byte, error) {
+func (MockCapturer) Capture(ctx context.Context, _ []string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

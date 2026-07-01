@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -61,12 +62,26 @@ func main() {
 func routes(svc *camera.Service, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
-	// GET /frame?maxAgeMs=&timeoutMs= -> JPEG bytes + metadata headers.
-	mux.HandleFunc("GET /frame", func(w http.ResponseWriter, r *http.Request) {
+	// /frame?maxAgeMs=&timeoutMs= -> JPEG bytes + metadata headers.
+	// POST with JSON body {"args": [...]} passes preset/ROI capture args; GET (no body)
+	// captures with the backend's default args.
+	mux.HandleFunc("/frame", func(w http.ResponseWriter, r *http.Request) {
 		maxAge := queryMs(r, "maxAgeMs", 0)
 		timeout := queryMs(r, "timeoutMs", 4*time.Second)
 
-		frame, err := svc.Frame(maxAge, timeout)
+		var args []string
+		if r.ContentLength != 0 {
+			var body struct {
+				Args []string `json:"args"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "bad request body: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			args = body.Args
+		}
+
+		frame, err := svc.Frame(args, maxAge, timeout)
 		if err != nil {
 			log.Warn("frame request failed", "err", err, "remote", r.RemoteAddr)
 			http.Error(w, err.Error(), http.StatusServiceUnavailable)

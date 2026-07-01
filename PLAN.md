@@ -159,24 +159,33 @@ Remaining: verify on the Pi against real rpicam.
 
 ---
 
-## Phase 2 — Point the bot at philo-optic (delete the TS mutex)
+## Phase 2 — Point the bot at philo-optic (delete the TS mutex) — DONE (dev) ✅
 
-Make the TS `Camera` service an HTTP client of philo-optic instead of spawning `rpicam`
-directly. The DI seam makes this a localized change; orchestration stays in TS.
+`Camera` is now a thin HTTP client of philo-optic; orchestration stays in TS. Verified with the
+mock daemon end-to-end (TS `Camera.photo` → daemon → valid JPEG on disk) and full TS + Go suites.
 
-- [ ] `Camera.photo(output)` → `GET {PHILO_OPTIC_URL}/frame?maxAgeMs=0`, write the returned
-  bytes to `output`. Keep the same throw-on-failure contract so `Timelapse`'s retry loop is
-  unchanged.
-- [ ] **Delete `Camera.#mutex`** — serialization now lives in the daemon's single-flight owner.
-- [ ] `/preview` and `/photo` can pass a non-zero `maxAgeMs` so a mid-timelapse preview reuses
-  the latest frame instead of forcing an extra shutter.
-- [ ] `CameraStub` keeps working for unit tests (no network).
-- [ ] Config: `PHILO_OPTIC_URL` (default `http://localhost:8080`).
-- [ ] Optional fallback flag so the bot can still spawn `rpicam` directly if the daemon is down.
+- [x] `Camera.photo(output)` → `POST {PHILO_OPTIC_URL}/frame?maxAgeMs=0&timeoutMs=`, writes the
+  returned bytes to `output`. Same throw-on-failure contract (non-ok status or empty body throws)
+  so `Timelapse`'s copy-forward loop is unchanged.
+- [x] **Deleted `Camera.#mutex`** — the daemon serialises the device (single-flight per args +
+  global device lock). `busy` now just tracks the in-flight request (for `Timelapse.stop`), it no
+  longer throws "Camera is busy".
+- [x] **Preset/ROI preserved without duplication:** extracted `buildStillArgs()` in
+  `libcamera-still.ts` (single source of truth for rpicam args, `--nopreview`, defaults, minus
+  `--output`); `Camera` forwards `buildStillArgs(this.options)` as `{ "args": [...] }`. Daemon is
+  a generic executor; single-flight is keyed by args so different presets don't share a frame,
+  and the global device lock still guarantees one shutter at a time.
+- [x] `CameraStub` unaffected (overrides `photo`, no network).
+- [x] Config: `PHILO_OPTIC_URL` (default `http://localhost:8080`), `PHILO_OPTIC_TIMEOUT_MS`
+  (default 4000).
+- [ ] Deferred: `/preview`/`/photo` passing a non-zero `maxAgeMs` (mid-timelapse preview reuse) —
+  currently every `Camera.photo` uses `maxAgeMs=0`. Small refinement, do when wiring preview UX.
+- [ ] Deferred: optional direct-rpicam fallback if the daemon is down (kept simple; `StillCamera`
+  + `buildStillArgs` remain, so a fallback is a small addition later).
 
-**Exit criteria:** a full sunset timelapse runs through philo-optic and lands a complete
-folder; `Camera.#mutex` is gone; a preview during a running timelapse returns instantly with
-the current frame and no extra shutter.
+**Exit criteria (dev): met.** `Camera.#mutex` gone; presets forwarded; end-to-end mock capture
+writes a valid JPEG. Remaining: run a full sunset through philo-optic on the Pi (real rpicam),
+which also covers the mid-timelapse-preview coalescing behaviour.
 
 ---
 
